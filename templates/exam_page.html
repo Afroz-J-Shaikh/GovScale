@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}{{ exam.title }} | GovScale{% endblock %}
+
+{% block content %}
+<section class="dashboard-section">
+    <div class="dashboard-card exam-lobby-card">
+        <span class="section-kicker">EXAM IN PROGRESS</span>
+        <h1>{{ exam.title }}</h1>
+        <p>
+            Your scheduled exam window is open.
+            The question and submission functionality will be added later.
+        </p>
+        <a href="{{ url_for('dashboard') }}" class="exam-action">
+            ← Back to dashboard
+        </a>
+    </div>
+</section>
+{% endblock %}
