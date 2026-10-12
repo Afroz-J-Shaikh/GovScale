@@ -133,14 +133,6 @@
                 <span aria-hidden="true">→</span>
             </a>
 
-        {% elif recent_exam %}
-            <h2>{{ recent_exam.title }}</h2>
-            <p>
-                Our previous exam concluded on
-                {{ recent_exam.end_at.strftime("%d %B %Y") }}.
-                Stay tuned for the next announcement!
-            </p>
-
         {% else %}
             <h2>No upcoming exam announced yet</h2>
             <p>

@@ -1,0 +1,122 @@
+ {% extends "base.html" %}
+
+{% block title %}{{ exam.title }} | GovScale{% endblock %}
+
+{% block content %}
+<section class="dashboard-section">
+    <div class="dashboard-card exam-countdown-card exam-lobby-card">
+        <span class="section-kicker exam-lobby-heading">Your Exam Starts Soon</span>
+
+        <h1>{{ exam.title }}</h1>
+
+        <p>
+            Scheduled for {{ exam.start_at.strftime("%d %B %Y") }}
+            at {{ exam.start_at.strftime("%I:%M %p") }} IST.
+        </p>
+
+        <div class="countdown-panel">
+            <span class="countdown-heading" id="lobby-countdown-heading">
+                {% if exam_state == "upcoming" %}
+                    COUNTDOWN TO THE EXAM
+                {% elif exam_state == "started" %}
+                    EXAM WINDOW OPEN
+                {% else %}
+                    EXAM CONCLUDED
+                {% endif %}
+            </span>
+
+            <div id="lobby-countdown" class="countdown-grid" aria-live="off">
+                <div class="countdown-unit">
+                    <strong id="lobby-days">00</strong>
+                    <span>Days</span>
+                </div>
+                <div class="countdown-unit">
+                    <strong id="lobby-hours">00</strong>
+                    <span>Hours</span>
+                </div>
+                <div class="countdown-unit">
+                    <strong id="lobby-minutes">00</strong>
+                    <span>Minutes</span>
+                </div>
+                <div class="countdown-unit">
+                    <strong id="lobby-seconds">00</strong>
+                    <span>Seconds</span>
+                </div>
+            </div>
+
+            <p id="lobby-countdown-message" class="countdown-message">
+                {% if exam_state == "upcoming" %}
+                    Your exam will start soon. Please return when the countdown reaches zero.
+                {% elif exam_state == "started" %}
+                    The scheduled exam window is open. The exam-taking feature will be connected in a later step.
+                {% else %}
+                    This exam has concluded. Stay tuned for announcements about upcoming scholarship exams.
+                {% endif %}
+            </p>
+        </div>
+
+        <a href="{{ url_for('dashboard') }}" class="exam-action">
+            <span aria-hidden="true">←</span> Back to dashboard
+        </a>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const countdown = document.getElementById("lobby-countdown");
+    if (!countdown) return;
+
+    const startIso = {{ exam_start_iso | tojson }};
+    const endIso = {{ exam_end_iso | tojson }};
+
+    const startTime = new Date(startIso).getTime();
+    const endTime = new Date(endIso).getTime();
+
+    const fields = {
+        days: document.getElementById("lobby-days"),
+        hours: document.getElementById("lobby-hours"),
+        minutes: document.getElementById("lobby-minutes"),
+        seconds: document.getElementById("lobby-seconds")
+    };
+
+    const heading = document.getElementById("lobby-countdown-heading");
+    const message = document.getElementById("lobby-countdown-message");
+
+    function updateCountdown() {
+        const now = Date.now();
+        let remaining;
+
+        if (now < startTime) {
+            remaining = startTime - now;
+            heading.textContent = "COUNTDOWN TO THE EXAM";
+            message.textContent =
+                "Your exam will start soon. Please return when the countdown reaches zero.";
+        } else if (now < endTime) {
+            countdown.hidden = true;
+            heading.textContent = "EXAM WINDOW OPEN";
+            message.textContent =
+                "The scheduled exam window is open. The exam-taking feature will be connected in a later step.";
+            return;
+        } else {
+            countdown.hidden = true;
+            heading.textContent = "EXAM CONCLUDED";
+            message.textContent =
+                "This exam has concluded. Stay tuned for announcements about upcoming scholarship exams.";
+            return;
+        }
+
+        countdown.hidden = false;
+        fields.days.textContent = String(Math.floor(remaining / 86400000)).padStart(2, "0");
+        fields.hours.textContent = String(Math.floor((remaining % 86400000) / 3600000)).padStart(2, "0");
+        fields.minutes.textContent = String(Math.floor((remaining % 3600000) / 60000)).padStart(2, "0");
+        fields.seconds.textContent = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
+    }
+
+    updateCountdown();
+    window.setInterval(updateCountdown, 1000);
+});
+</script>
+{% endblock %}
