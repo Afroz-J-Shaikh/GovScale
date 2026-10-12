@@ -2,8 +2,9 @@
 import os
 import re
 from pathlib import Path
-
-from datetime import date
+from urllib.parse import urlsplit
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from flask import (
     Flask,
     abort,
@@ -193,6 +194,70 @@ class ScholarshipApplication(db.Model):
         backref=db.backref("applications", lazy=True),
     )
 
+
+class DemoExam(db.Model):
+    __tablename__ = "demo_exam"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(160), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    start_at = db.Column(db.DateTime, nullable=False)
+    end_at = db.Column(db.DateTime, nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    scholarship_id = db.Column(
+        db.Integer,
+        db.ForeignKey("scholarship.id"),
+        nullable=True,
+        index=True,
+    )
+
+class ExamRegistration(db.Model):
+    __tablename__ = "exam_registration"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+    )
+
+    exam_id = db.Column(
+        db.Integer,
+        db.ForeignKey("demo_exam.id"),
+        nullable=False,
+    )
+
+    registered_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+
+    status = db.Column(
+        db.String(20),
+        nullable=False,
+        default="registered",
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "user_id",
+            "exam_id",
+            name="uq_student_exam_registration",
+        ),
+    )
+
+    user = db.relationship(
+        "User",
+        backref=db.backref("exam_registrations", lazy=True),
+    )
+
+    exam = db.relationship(
+        "DemoExam",
+        backref=db.backref("registrations", lazy=True),
+    )
+
 class Institution(db.Model):
     __tablename__ = "institution"
 
@@ -216,6 +281,24 @@ class Institution(db.Model):
 def normalize_institution_name(name):
     return re.sub(r"\s+", " ", name.strip()).casefold()
 
+INSTITUTION_ALIASES = {
+    "pune university": "Savitribai Phule Pune University",
+    "university of pune": "Savitribai Phule Pune University",
+    "mumbai university": "University of Mumbai",
+    "bombay university": "University of Mumbai",
+    "delhi university": "University of Delhi",
+    "du": "University of Delhi",
+    "iit bombay": "Indian Institute of Technology Bombay",
+    "iit delhi": "Indian Institute of Technology Delhi",
+    "iit madras": "Indian Institute of Technology Madras",
+    "pune uni": "Savitribai Phule Pune University",
+}
+
+
+def canonical_institution_name(name):
+    normalized = normalize_institution_name(name)
+    return INSTITUTION_ALIASES.get(normalized, name.strip())
+
 @login_manager.user_loader
 def load_user(user_id):
     try:
@@ -232,15 +315,6 @@ class SignUpForm(FlaskForm):
     email = StringField(
         "Email address",
         validators=[DataRequired(), Email(), Length(max=254)],
-    )
-    education_level = SelectField(
-        "Education level",
-        choices=[
-            ("school", "School student"),
-            ("college", "College student"),
-            ("university", "University student"),
-        ],
-        validators=[DataRequired()],
     )
     password = PasswordField(
         "Password",
@@ -388,6 +462,43 @@ def check_scholarship_eligibility(user, scholarship):
 
 @app.route("/")
 def home():
+    india_tz = ZoneInfo("Asia/Kolkata")
+    now_ist = datetime.now(india_tz).replace(tzinfo=None)
+
+    upcoming_exam = DemoExam.query.join(
+        Scholarship,
+        DemoExam.scholarship_id == Scholarship.id,
+    ).filter(
+        DemoExam.is_active.is_(True),
+        DemoExam.end_at > now_ist,
+        Scholarship.is_active.is_(True),
+        Scholarship.category == "exam",
+    ).order_by(
+        DemoExam.start_at.asc()
+    ).first()
+
+    recent_exam = None
+
+    if upcoming_exam is None:
+        recent_exam = DemoExam.query.join(
+            Scholarship,
+            DemoExam.scholarship_id == Scholarship.id,
+        ).filter(
+            DemoExam.is_active.is_(True),
+            DemoExam.end_at <= now_ist,
+            Scholarship.is_active.is_(True),
+            Scholarship.category == "exam",
+        ).order_by(
+            DemoExam.end_at.desc()
+        ).first()
+
+    upcoming_exam_start_iso = (
+        upcoming_exam.start_at.replace(
+            tzinfo=india_tz
+        ).isoformat()
+        if upcoming_exam else None
+    )
+
     query = Scholarship.query.filter_by(is_active=True)
 
     if current_user.is_authenticated:
@@ -411,12 +522,56 @@ def home():
             # show only exam-based scholarships.
             query = query.filter(Scholarship.category == "exam")
 
+    
     scholarships = query.order_by(
         Scholarship.deadline.asc(),
         Scholarship.id.asc(),
     ).all()
 
-    return render_template("index.html", scholarships=scholarships)
+    # Homepage impact metrics use global database totals,
+    # not the personalized scholarship list shown to a logged-in student.
+    impact_active_count = Scholarship.query.filter_by(
+        is_active=True
+    ).count()
+
+    impact_applications_count = ScholarshipApplication.query.filter_by(
+        status="submitted"
+    ).count()
+
+    impact_students_count = User.query.count()
+
+    impact_grade_count = Scholarship.query.filter_by(
+        is_active=True,
+        category="grade",
+    ).count()
+
+    impact_exam_count = Scholarship.query.filter_by(
+        is_active=True,
+        category="exam",
+    ).count()
+
+    impact_scholarships_awarded = ScholarshipApplication.query.filter_by(
+        status="approved"
+    ).count()
+
+    # TODO: Replace with a real count when exam registration is implemented.
+    impact_exam_participants = 0
+
+    return render_template(
+        "index.html",
+        scholarships=scholarships,
+        impact_active_count=impact_active_count,
+        impact_applications_count=impact_applications_count,
+        impact_students_count=impact_students_count,
+        impact_grade_count=impact_grade_count,
+        impact_exam_count=impact_exam_count,
+        impact_scholarships_awarded=impact_scholarships_awarded,
+        impact_exam_participants=impact_exam_participants,
+        upcoming_exam=upcoming_exam,
+        upcoming_exam_start_iso=upcoming_exam_start_iso,
+        recent_exam=recent_exam,
+    )
+
 
 
 @app.route("/scholarships/<int:scholarship_id>")
@@ -589,7 +744,7 @@ def signup():
         user = User(
             full_name=form.full_name.data.strip(),
             email=email,
-            education_level=form.education_level.data,
+            education_level="not_specified",
             indian_citizen_declared=form.indian_citizen.data,
         )
         user.set_password(form.password.data)
@@ -613,7 +768,15 @@ def signup():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    next_url = request.args.get("next", "")
+
     if current_user.is_authenticated:
+        if (
+            next_url
+            and urlsplit(next_url).path.startswith("/")
+            and not urlsplit(next_url).netloc
+        ):
+            return redirect(next_url)
         return redirect(url_for("dashboard"))
 
     form = LoginForm()
@@ -626,6 +789,15 @@ def login():
         if user and user.check_password(form.password.data):
             login_user(user)
             flash("You are now logged in.", "success")
+
+            next_url = request.args.get("next", "")
+            if (
+                next_url
+                and urlsplit(next_url).path.startswith("/")
+                and not urlsplit(next_url).netloc
+            ):
+                return redirect(next_url)
+
             return redirect(url_for("dashboard"))
 
         flash("Invalid email or password.", "error")
@@ -665,6 +837,33 @@ def dashboard():
 
     scholarships = query.all()
 
+    india_tz = ZoneInfo("Asia/Kolkata")
+    now_ist = datetime.now(india_tz).replace(tzinfo=None)
+
+    registered_exam = DemoExam.query.join(
+        Scholarship,
+        DemoExam.scholarship_id == Scholarship.id,
+    ).join(
+        ScholarshipApplication,
+        ScholarshipApplication.scholarship_id == Scholarship.id,
+    ).filter(
+        ScholarshipApplication.user_id == current_user.id,
+        ScholarshipApplication.status == "submitted",
+        Scholarship.is_active.is_(True),
+        Scholarship.category == "exam",
+        DemoExam.is_active.is_(True),
+        DemoExam.end_at > now_ist,
+    ).order_by(
+        DemoExam.start_at.asc()
+    ).first()
+
+    registered_exam_start_iso = (
+        registered_exam.start_at.replace(
+            tzinfo=india_tz
+        ).isoformat()
+        if registered_exam else None
+    )
+
     grade_count = sum(
         1 for scholarship in scholarships
         if scholarship.category == "grade"
@@ -676,8 +875,11 @@ def dashboard():
 
     return render_template(
         "dashboard.html",
+        scholarships=scholarships,
         grade_count=grade_count,
         exam_count=exam_count,
+        registered_exam=registered_exam,
+        registered_exam_start_iso=registered_exam_start_iso,
     )
 
 @app.route("/profile", methods=["GET", "POST"])
@@ -773,17 +975,15 @@ def student_profile():
 
         profile.education_category = form.education_category.data
         profile.study_level = form.study_level.data
-        profile.institution_name = form.institution_name.data.strip()
         profile.institution_not_listed = bool(form.institution_not_listed.data)
         profile.grading_system = form.grading_system.data or None
         profile.academic_score = score
         profile.annual_family_income = income
 
-
-
-        # Add a new institution when it is not already in the database.
-        institution_name = form.institution_name.data.strip()
-        normalized = normalize_institution_name(institution_name)
+        # Resolve recognized institution aliases to their canonical name.
+        entered_name = form.institution_name.data.strip()
+        canonical_name = canonical_institution_name(entered_name)
+        normalized = normalize_institution_name(canonical_name)
 
         institution = Institution.query.filter_by(
             normalized_name=normalized
@@ -793,7 +993,7 @@ def student_profile():
             is_school = form.education_category.data.startswith("school_")
 
             institution = Institution(
-                name=institution_name,
+                name=canonical_name,
                 normalized_name=normalized,
                 institution_type="school" if is_school else "college",
                 education_categories=form.education_category.data,
@@ -802,13 +1002,16 @@ def student_profile():
             )
             db.session.add(institution)
         else:
-            # Make the existing entry available to this education category too.
+            # Include this education category if it is not already supported.
             categories = institution.education_categories.split(",")
             selected_category = form.education_category.data
 
             if selected_category not in categories:
                 categories.append(selected_category)
                 institution.education_categories = ",".join(categories)
+
+        # Store the canonical name in the student's profile.
+        profile.institution_name = institution.name
 
 
         db.session.add(profile)

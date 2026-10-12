@@ -44,48 +44,139 @@
     </div>
 </section>
 
+<section class="impact-stats-section" aria-label="GovScale portal statistics">
+    <div class="impact-stats-heading">
+        <span class="section-kicker">GOVSCALE AT A GLANCE</span>
+        <h2>Every opportunity counts.</h2>
+        <p>Real-time statistics from our scholarship demonstration portal.</p>
+    </div>
+    <div class="impact-stats-grid">
+        <!-- First row: headline metrics -->
+        <article class="impact-stat-card">
+            <strong>{{ impact_scholarships_awarded }}</strong>
+            <h3>Scholarships awarded</h3>
+            <p>Approved scholarship applications recorded in the portal.</p>
+        </article>
+
+        <article class="impact-stat-card">
+            <strong>{{ impact_students_count }}</strong>
+            <h3>Registered students</h3>
+            <p>Student accounts registered on GovScale.</p>
+        </article>
+
+        <article class="impact-stat-card">
+            <strong>{{ impact_exam_participants }}</strong>
+            <h3>Exam participants</h3>
+            <p>Students registered for upcoming demonstration exams.</p>
+        </article>
+
+        <article class="impact-stat-card">
+            <strong>{{ impact_applications_count }}</strong>
+            <h3>Applications received</h3>
+            <p>Total scholarship applications recorded in the portal.</p>
+        </article>
+
+        <!-- Second row: scholarship catalogue -->
+        <article class="impact-stat-card">
+            <strong>{{ impact_active_count }}</strong>
+            <h3>Active scholarships</h3>
+            <p>Currently active opportunities in the database.</p>
+        </article>
+
+        <article class="impact-stat-card">
+            <strong>{{ impact_grade_count }}</strong>
+            <h3>Grade-based scholarships</h3>
+            <p>Active opportunities based on academic performance.</p>
+        </article>
+
+        <article class="impact-stat-card">
+            <strong>{{ impact_exam_count }}</strong>
+            <h3>Exam-based scholarships</h3>
+            <p>Active opportunities connected to examinations.</p>
+        </article>
+    </div>
+    <p class="impact-stats-note">
+        All figures reflect demonstration-portal data. Approved applications
+        do not necessarily mean payments have been made.
+    </p>
+</section>
+
 <section class="exam-section" id="upcoming-exam">
     <div class="exam-copy">
         <span class="section-kicker">MARK YOUR CALENDAR</span>
-        <h2>Your next opportunity is on the horizon.</h2>
-        <p>
-            Get ready for the GovScale Demo Scholarship Exam.
-            This sample exam demonstrates how a portal can handle
-            increased traffic when many students participate together.
-        </p>
-        <div class="exam-date">
-            <span class="exam-calendar-icon">▦</span>
-            <span>
-                <strong>25 October 2026</strong>
-                <small>10:00 AM IST · Demonstration event</small>
-            </span>
-        </div>
+
+        {% if upcoming_exam %}
+            <h2>{{ upcoming_exam.title }}</h2>
+            <p>
+                {{ upcoming_exam.description or
+                   "Get ready for the upcoming GovScale demonstration exam." }}
+                All times are in Indian Standard Time (IST).
+            </p>
+
+            <div class="exam-date">
+                <span class="exam-calendar-icon">▦</span>
+                <span>
+                    <strong>
+                        {{ upcoming_exam.start_at.strftime("%d %B %Y") }}
+                    </strong>
+                    <small>
+                        {{ upcoming_exam.start_at.strftime("%I:%M %p") }} IST
+                        · Ends at
+                        {{ upcoming_exam.end_at.strftime("%I:%M %p") }} IST
+                    </small>
+                </span>
+            </div>
+
+            <a href="{{ url_for('scholarship_detail', scholarship_id=upcoming_exam.scholarship_id) }}"
+               class="exam-action">
+                View Exam Scholarship
+                <span aria-hidden="true">→</span>
+            </a>
+
+        {% elif recent_exam %}
+            <h2>{{ recent_exam.title }}</h2>
+            <p>
+                Our previous exam concluded on
+                {{ recent_exam.end_at.strftime("%d %B %Y") }}.
+                Stay tuned for the next announcement!
+            </p>
+
+        {% else %}
+            <h2>No upcoming exam announced yet</h2>
+            <p>
+                Keep an eye out for our next announcement!
+            </p>
+        {% endif %}
     </div>
 
-    <div class="countdown-panel">
-        <span class="countdown-heading">COUNTDOWN TO THE DEMO EXAM</span>
-        <div class="countdown-grid" aria-live="off">
-            <div class="countdown-unit">
-                <strong id="countdown-days">--</strong>
-                <span>Days</span>
+    {% if upcoming_exam %}
+        <div class="countdown-panel">
+            <span class="countdown-heading">COUNTDOWN TO THE DEMO EXAM</span>
+
+            <div class="countdown-grid" aria-live="off">
+                <div class="countdown-unit">
+                    <strong id="countdown-days">--</strong>
+                    <span>Days</span>
+                </div>
+                <div class="countdown-unit">
+                    <strong id="countdown-hours">--</strong>
+                    <span>Hours</span>
+                </div>
+                <div class="countdown-unit">
+                    <strong id="countdown-minutes">--</strong>
+                    <span>Minutes</span>
+                </div>
+                <div class="countdown-unit">
+                    <strong id="countdown-seconds">--</strong>
+                    <span>Seconds</span>
+                </div>
             </div>
-            <div class="countdown-unit">
-                <strong id="countdown-hours">--</strong>
-                <span>Hours</span>
-            </div>
-            <div class="countdown-unit">
-                <strong id="countdown-minutes">--</strong>
-                <span>Minutes</span>
-            </div>
-            <div class="countdown-unit">
-                <strong id="countdown-seconds">--</strong>
-                <span>Seconds</span>
-            </div>
+
+            <p id="countdown-message" class="countdown-message">
+                Every second brings you closer to the opportunity.
+            </p>
         </div>
-        <p id="countdown-message" class="countdown-message">
-            Every second brings you closer to the opportunity.
-        </p>
-    </div>
+    {% endif %}
 </section>
 
 <section class="catalog-section" id="scholarships">
@@ -244,8 +335,10 @@
     typeSelect.addEventListener("change", filterScholarships);
     filterScholarships();
 
-    // Fictional demo event: 25 October 2026, 10:00 AM India Standard Time.
-    const examDate = new Date("2026-10-25T10:00:00+05:30").getTime();
+    const examStartIso = {{ upcoming_exam_start_iso | tojson }};
+    const examDate = examStartIso
+    ? new Date(examStartIso).getTime()
+    : null;
     const fields = {
         days: document.getElementById("countdown-days"),
         hours: document.getElementById("countdown-hours"),
@@ -255,6 +348,8 @@
     const message = document.getElementById("countdown-message");
 
     function updateCountdown() {
+        if (examDate === null) return;
+
         const remaining = examDate - Date.now();
 
         if (remaining <= 0) {
