@@ -1,0 +1,52 @@
+
+{% extends "base.html" %}
+
+{% block title %}My Applications | GovScale{% endblock %}
+
+{% block content %}
+<section class="dashboard-section">
+    <span class="section-kicker">YOUR STUDENT SPACE</span>
+    <h1>My Applications</h1>
+    <p class="dashboard-intro">
+        Track the scholarships you have applied for.
+    </p>
+
+    {% if applications %}
+        <div class="dashboard-grid">
+            {% for application in applications %}
+                <article class="dashboard-card">
+                    <h2>{{ application.scholarship.title }}</h2>
+
+                    <p>
+                        Category:
+                        {{ "Exam-based" if application.scholarship.category == "exam" else "Grade-based" }}
+                    </p>
+
+                    <p>
+                        Submitted:
+                        {{ application.submitted_at.strftime("%d %B %Y, %I:%M %p") }}
+                    </p>
+
+                    <p>
+                        Status:
+                        <strong>{{ application.status|capitalize }}</strong>
+                    </p>
+
+                    <a class="text-link"
+                       href="{{ url_for('scholarship_detail', scholarship_id=application.scholarship_id) }}">
+                        View scholarship →
+                    </a>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <article class="dashboard-card">
+            <h2>No applications yet</h2>
+            <p>Explore available scholarships and apply when eligible.</p>
+            <a class="text-link" href="{{ url_for('home') }}#scholarships">
+                Browse scholarships →
+            </a>
+        </article>
+    {% endif %}
+</section>
+{% endblock %}

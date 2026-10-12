@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ scholarship.title }} | GovScale{% endblock %}
+
+{% block content %}
+<section class="scholarship-detail-section">
+    <a href="{{ url_for('home') }}#scholarships" class="text-link">
+        ← Back to scholarships
+    </a>
+
+    <article class="scholarship-detail-card">
+        <span class="section-kicker">
+            {{ 'EXAM-BASED' if scholarship.category == 'exam' else 'MERIT/GRADE-BASED' }}
+        </span>
+        <h1>{{ scholarship.title }}</h1>
+        <p class="detail-description">{{ scholarship.description }}</p>
+
+        <div class="detail-award">
+            <span>Illustrative award amount</span>
+            <strong>₹{{ "{:,}".format(scholarship.award_amount) }}</strong>
+        </div>
+
+        <h2>Eligibility requirements</h2>
+        <p>{{ scholarship.eligibility_description }}</p>
+
+        <h2>Education levels</h2>
+        <p>{{ scholarship.eligible_education_levels.replace(',', ', ')|capitalize }}</p>
+
+        <h2>Application deadline</h2>
+        <p>
+            {{ scholarship.deadline.strftime('%d %B %Y') if scholarship.deadline else 'To be announced' }}
+        </p>
+
+        {% if not existing_application and eligible is not none %}
+            {% if eligible %}
+                <div class="eligibility-message eligibility-success">
+                    <span class="eligibility-status status-eligible">
+                        ✓ Eligible
+                    </span>
+                    <p>You are eligible for this scholarship.</p>
+                </div>
+            {% else %}
+                <div class="eligibility-message eligibility-warning">
+                    <span class="eligibility-status status-ineligible">
+                        ✕ Not eligible
+                    </span>
+
+                    <ul>
+                        {% for reason in ineligible_reasons %}
+                            <li>{{ reason }}</li>
+                        {% endfor %}
+                    </ul>
+
+                    <a class="text-link"
+                       href="{{ url_for('student_profile') }}">
+                        Review my profile →
+                    </a>
+                </div>
+            {% endif %}
+        {% endif %}
+
+        {% if current_user.is_authenticated %}
+            {% if existing_application %}
+                <div class="eligibility-message eligibility-success">
+                    <span class="eligibility-status status-eligible">
+                        ✓ Application submitted
+                    </span>
+                    <p>
+                        You have already applied for this scholarship.
+                        Your submitted application remains recorded.
+                    </p>
+                </div>
+                <a class="text-link"
+                   href="{{ url_for('my_applications') }}">
+                    View my applications →
+                </a>
+            {% elif eligible %}
+                <form method="POST"
+                      action="{{ url_for('apply_for_scholarship', scholarship_id=scholarship.id) }}">
+                    <input type="hidden"
+                           name="csrf_token"
+                           value="{{ csrf_token() }}">
+                    <button type="submit" class="nav-signup">
+                        Apply Now
+                    </button>
+                </form>
+            {% else %}
+                <p>Complete the requirements above before applying.</p>
+            {% endif %}
+        {% else %}
+            <a class="nav-signup"
+               href="{{ url_for('login', next=url_for('scholarship_detail', scholarship_id=scholarship.id)) }}">
+                Log in to apply
+            </a>
+        {% endif %}
+
+        <p class="demo-disclaimer">
+            Fictional demonstration opportunity. This is not a real scholarship
+            offer, government scheme, or payment commitment.
+        </p>
+    </article>
+</section>
+{% endblock %}
