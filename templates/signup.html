@@ -35,14 +35,6 @@
             </div>
 
             <div class="form-field">
-                {{ form.education_level.label }}
-                {{ form.education_level(class="form-input") }}
-                {% for error in form.education_level.errors %}
-                    <small class="field-error">{{ error }}</small>
-                {% endfor %}
-            </div>
-
-            <div class="form-field">
                 {{ form.password.label }}
                 {{ form.password(class="form-input", placeholder="At least 8 characters", autocomplete="new-password") }}
                 {% for error in form.password.errors %}

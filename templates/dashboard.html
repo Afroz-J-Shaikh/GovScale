@@ -63,11 +63,17 @@
 
     </div>
 
+    {% if registered_exam %}
     <div class="dashboard-card exam-countdown-card">
-        <span class="section-kicker">UPCOMING DEMO EXAM</span>
-        <h2>Get ready for exam day</h2>
+        <span class="section-kicker">YOUR REGISTERED EXAM</span>
 
-        <p>Scheduled for 25 October 2026 at 10:00 AM IST.</p>
+        <h2>{{ registered_exam.title }}</h2>
+
+        <p>
+            Scheduled for
+            {{ registered_exam.start_at.strftime("%d %B %Y") }}
+            at {{ registered_exam.start_at.strftime("%I:%M %p") }} IST.
+        </p>
 
         <div id="exam-countdown"
              class="dashboard-stat"
@@ -75,6 +81,7 @@
             Calculating countdown...
         </div>
     </div>
+    {% endif %}
 
     <div class="dashboard-grid dashboard-quick-links">
         <article class="dashboard-card">
@@ -100,16 +107,23 @@
     </div>
 </section>
 
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const countdown = document.getElementById("exam-countdown");
-    const examDate = new Date("2026-10-25T10:00:00+05:30").getTime();
+
+    if (!countdown) return;
+
+    const examStartIso = {{ registered_exam_start_iso | tojson }};
+    if (!examStartIso) return;
+
+    const examDate = new Date(examStartIso).getTime();
 
     function updateCountdown() {
         const remaining = examDate - Date.now();
 
         if (remaining <= 0) {
-            countdown.textContent = "Exam time has arrived!";
+            countdown.textContent = "Exam start time has arrived!";
             return;
         }
 
@@ -127,4 +141,5 @@ document.addEventListener("DOMContentLoaded", function () {
     setInterval(updateCountdown, 1000);
 });
 </script>
+
 {% endblock %}

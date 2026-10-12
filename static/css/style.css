@@ -4317,3 +4317,1273 @@ body {
     color: #8b3030;
     background: #fbe8e6;
 }
+/* ==========================================
+   GOVSCALE DASHBOARD — CLEAN VISUAL REFINEMENT
+   ========================================== */
+
+.dashboard-section {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: clamp(32px, 5vw, 60px) clamp(20px, 5vw, 72px) 72px;
+}
+
+.dashboard-section > h1 {
+    margin-bottom: 10px;
+    font-size: clamp(30px, 3.5vw, 42px);
+    line-height: 1.2;
+    letter-spacing: -0.8px;
+}
+
+.dashboard-intro {
+    margin: 0 0 28px;
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+.dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+}
+
+.dashboard-card {
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 26px;
+    border: 1px solid #dce4d9;
+    border-radius: 16px;
+    background: #fffdf8;
+    box-shadow: 0 5px 18px rgba(36, 78, 59, 0.045);
+    transition: transform 0.2s ease, box-shadow 0.2s ease,
+                border-color 0.2s ease;
+}
+
+.dashboard-card:hover {
+    border-color: #b7cbb8;
+    box-shadow: 0 10px 26px rgba(36, 78, 59, 0.09);
+    transform: translateY(-2px);
+}
+
+.dashboard-card h2 {
+    margin: 12px 0 10px;
+    font-size: 21px;
+    line-height: 1.35;
+}
+
+.dashboard-card p {
+    min-height: 0;
+    margin: 0 0 14px;
+    font-size: 15px;
+    line-height: 1.75;
+}
+
+.dashboard-card .dashboard-stat {
+    margin: 12px 0;
+    font-size: clamp(28px, 3vw, 36px);
+    line-height: 1.2;
+}
+
+.dashboard-card .dashboard-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 14px;
+    border: 1px solid #d9e6d6;
+    border-radius: 14px;
+}
+
+.dashboard-card .text-link {
+    margin-top: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    text-underline-offset: 4px;
+}
+
+.exam-countdown-card {
+    margin-top: 24px;
+    padding: clamp(22px, 4vw, 32px);
+    border: 1px solid #e6d8b8;
+    border-radius: 16px;
+    background: #fbf5e8;
+}
+
+.dashboard-quick-links {
+    margin-top: 28px;
+}
+
+@media (max-width: 760px) {
+    .dashboard-section {
+        padding: 32px 18px 48px;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
+    }
+
+    .dashboard-card {
+        padding: 22px;
+    }
+
+    .dashboard-card h2 {
+        font-size: 20px;
+    }
+
+    .dashboard-card p {
+        font-size: 15px;
+    }
+
+    .exam-countdown-card {
+        padding: 22px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-card {
+        transition: none;
+    }
+
+    .dashboard-card:hover {
+        transform: none;
+    }
+}
+
+/* ==========================================
+   GOVSCALE — POLISHED BOTANICAL UI
+   ========================================== */
+
+/* Navigation: visible button-style links */
+@media (min-width: 761px) {
+    .site-header .nav-links {
+        gap: 8px !important;
+    }
+
+    .site-header .nav-links a,
+    .site-header .nav-links a:visited {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 13px !important;
+        border: 1px solid rgba(255, 253, 248, 0.32) !important;
+        border-radius: 9px !important;
+        background: rgba(255, 253, 248, 0.09) !important;
+        color: #FFFDF8 !important;
+        text-decoration: none !important;
+        transition: background 180ms ease, color 180ms ease,
+                    transform 180ms ease;
+    }
+
+    .site-header .nav-links a:hover,
+    .site-header .nav-links a:focus-visible {
+        background: #E8C778 !important;
+        border-color: #E8C778 !important;
+        color: #193B2B !important;
+        text-decoration: none !important;
+        transform: translateY(-1px);
+    }
+
+    .site-header .nav-actions .nav-login {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 15px !important;
+        border: 1px solid rgba(255, 253, 248, 0.65) !important;
+        border-radius: 9px !important;
+        background: transparent !important;
+        color: #FFFDF8 !important;
+        text-decoration: none !important;
+    }
+
+    .site-header .nav-actions .nav-login:hover {
+        background: rgba(255, 253, 248, 0.13) !important;
+    }
+}
+
+/* Hero: one shared banner containing text and image */
+.hero-redesign {
+    box-sizing: border-box;
+    width: min(1380px, calc(100% - 64px));
+    margin: 32px auto 48px;
+    grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+    gap: clamp(24px, 4vw, 54px);
+    padding: clamp(32px, 5vw, 64px);
+    border: 0;
+    border-radius: 28px;
+    background:
+        radial-gradient(ellipse at 90% 12%,
+            rgba(217, 164, 65, 0.19), transparent 38%),
+        linear-gradient(125deg, #FBF8EF 0%, #F0F3E9 100%);
+    box-shadow: 0 18px 35px rgba(36, 78, 59, 0.08),
+                12px 18px 0 -8px rgba(217, 164, 65, 0.22);
+}
+
+.hero-redesign .hero-content {
+    min-width: 0;
+}
+
+.hero-redesign .hero-image-placeholder {
+    min-width: 0;
+    height: 100%;
+    min-height: 330px;
+    max-height: 440px;
+    border-radius: 20px;
+    background:
+        radial-gradient(ellipse at 75% 20%,
+            rgba(217, 164, 65, 0.22), transparent 44%),
+        linear-gradient(145deg, #DCE8D9, #F3E8D1);
+}
+
+/* Scholarship cards: soft green shadow plus offset gold shadow */
+.scholarship-grid-redesign {
+    align-items: stretch;
+    gap: 28px;
+}
+
+.scholarship-card-redesign {
+    position: relative;
+    overflow: visible;
+    padding: 26px;
+    border: 1px solid #E1E7DC;
+    border-radius: 17px;
+    background: #FFFEFA;
+    box-shadow: 0 9px 22px rgba(36, 78, 59, 0.09),
+                9px 13px 0 -5px rgba(217, 164, 65, 0.30);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.scholarship-card-redesign:hover {
+    transform: translateY(-4px);
+    border-color: #E1E7DC;
+    box-shadow: 0 16px 30px rgba(36, 78, 59, 0.13),
+                11px 17px 0 -5px rgba(217, 164, 65, 0.38);
+}
+
+/* Different offset shadow for each category */
+.scholarship-card-redesign[data-type="grade"] {
+    box-shadow: 0 9px 22px rgba(36, 78, 59, 0.09),
+                9px 13px 0 -5px rgba(217, 164, 65, 0.34);
+}
+
+.scholarship-card-redesign[data-type="exam"] {
+    box-shadow: 0 9px 22px rgba(36, 78, 59, 0.10),
+                9px 13px 0 -5px rgba(109, 148, 119, 0.40);
+}
+
+.scholarship-card-redesign[data-type="grade"]:hover {
+    box-shadow: 0 16px 30px rgba(36, 78, 59, 0.13),
+                11px 17px 0 -5px rgba(217, 164, 65, 0.43);
+}
+
+.scholarship-card-redesign[data-type="exam"]:hover {
+    box-shadow: 0 16px 30px rgba(36, 78, 59, 0.13),
+                11px 17px 0 -5px rgba(109, 148, 119, 0.48);
+}
+
+.scholarship-card-redesign .scholarship-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: auto;
+    padding: 15px 16px;
+    border: 0;
+    border-radius: 12px;
+    background: #EAF1E7;
+}
+
+.scholarship-card-redesign .scholarship-meta span {
+    font-size: 13px;
+    font-weight: 600;
+    color: #526653;
+}
+
+.scholarship-card-redesign .scholarship-meta strong {
+    color: #244E3B;
+    font-size: 27px;
+    line-height: 1.25;
+}
+
+.scholarship-card-redesign .catalogue-deadline {
+    flex: initial;
+    margin: 16px 0 18px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #FFF0EC;
+    color: #883A32;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.scholarship-card-redesign .catalogue-deadline strong {
+    color: #A52F2F;
+    font-weight: 800;
+}
+
+.scholarship-card-redesign > .text-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: auto;
+    padding: 13px 15px;
+    border-radius: 9px;
+    background: #244E3B;
+    color: #FFFDF8;
+    text-decoration: none;
+    transition: background 180ms ease, transform 180ms ease;
+}
+
+.scholarship-card-redesign > .text-link:hover {
+    background: #193B2B;
+    color: #FFFFFF;
+    transform: translateY(-1px);
+}
+
+/* Discovery journey: distinct cards and connected visual flow */
+.how-section-redesign {
+    position: relative;
+    padding-top: 84px;
+    padding-bottom: 84px;
+    background:
+        radial-gradient(ellipse at 8% 90%,
+            rgba(217, 164, 65, 0.12), transparent 34%),
+        #F4F3E9;
+}
+
+.how-heading {
+    margin-bottom: 42px;
+}
+
+.how-heading h2 {
+    color: #244E3B;
+    font-size: clamp(29px, 3.4vw, 42px);
+    line-height: 1.25;
+}
+
+.steps-grid-redesign {
+    gap: 22px;
+}
+
+.steps-grid-redesign .step {
+    position: relative;
+    padding: 27px 23px;
+    border: 0;
+    border-radius: 15px;
+    background: #FFFEFA;
+    box-shadow: 0 8px 18px rgba(36, 78, 59, 0.07),
+                7px 10px 0 -4px rgba(109, 148, 119, 0.30);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.steps-grid-redesign .step:nth-child(even) {
+    box-shadow: 0 8px 18px rgba(36, 78, 59, 0.07),
+                7px 10px 0 -4px rgba(217, 164, 65, 0.34);
+}
+
+.steps-grid-redesign .step:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 25px rgba(36, 78, 59, 0.11),
+                8px 13px 0 -4px rgba(109, 148, 119, 0.36);
+}
+
+.steps-grid-redesign .step-number {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: #244E3B;
+    color: #FFFDF8;
+    font-size: 15px;
+}
+
+.steps-grid-redesign .step:nth-child(even) .step-number {
+    background: #D9A441;
+    color: #193B2B;
+}
+
+.steps-grid-redesign .step h3 {
+    font-size: 20px;
+    line-height: 1.4;
+}
+
+.steps-grid-redesign .step p {
+    font-size: 15px;
+}
+
+@media (max-width: 900px) {
+    .hero-redesign {
+        width: calc(100% - 32px);
+        margin: 20px auto 36px;
+        grid-template-columns: minmax(0, 1fr);
+        padding: clamp(24px, 5vw, 40px);
+        border-radius: 22px;
+    }
+
+    .hero-redesign .hero-image-placeholder {
+        min-height: 270px;
+        max-height: 340px;
+    }
+
+    .scholarship-grid-redesign {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .steps-grid-redesign {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .hero-redesign {
+        width: calc(100% - 24px);
+        padding: 25px 20px;
+        border-radius: 18px;
+    }
+
+    .hero-redesign .hero-image-placeholder {
+        min-height: 220px;
+    }
+
+    .scholarship-grid-redesign,
+    .steps-grid-redesign {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scholarship-card-redesign,
+    .steps-grid-redesign .step,
+    .hero-redesign .button,
+    .site-header .nav-links a {
+        transition: none;
+    }
+
+    .scholarship-card-redesign:hover,
+    .steps-grid-redesign .step:hover {
+        transform: none;
+    }
+}
+
+
+/* FINAL TWEAK: compact deadline highlight */
+.scholarship-card-redesign .catalogue-deadline {
+    display: table !important;
+    width: auto !important;
+    max-width: 100%;
+    flex: 0 0 auto !important;
+    align-self: flex-start;
+    padding: 5px 12px !important;
+    margin: 12px 0 18px !important;
+    line-height: 1.35 !important;
+}
+
+/* FINAL TWEAK: connect discovery section directly to footer */
+.how-section-redesign {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.site-footer {
+    margin-top: 0 !important;
+}
+
+/* Deadline: preserve horizontal padding, reduce only vertical padding */
+.scholarship-card-redesign .catalogue-deadline {
+    padding: 10px 12px 0 !important;
+    line-height: 1.6 !important;
+    margin: 12px 0 18px !important;
+}
+
+/* Discovery section: restore a comfortable bottom area */
+.how-section-redesign {
+    padding-bottom: 48px !important;
+    margin-bottom: 0 !important;
+}
+
+.site-footer {
+    margin-top: 0 !important;
+}
+
+/* Scholarship deadline: compact, left-aligned, single-line height */
+.scholarship-card-redesign .catalogue-deadline {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    align-self: flex-start !important;
+    width: fit-content !important;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px !important;
+    margin: 12px 0 18px !important;
+    line-height: 1.25 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    flex: 0 0 auto !important;
+    text-align: left !important;
+}
+
+.scholarship-card-redesign .catalogue-deadline strong {
+    display: inline !important;
+    line-height: inherit !important;
+}
+
+/* Keep a balanced amount of space below the discovery section */
+.how-section-redesign {
+    padding-bottom: 48px !important;
+}
+
+/* Deadline: full card width, compact height */
+.scholarship-card-redesign .catalogue-deadline {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    align-self: stretch !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    padding: 10px 12px !important;
+    line-height: 1.25 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    text-align: left !important;
+}
+
+/* GOVSCALE — LIVE HOMEPAGE IMPACT STATISTICS */
+.impact-stats-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 24px;
+}
+
+.impact-stats-heading {
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.impact-stats-heading h2 {
+    margin: 8px 0;
+    color: var(--heading-color, #234b38);
+}
+
+.impact-stats-heading p,
+.impact-stats-note {
+    color: var(--text-muted, #6c756e);
+}
+
+.impact-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.impact-stat-card {
+    display: flex;
+    min-height: 120px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 14px;
+    border: 1px solid rgba(54, 91, 65, 0.15);
+    border-radius: 16px;
+    background: #fffdf6;
+    box-shadow: 0 5px 16px rgba(40, 65, 45, 0.06);
+    text-align: center;
+}
+
+.impact-stat-number {
+    color: #315d40;
+    font-size: clamp(1.7rem, 3vw, 2.4rem);
+    font-weight: 750;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.impact-stat-label {
+    color: #515e54;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.impact-stats-note {
+    margin: 16px 0 0;
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .impact-stats-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .impact-stats-section {
+        padding: 32px 18px;
+    }
+
+    .impact-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .impact-stat-card {
+        min-height: 105px;
+        padding: 16px 10px;
+    }
+}
+
+
+/* GOVSCALE — SIGNATURE IMPACT SECTION */
+.impact-stats-section {
+    position: relative;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 64px 24px 58px;
+}
+
+.impact-stats-heading {
+    max-width: 720px;
+    margin: 0 auto 30px;
+    text-align: center;
+}
+
+.impact-stats-heading h2 {
+    margin: 10px 0;
+    color: #234b38;
+    font-size: clamp(1.8rem, 3vw, 2.55rem);
+    line-height: 1.18;
+    letter-spacing: -0.035em;
+}
+
+.impact-stats-heading p {
+    margin: 0;
+    color: #69766c;
+    font-size: 1.02rem;
+}
+
+.impact-featured-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.impact-card {
+    position: relative;
+    display: flex;
+    min-height: 245px;
+    flex-direction: column;
+    align-items: flex-start;
+    overflow: hidden;
+    padding: 27px 26px 24px;
+    border: 1px solid transparent;
+    border-radius: 22px;
+    box-shadow: 0 12px 28px rgba(34, 65, 44, 0.10);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.impact-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 34px rgba(34, 65, 44, 0.16);
+}
+
+.impact-card-primary {
+    color: #fffdf5;
+    background: linear-gradient(145deg, #234b38, #37694a);
+}
+
+.impact-card-gold {
+    color: #3d3522;
+    background: linear-gradient(145deg, #f2e5b9, #e5ca7d);
+}
+
+.impact-card-light {
+    color: #234b38;
+    background: #fffdf6;
+    border-color: #dfe8dc;
+}
+
+.impact-card-icon {
+    display: grid;
+    width: 43px;
+    height: 43px;
+    margin-bottom: 18px;
+    place-items: center;
+    border: 1px solid currentColor;
+    border-radius: 14px;
+    font-size: 1.45rem;
+    opacity: 0.9;
+}
+
+.impact-card-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 750;
+    letter-spacing: 0.12em;
+    opacity: 0.8;
+}
+
+.impact-card .impact-stat-number {
+    margin-top: 8px;
+    font-size: clamp(2.6rem, 4vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.impact-card .impact-stat-label {
+    margin-top: 7px;
+    font-size: 1.13rem;
+    font-weight: 700;
+}
+
+.impact-card-footnote {
+    margin-top: 8px;
+    font-size: 0.83rem;
+    line-height: 1.45;
+    opacity: 0.82;
+}
+
+.impact-secondary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.impact-mini-card {
+    display: flex;
+    min-width: 0;
+    min-height: 140px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 20px 18px;
+    border: 1px solid #e0e6d9;
+    border-radius: 17px;
+    background: #f8f7ed;
+    transition: background 180ms ease, transform 180ms ease;
+}
+
+.impact-mini-card:hover {
+    transform: translateY(-3px);
+    background: #f0f1e4;
+}
+
+.impact-mini-icon {
+    margin-bottom: 10px;
+    color: #9a7b30;
+    font-size: 1.35rem;
+}
+
+.impact-mini-card strong {
+    color: #2d5b3d;
+    font-size: 1.85rem;
+    font-weight: 800;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+}
+
+.impact-mini-card > span:last-child {
+    margin-top: 7px;
+    color: #626d62;
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+
+.impact-stats-note {
+    margin: 20px 0 0;
+    color: #73796e;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .impact-featured-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .impact-card:last-child {
+        grid-column: 1 / -1;
+    }
+
+    .impact-secondary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .impact-stats-section {
+        padding: 42px 18px;
+    }
+
+    .impact-featured-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .impact-card:last-child {
+        grid-column: auto;
+    }
+
+    .impact-card {
+        min-height: 220px;
+        padding: 23px;
+    }
+
+    .impact-secondary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 11px;
+    }
+
+    .impact-mini-card {
+        min-height: 125px;
+        padding: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .impact-card,
+    .impact-mini-card {
+        transition: none;
+    }
+
+    .impact-card:hover,
+    .impact-mini-card:hover {
+        transform: none;
+    }
+}
+
+/* GOVSCALE — REFINED GOLD STATISTICS DESIGN */
+.impact-stats-section {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 64px 24px;
+    background:
+        radial-gradient(ellipse at 8% 12%,
+            rgba(226, 202, 132, 0.13), transparent 34%),
+        radial-gradient(ellipse at 92% 88%,
+            rgba(226, 202, 132, 0.12), transparent 32%),
+        #fbf9f0;
+    border-radius: 28px;
+}
+
+.impact-stats-heading {
+    max-width: 720px;
+    margin: 0 auto 34px;
+    text-align: center;
+}
+
+.impact-stats-heading h2 {
+    margin: 10px 0;
+    color: #284b36;
+    font-size: clamp(1.9rem, 3vw, 2.5rem);
+    line-height: 1.2;
+    letter-spacing: -0.035em;
+}
+
+.impact-stats-heading p {
+    margin: 0;
+    color: #687166;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.impact-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.impact-stat-card {
+    box-sizing: border-box;
+    display: flex;
+    min-width: 0;
+    min-height: 205px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 26px;
+    border: 1px solid #e4d6a8;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #fff9e7, #f0e2b8);
+    box-shadow:
+        0 7px 0 rgba(188, 157, 77, 0.10),
+        0 12px 26px rgba(83, 68, 35, 0.09);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.impact-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow:
+        0 7px 0 rgba(188, 157, 77, 0.10),
+        0 18px 30px rgba(83, 68, 35, 0.14);
+}
+
+.impact-stat-card > strong {
+    display: block;
+    margin-bottom: 12px;
+    color: #315b3d;
+    font-size: clamp(2.5rem, 4vw, 3.3rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.impact-stat-card h3 {
+    margin: 0 0 8px;
+    color: #3b452f;
+    font-size: 1.08rem;
+    font-weight: 750;
+    line-height: 1.35;
+}
+
+.impact-stat-card p {
+    margin: 0;
+    color: #6a6857;
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
+.impact-stats-note {
+    max-width: 760px;
+    margin: 24px auto 0;
+    color: #777263;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .impact-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .impact-stats-section {
+        margin: 0 12px;
+        padding: 38px 16px;
+        border-radius: 22px;
+    }
+
+    .impact-stats-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .impact-stat-card {
+        min-height: 170px;
+        padding: 23px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .impact-stat-card,
+    .impact-stat-card:hover {
+        transition: none;
+        transform: none;
+    }
+}
+
+
+/* GOVSCALE — REFINED IMPACT STATISTICS */
+
+.impact-stats-section {
+    padding: 42px 24px;
+}
+
+.impact-stats-heading {
+    margin-bottom: 26px;
+}
+
+.impact-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    max-width: 1080px;
+    margin: 0 auto;
+}
+
+/* Consistent, elegant card design */
+.impact-stat-card {
+    min-width: 0;
+    min-height: 148px;
+    padding: 18px 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+
+    background: linear-gradient(145deg, #fffdf7, #f6f0e2);
+    border: 1px solid #e4d9bd;
+    border-radius: 14px;
+    box-shadow: 0 5px 16px rgba(48, 63, 43, 0.10);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+/* Title above the number */
+.impact-stat-card h3 {
+    order: 1;
+    margin: 0 0 9px;
+    color: #465044;
+    font-size: 0.91rem;
+    line-height: 1.35;
+    font-weight: 650;
+}
+
+/* Large, bold, centered number */
+.impact-stat-card > strong {
+    order: 2;
+    display: block;
+    margin: 0 0 9px;
+    color: #31583e;
+    font-size: clamp(2.1rem, 2.8vw, 2.65rem);
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+}
+
+/* Detail below the number */
+.impact-stat-card p {
+    order: 3;
+    margin: 0;
+    color: #747568;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    font-weight: 400;
+}
+
+.impact-stat-card:hover {
+    transform: translateY(-3px);
+    border-color: #cbb77d;
+    box-shadow: 0 10px 24px rgba(48, 63, 43, 0.16);
+}
+
+/* Use a centered 3-card row via explicit placement */
+.impact-stats-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.impact-stat-card {
+    grid-column: span 3;
+}
+
+.impact-stat-card:nth-child(5) {
+    grid-column: 2 / span 3;
+}
+
+.impact-stat-card:nth-child(6) {
+    grid-column: 5 / span 3;
+}
+
+.impact-stat-card:nth-child(7) {
+    grid-column: 8 / span 3;
+}
+
+/* Tablet and mobile: natural two-column layout */
+@media (max-width: 900px) {
+    .impact-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 13px;
+    }
+
+    .impact-stat-card:nth-child(n) {
+        grid-column: auto;
+        width: auto;
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 560px) {
+    .impact-stats-section {
+        padding: 32px 14px;
+    }
+
+    .impact-stats-grid {
+        gap: 11px;
+    }
+
+    .impact-stat-card {
+        min-height: 138px;
+        padding: 14px 10px;
+        border-radius: 12px;
+    }
+
+    .impact-stat-card h3 {
+        font-size: 0.84rem;
+    }
+
+    .impact-stat-card > strong {
+        font-size: 1.95rem;
+    }
+
+    .impact-stat-card p {
+        font-size: 0.73rem;
+    }
+}
+
+
+/* GOVSCALE — WIDE, COMPACT GOLD-EDGE STAT CARDS */
+
+.impact-stats-section {
+    padding: 30px 20px;
+}
+
+.impact-stats-heading {
+    margin-bottom: 18px;
+}
+
+.impact-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 16px;
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+.impact-stat-card {
+    grid-column: span 3;
+    min-width: 0;
+    min-height: 88px;
+    padding: 11px 20px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    text-align: left;
+
+    background: #fffdf8;
+    border: 1px solid #eee8d8;
+    border-radius: 12px;
+
+    /* Gold shadow concentrated on the right */
+    box-shadow: 5px 3px 0 rgba(190, 155, 75, 0.14),
+                9px 5px 15px rgba(190, 155, 75, 0.12);
+
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Title above number */
+.impact-stat-card h3 {
+    order: 1;
+    margin: 0 0 3px;
+    color: #31583e;
+    font-size: 0.98rem;
+    line-height: 1.3;
+    font-weight: 650;
+}
+
+/* Large, bold green number */
+.impact-stat-card > strong {
+    order: 2;
+    display: block;
+    margin: 0 0 3px;
+    color: #28563b;
+    font-size: 2rem;
+    line-height: 1.02;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+}
+
+/* Detail below number */
+.impact-stat-card p {
+    order: 3;
+    margin: 0;
+    color: #617363;
+    font-size: 0.76rem;
+    line-height: 1.35;
+}
+
+.impact-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 7px 3px 0 rgba(190, 155, 75, 0.18),
+                12px 6px 18px rgba(190, 155, 75, 0.18);
+}
+
+/* Center the bottom three cards */
+.impact-stat-card:nth-child(5) {
+    grid-column: 2 / span 3;
+}
+
+.impact-stat-card:nth-child(6) {
+    grid-column: 5 / span 3;
+}
+
+.impact-stat-card:nth-child(7) {
+    grid-column: 8 / span 3;
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+    .impact-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .impact-stat-card,
+    .impact-stat-card:nth-child(n) {
+        grid-column: auto;
+    }
+}
+
+/* Mobile */
+@media (max-width: 560px) {
+    .impact-stats-section {
+        padding: 26px 14px;
+    }
+
+    .impact-stats-grid {
+        gap: 10px;
+    }
+
+    .impact-stat-card {
+        min-height: 88px;
+        padding: 10px 12px;
+    }
+
+    .impact-stat-card h3 {
+        font-size: 0.84rem;
+    }
+
+    .impact-stat-card > strong {
+        font-size: 1.75rem;
+    }
+
+    .impact-stat-card p {
+        font-size: 0.70rem;
+    }
+}
+/* Upcoming exam action button */
+.exam-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 24px;
+    padding: 12px 20px;
+    border: 1px solid #e8c778;
+    border-radius: 8px;
+    background: #fffdf8;
+    color: var(--gs-green);
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.exam-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 4px 3px 0 rgba(190, 155, 75, 0.25);
+}
+
+.exam-action:focus-visible {
+    outline: 3px solid #e8c778;
+    outline-offset: 4px;
+}

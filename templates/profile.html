@@ -169,6 +169,19 @@ document.addEventListener("DOMContentLoaded", function () {
         ? JSON.parse(institutionsData.textContent)
         : [];
 
+    const institutionAliases = {
+    "pune university": "Savitribai Phule Pune University",
+    "university of pune": "Savitribai Phule Pune University",
+    "mumbai university": "University of Mumbai",
+    "bombay university": "University of Mumbai",
+    "delhi university": "University of Delhi",
+    "du": "University of Delhi",
+    "iit bombay": "Indian Institute of Technology Bombay",
+    "iit delhi": "Indian Institute of Technology Delhi",
+    "iit madras": "Indian Institute of Technology Madras",
+    "pune uni": "Savitribai Phule Pune University"
+    };
+
     const levels = {
         school_8_10: [
             ["class_8", "Class 8"],
@@ -206,11 +219,17 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function matchingInstitutions() {
-        const query = search.value.trim().toLowerCase();
+    const query = search.value.trim().toLowerCase();
+    const aliasTarget = institutionAliases[query];
 
-        return institutions.filter(function (institution) {
-            return institution.categories.includes(category.value) &&
-                institution.name.toLowerCase().includes(query);
+    return institutions.filter(function (institution) {
+        const name = institution.name.toLowerCase();
+
+        return institution.categories.includes(category.value) &&
+            (
+                name.includes(query) ||
+                (aliasTarget && name === aliasTarget.toLowerCase())
+            );
         });
     }
 
@@ -241,12 +260,22 @@ document.addEventListener("DOMContentLoaded", function () {
             optionsList.appendChild(button);
         });
 
+
         const query = search.value.trim().toLowerCase();
+        const aliasTarget = institutionAliases[query];
 
         const alreadyExists = institutions.some(function (institution) {
+            const name = institution.name.trim().toLowerCase();
+
             return institution.categories.includes(category.value) &&
-                institution.name.trim().toLowerCase() === query;
+                (name === query ||
+                (aliasTarget && name === aliasTarget.toLowerCase()));
         });
+
+        addButton.hidden = !query || alreadyExists;
+        addButton.textContent = query
+            ? '+ Add "' + search.value.trim() + '"'
+            : "+ Add this institution";
 
         addButton.hidden = !query || alreadyExists;
         addButton.textContent = query
