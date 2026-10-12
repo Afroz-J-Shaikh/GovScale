@@ -1,0 +1,946 @@
+
+import os
+import re
+from pathlib import Path
+
+from datetime import date
+from flask import (
+    Flask,
+    abort,
+    flash,
+    redirect,
+    render_template,
+    url_for,
+    request,
+)
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    current_user,
+    login_required,
+    login_user,
+    logout_user,
+)
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf import FlaskForm
+from sqlalchemy.exc import IntegrityError
+from werkzeug.security import check_password_hash, generate_password_hash
+from wtforms import (
+    BooleanField,
+    PasswordField,
+    SelectField,
+    StringField,
+    SubmitField,
+)
+from wtforms.validators import (
+    DataRequired,
+    Email,
+    EqualTo,
+    Length,
+    ValidationError,
+)
+
+
+app = Flask(__name__, instance_relative_config=True)
+
+# Set GOVSCALE_SECRET_KEY in your environment before production deployment.
+app.config["SECRET_KEY"] = os.environ.get(
+    "GOVSCALE_SECRET_KEY",
+    "local-development-key-change-before-deployment",
+)
+
+Path(app.instance_path).mkdir(parents=True, exist_ok=True)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = (
+    "sqlite:///" + str(Path(app.instance_path) / "govscale.db")
+)
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db = SQLAlchemy(app)
+
+# Enable CSRF protection for POST forms
+from flask_wtf.csrf import CSRFProtect
+
+csrf = CSRFProtect(app)
+
+login_manager = LoginManager()
+login_manager.login_view = "login"
+login_manager.login_message = "Please log in to access your student dashboard."
+login_manager.init_app(app)
+
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    full_name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(254), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    education_level = db.Column(db.String(30), nullable=False)
+    indian_citizen_declared = db.Column(
+        db.Boolean, nullable=False, default=False
+    )
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+
+
+class Scholarship(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(160), nullable=False)
+    category = db.Column(db.String(20), nullable=False, index=True)
+    education_category = db.Column(db.String(30),nullable=True,index=True,)
+    description = db.Column(db.Text, nullable=False)
+    award_amount = db.Column(db.Integer, nullable=False)
+    eligibility_description = db.Column(db.Text, nullable=False)
+    eligible_education_levels = db.Column(db.String(100), nullable=False)
+    deadline = db.Column(db.Date, nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+
+class StudentProfile(db.Model):
+    __tablename__ = "student_profile"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"),
+        unique=True, nullable=False
+    )
+    education_category = db.Column(db.String(30), nullable=False)
+    study_level = db.Column(db.String(30), nullable=False)
+    institution_name = db.Column(db.String(200), nullable=False)
+    institution_not_listed = db.Column(
+        db.Boolean, nullable=False, default=False
+    )
+    grading_system = db.Column(db.String(20), nullable=True)
+    academic_score = db.Column(db.Float, nullable=True)
+    annual_family_income = db.Column(db.Integer, nullable=True)
+
+    user = db.relationship("User", backref=db.backref(
+        "student_profile", uselist=False
+    ))
+
+
+class ScholarshipCriteria(db.Model):
+    __tablename__ = "scholarship_criteria"
+
+    id = db.Column(db.Integer, primary_key=True)
+    scholarship_id = db.Column(
+        db.Integer, db.ForeignKey("scholarship.id"),
+        unique=True, nullable=False
+    )
+    eligible_study_levels = db.Column(db.String(200), nullable=False)
+    minimum_percentage = db.Column(db.Float, nullable=True)
+    minimum_cgpa = db.Column(db.Float, nullable=True)
+    annual_income_limit = db.Column(db.Integer, nullable=True)
+    requires_academic_proof = db.Column(
+        db.Boolean, nullable=False, default=False
+    )
+    requires_income_proof = db.Column(
+        db.Boolean, nullable=False, default=False
+    )
+
+    scholarship = db.relationship("Scholarship", backref=db.backref(
+        "criteria", uselist=False
+    ))
+
+class ScholarshipApplication(db.Model):
+    __tablename__ = "scholarship_application"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+    )
+
+    scholarship_id = db.Column(
+        db.Integer,
+        db.ForeignKey("scholarship.id"),
+        nullable=False,
+    )
+
+    status = db.Column(
+        db.String(20),
+        nullable=False,
+        default="submitted",
+    )
+
+    submitted_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "user_id",
+            "scholarship_id",
+            name="uq_student_scholarship_application",
+        ),
+    )
+
+    user = db.relationship(
+        "User",
+        backref=db.backref("scholarship_applications", lazy=True),
+    )
+
+    scholarship = db.relationship(
+        "Scholarship",
+        backref=db.backref("applications", lazy=True),
+    )
+
+class Institution(db.Model):
+    __tablename__ = "institution"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    normalized_name = db.Column(
+        db.String(200), unique=True, nullable=False, index=True
+    )
+    institution_type = db.Column(db.String(30), nullable=False)
+    education_categories = db.Column(db.String(100), nullable=False)
+    state = db.Column(db.String(100), nullable=True)
+    is_verified = db.Column(db.Boolean, nullable=False, default=False)
+    created_by_user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=True
+    )
+    created_at = db.Column(
+        db.DateTime, nullable=False, default=db.func.current_timestamp()
+    )
+
+
+def normalize_institution_name(name):
+    return re.sub(r"\s+", " ", name.strip()).casefold()
+
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        return db.session.get(User, int(user_id))
+    except (TypeError, ValueError):
+        return None
+
+
+class SignUpForm(FlaskForm):
+    full_name = StringField(
+        "Full name",
+        validators=[DataRequired(), Length(min=2, max=100)],
+    )
+    email = StringField(
+        "Email address",
+        validators=[DataRequired(), Email(), Length(max=254)],
+    )
+    education_level = SelectField(
+        "Education level",
+        choices=[
+            ("school", "School student"),
+            ("college", "College student"),
+            ("university", "University student"),
+        ],
+        validators=[DataRequired()],
+    )
+    password = PasswordField(
+        "Password",
+        validators=[
+            DataRequired(),
+            Length(min=8, max=128, message="Use 8–128 characters."),
+        ],
+    )
+    confirm_password = PasswordField(
+        "Confirm password",
+        validators=[
+            DataRequired(),
+            EqualTo("password", message="Passwords must match."),
+        ],
+    )
+    indian_citizen = BooleanField(
+        "I confirm that I am an Indian citizen.",
+        validators=[DataRequired()],
+    )
+    submit = SubmitField("Create my account")
+
+    def validate_full_name(self, field):
+        if not field.data or not field.data.strip():
+            raise ValidationError("Please enter your full name.")
+
+    def validate_email(self, field):
+        field.data = field.data.strip().lower()
+
+
+class LoginForm(FlaskForm):
+    email = StringField(
+        "Email address",
+        validators=[DataRequired(), Email(), Length(max=254)],
+    )
+    password = PasswordField("Password", validators=[DataRequired()])
+    submit = SubmitField("Log in")
+
+    def validate_email(self, field):
+        field.data = field.data.strip().lower()
+
+
+class StudentProfileForm(FlaskForm):
+    education_category = SelectField(
+        "Education category",
+        choices=[
+            ("school_8_10", "Classes 8–10"),
+            ("school_11_12", "Classes 11–12"),
+            ("undergraduate_1_4", "Undergraduate — Years 1–4"),
+        ],
+        validators=[DataRequired()],
+    )
+
+    study_level = SelectField(
+        "Current class or year",
+        choices=[
+            ("class_8", "Class 8"),
+            ("class_9", "Class 9"),
+            ("class_10", "Class 10"),
+            ("class_11", "Class 11"),
+            ("class_12", "Class 12"),
+            ("ug_year_1", "Undergraduate Year 1"),
+            ("ug_year_2", "Undergraduate Year 2"),
+            ("ug_year_3", "Undergraduate Year 3"),
+            ("ug_year_4", "Undergraduate Year 4"),
+        ],
+        validators=[DataRequired()],
+    )
+
+    institution_name = StringField(
+        "School or institution name",
+        validators=[DataRequired(), Length(min=2, max=200)],
+    )
+
+    institution_not_listed = BooleanField(
+        "My institution is not listed"
+    )
+
+    grading_system = SelectField(
+        "Academic grading format",
+        choices=[
+            ("", "Not provided"),
+            ("percentage", "Percentage"),
+            ("cgpa", "CGPA"),
+        ],
+        validators=[DataRequired()],
+    )
+
+    academic_score = StringField(
+        "Academic score",
+        validators=[Length(max=20)],
+    )
+
+    annual_family_income = StringField(
+        "Annual family income in ₹ (optional)",
+        validators=[Length(max=20)],
+    )
+
+    submit = SubmitField("Save profile")
+
+def check_scholarship_eligibility(user, scholarship):
+    """Return (eligible, reasons) using GovScale's existing rules."""
+    reasons = []
+
+    if not user.indian_citizen_declared:
+        reasons.append(
+            "This scholarship is available to registered students "
+            "who declare Indian citizenship."
+        )
+        return False, reasons
+
+    if scholarship.category == "exam":
+        return True, []
+
+    if scholarship.category == "grade":
+        profile = StudentProfile.query.filter_by(
+            user_id=user.id
+        ).first()
+
+        if profile is None:
+            reasons.append(
+                "Please complete your student profile first."
+            )
+            return False, reasons
+
+        if profile.education_category != scholarship.education_category:
+            reasons.append(
+                "Your education category does not match this "
+                "scholarship's requirements."
+            )
+
+        if profile.annual_family_income is None:
+            reasons.append(
+                "Please add your annual family income to your profile "
+                "to check eligibility."
+            )
+        elif profile.annual_family_income > 400000:
+            reasons.append(
+                "Your annual family income exceeds the maximum "
+                "eligible limit of ₹4,00,000."
+            )
+
+        return not reasons, reasons
+
+    return False, ["This scholarship category is not supported."]
+
+@app.route("/")
+def home():
+    query = Scholarship.query.filter_by(is_active=True)
+
+    if current_user.is_authenticated:
+        profile = StudentProfile.query.filter_by(
+            user_id=current_user.id
+        ).first()
+
+        if profile:
+            query = query.filter(
+                db.or_(
+                    Scholarship.category == "exam",
+                    db.and_(
+                        Scholarship.category == "grade",
+                        Scholarship.education_category
+                        == profile.education_category,
+                    ),
+                )
+            )
+        else:
+            # Until a student saves their education category,
+            # show only exam-based scholarships.
+            query = query.filter(Scholarship.category == "exam")
+
+    scholarships = query.order_by(
+        Scholarship.deadline.asc(),
+        Scholarship.id.asc(),
+    ).all()
+
+    return render_template("index.html", scholarships=scholarships)
+
+
+@app.route("/scholarships/<int:scholarship_id>")
+def scholarship_detail(scholarship_id):
+    scholarship = db.session.get(Scholarship, scholarship_id)
+    if scholarship is None or not scholarship.is_active:
+        abort(404)
+   
+    
+    eligible = None
+    ineligible_reasons = []
+
+    if current_user.is_authenticated:
+        eligible, ineligible_reasons = (
+            check_scholarship_eligibility(
+                current_user, scholarship
+            )
+        )
+    
+    existing_application = None
+
+    if current_user.is_authenticated:
+        existing_application = ScholarshipApplication.query.filter_by(
+            user_id=current_user.id,
+            scholarship_id=scholarship.id,
+        ).first()
+
+    return render_template(
+        "scholarship_detail.html",
+        scholarship=scholarship,
+        eligible=eligible,
+        ineligible_reasons=ineligible_reasons,
+        existing_application=existing_application,
+    )
+
+@app.route(
+    "/scholarships/<int:scholarship_id>/apply",
+    methods=["POST"],
+)
+@login_required
+def apply_for_scholarship(scholarship_id):
+    scholarship = db.session.get(Scholarship, scholarship_id)
+
+    if scholarship is None or not scholarship.is_active:
+        abort(404)
+
+    eligible, reasons = check_scholarship_eligibility(
+        current_user, scholarship
+    )
+
+    if not eligible:
+        for reason in reasons:
+            flash(reason, "error")
+        return redirect(
+            url_for(
+                "scholarship_detail",
+                scholarship_id=scholarship.id,
+            )
+        )
+
+    existing = ScholarshipApplication.query.filter_by(
+        user_id=current_user.id,
+        scholarship_id=scholarship.id,
+    ).first()
+
+    if existing:
+        flash(
+            "You have already applied for this scholarship.",
+            "error",
+        )
+        return redirect(url_for("my_applications"))
+
+    application = ScholarshipApplication(
+        user_id=current_user.id,
+        scholarship_id=scholarship.id,
+        status="submitted",
+    )
+
+    db.session.add(application)
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash(
+            "You have already applied for this scholarship.",
+            "error",
+        )
+        return redirect(url_for("my_applications"))
+
+    flash("Your scholarship application has been submitted.", "success")
+    return redirect(url_for("my_applications"))
+
+
+@app.route("/my-applications")
+@login_required
+def my_applications():
+    applications = (
+        ScholarshipApplication.query
+        .filter_by(user_id=current_user.id)
+        .order_by(ScholarshipApplication.submitted_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "my_applications.html",
+        applications=applications,
+    )
+
+@app.route("/scholarships/category/<category>")
+@login_required
+def scholarship_category(category):
+    if category not in ("grade", "exam"):
+        abort(404)
+
+    query = Scholarship.query.filter_by(
+        is_active=True,
+        category=category,
+    )
+
+    if category == "grade":
+        profile = StudentProfile.query.filter_by(
+            user_id=current_user.id
+        ).first()
+
+        if profile is None:
+            scholarships = []
+        else:
+            scholarships = query.filter_by(
+                education_category=profile.education_category
+            ).order_by(
+                Scholarship.deadline.asc(),
+                Scholarship.id.asc(),
+            ).all()
+    else:
+        scholarships = query.order_by(
+            Scholarship.deadline.asc(),
+            Scholarship.id.asc(),
+        ).all()
+
+    category_title = (
+        "Grade-based Scholarships"
+        if category == "grade"
+        else "Exam-based Scholarships"
+    )
+
+    return render_template(
+        "scholarship_category.html",
+        scholarships=scholarships,
+        category=category,
+        category_title=category_title,
+    )
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard"))
+
+    form = SignUpForm()
+
+    if form.validate_on_submit():
+        email = form.email.data
+
+        if db.session.query(User.id).filter_by(email=email).first():
+            form.email.errors.append(
+                "An account with this email already exists. Please log in."
+            )
+            return render_template("signup.html", form=form)
+
+        user = User(
+            full_name=form.full_name.data.strip(),
+            email=email,
+            education_level=form.education_level.data,
+            indian_citizen_declared=form.indian_citizen.data,
+        )
+        user.set_password(form.password.data)
+
+        try:
+            db.session.add(user)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            form.email.errors.append(
+                "This email is already registered. Please log in."
+            )
+            return render_template("signup.html", form=form)
+
+        login_user(user)
+        flash("Your account has been created. Welcome to GovScale!", "success")
+        return redirect(url_for("dashboard"))
+
+    return render_template("signup.html", form=form)
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard"))
+
+    form = LoginForm()
+
+    if form.validate_on_submit():
+        user = db.session.query(User).filter_by(
+            email=form.email.data
+        ).first()
+
+        if user and user.check_password(form.password.data):
+            login_user(user)
+            flash("You are now logged in.", "success")
+            return redirect(url_for("dashboard"))
+
+        flash("Invalid email or password.", "error")
+
+    return render_template("login.html", form=form)
+
+
+@app.route("/logout", methods=["POST"])
+@login_required
+def logout():
+    logout_user()
+    flash("You have been logged out.", "success")
+    return redirect(url_for("home"))
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    profile = StudentProfile.query.filter_by(
+        user_id=current_user.id
+    ).first()
+
+    query = Scholarship.query.filter_by(is_active=True)
+
+    if profile:
+        query = query.filter(
+            db.or_(
+                Scholarship.category == "exam",
+                db.and_(
+                    Scholarship.category == "grade",
+                    Scholarship.education_category
+                    == profile.education_category,
+                ),
+            )
+        )
+    else:
+        query = query.filter(Scholarship.category == "exam")
+
+    scholarships = query.all()
+
+    grade_count = sum(
+        1 for scholarship in scholarships
+        if scholarship.category == "grade"
+    )
+    exam_count = sum(
+        1 for scholarship in scholarships
+        if scholarship.category == "exam"
+    )
+
+    return render_template(
+        "dashboard.html",
+        grade_count=grade_count,
+        exam_count=exam_count,
+    )
+
+@app.route("/profile", methods=["GET", "POST"])
+@login_required
+def student_profile():
+    profile = StudentProfile.query.filter_by(
+        user_id=current_user.id
+    ).first()
+
+    form = StudentProfileForm()
+    institution_data = [
+    {
+        "name": institution.name,
+        "categories": institution.education_categories.split(",")
+    }
+    for institution in Institution.query.order_by(Institution.name.asc()).all()
+    ]
+
+    if request.method == "GET" and profile:
+        form.education_category.data = profile.education_category
+        form.study_level.data = profile.study_level
+        form.institution_name.data = profile.institution_name
+        form.institution_not_listed.data = profile.institution_not_listed
+        form.grading_system.data = profile.grading_system or ""
+        form.academic_score.data = (
+            str(profile.academic_score)
+            if profile.academic_score is not None else ""
+        )
+        form.annual_family_income.data = (
+            str(profile.annual_family_income)
+            if profile.annual_family_income is not None else ""
+        )
+
+    if form.validate_on_submit():
+        category_for_level = {
+            "class_8": "school_8_10",
+            "class_9": "school_8_10",
+            "class_10": "school_8_10",
+            "class_11": "school_11_12",
+            "class_12": "school_11_12",
+            "ug_year_1": "undergraduate_1_4",
+            "ug_year_2": "undergraduate_1_4",
+            "ug_year_3": "undergraduate_1_4",
+            "ug_year_4": "undergraduate_1_4",
+        }
+
+        if category_for_level.get(form.study_level.data) != form.education_category.data:
+            flash(
+                "Please select a class or year that matches your education category.",
+                "error",
+            )
+            return render_template(
+                "profile.html", form=form, profile=profile,
+                institutions=institution_data,
+            )
+
+        score = None
+        income = None
+
+        try:
+            if form.academic_score.data.strip():
+                score = float(form.academic_score.data.strip())
+            if form.annual_family_income.data.strip():
+                income = int(form.annual_family_income.data.strip())
+        except ValueError:
+            flash("Enter a valid academic score and family income.", "error")
+            return render_template(
+                                "profile.html", form=form, profile=profile,
+                                institutions=institution_data,
+                            )
+
+        if score is not None:
+            maximum = 100 if form.grading_system.data == "percentage" else 10
+            if score < 0 or score > maximum:
+                flash(
+                    f"Your score must be between 0 and {maximum}.",
+                    "error",
+                )
+                return render_template(
+                    "profile.html", form=form, profile=profile,
+                    institutions=institution_data,
+                )
+
+        if income is not None and income < 0:
+            flash("Family income cannot be negative.", "error")
+            return render_template(
+                                "profile.html", form=form, profile=profile,
+                                institutions=institution_data,
+                            )
+
+        if profile is None:
+            profile = StudentProfile(user_id=current_user.id)
+
+        profile.education_category = form.education_category.data
+        profile.study_level = form.study_level.data
+        profile.institution_name = form.institution_name.data.strip()
+        profile.institution_not_listed = bool(form.institution_not_listed.data)
+        profile.grading_system = form.grading_system.data or None
+        profile.academic_score = score
+        profile.annual_family_income = income
+
+
+
+        # Add a new institution when it is not already in the database.
+        institution_name = form.institution_name.data.strip()
+        normalized = normalize_institution_name(institution_name)
+
+        institution = Institution.query.filter_by(
+            normalized_name=normalized
+        ).first()
+
+        if institution is None:
+            is_school = form.education_category.data.startswith("school_")
+
+            institution = Institution(
+                name=institution_name,
+                normalized_name=normalized,
+                institution_type="school" if is_school else "college",
+                education_categories=form.education_category.data,
+                is_verified=False,
+                created_by_user_id=current_user.id,
+            )
+            db.session.add(institution)
+        else:
+            # Make the existing entry available to this education category too.
+            categories = institution.education_categories.split(",")
+            selected_category = form.education_category.data
+
+            if selected_category not in categories:
+                categories.append(selected_category)
+                institution.education_categories = ",".join(categories)
+
+
+        db.session.add(profile)
+        db.session.commit()
+
+        flash("Your student profile has been saved.", "success")
+        return redirect(url_for("dashboard"))
+
+    return render_template(
+        "profile.html", form=form, profile=profile,
+        institutions=institution_data,
+    )
+
+
+@app.route("/health")
+def health():
+    return {"status": "healthy"}, 200
+
+
+with app.app_context():
+    db.create_all()
+
+    # Seed fictional demonstration opportunities only when the catalogue
+    # is empty. Existing users and scholarship records are preserved.
+    if db.session.query(Scholarship.id).first() is None:
+        demo_scholarships = [
+            Scholarship(
+                title="National Merit Challenge",
+                category="exam",
+                description=(
+                    "A fictional scholarship opportunity based on performance "
+                    "in a timed demonstration assessment."
+                ),
+                award_amount=25000,
+                eligibility_description=(
+                    "For declared Indian-citizen students who participate in "
+                    "the demo exam and meet its illustrative score requirement."
+                ),
+                eligible_education_levels="school,college,university",
+                deadline=date(2026, 11, 15),
+            ),
+            Scholarship(
+                title="Future Learners Grant",
+                category="merit",
+                description=(
+                    "A fictional education grant recognising academic "
+                    "performance and consistent grades."
+                ),
+                award_amount=10000,
+                eligibility_description=(
+                    "For declared Indian-citizen students with an illustrative "
+                    "minimum academic score of 75%. Actual marks are not "
+                    "collected or verified by this demo."
+                ),
+                eligible_education_levels="school,college,university",
+                deadline=date(2026, 12, 15),
+            ),
+            Scholarship(
+                title="Digital Skills Award",
+                category="merit",
+                description=(
+                    "A fictional award recognising academic achievement "
+                    "and interest in digital skills."
+                ),
+                award_amount=15000,
+                eligibility_description=(
+                    "For declared Indian-citizen college and university "
+                    "students meeting the illustrative academic requirements."
+                ),
+                eligible_education_levels="college,university",
+                deadline=date(2026, 11, 30),
+            ),
+        ]
+
+        starter_institutions = [
+            # Schools — suggestions for Classes 8–10 and 11–12
+            ("Delhi Public School, R.K. Puram", "school", "school_8_10,school_11_12", "Delhi"),
+            ("The Doon School", "school", "school_8_10,school_11_12", "Uttarakhand"),
+            ("Modern School, Barakhamba Road", "school", "school_8_10,school_11_12", "Delhi"),
+            ("The Cathedral and John Connon School", "school", "school_8_10,school_11_12", "Maharashtra"),
+            ("Bombay Scottish School, Mahim", "school", "school_8_10,school_11_12", "Maharashtra"),
+            ("St. Xavier's Collegiate School", "school", "school_8_10,school_11_12", "West Bengal"),
+            ("Loyola High School, Pune", "school", "school_8_10,school_11_12", "Maharashtra"),
+            ("Kendriya Vidyalaya, IIT Bombay", "school", "school_8_10,school_11_12", "Maharashtra"),
+
+            # Higher education — suggestions for undergraduate students
+            ("University of Delhi", "university", "undergraduate_1_4", "Delhi"),
+            ("University of Mumbai", "university", "undergraduate_1_4", "Maharashtra"),
+            ("Savitribai Phule Pune University", "university", "undergraduate_1_4", "Maharashtra"),
+            ("Jawaharlal Nehru University", "university", "undergraduate_1_4", "Delhi"),
+            ("University of Hyderabad", "university", "undergraduate_1_4", "Telangana"),
+            ("Banaras Hindu University", "university", "undergraduate_1_4", "Uttar Pradesh"),
+            ("Aligarh Muslim University", "university", "undergraduate_1_4", "Uttar Pradesh"),
+            ("Jamia Millia Islamia", "university", "undergraduate_1_4", "Delhi"),
+            ("University of Calcutta", "university", "undergraduate_1_4", "West Bengal"),
+            ("Anna University", "university", "undergraduate_1_4", "Tamil Nadu"),
+            ("Andhra University", "university", "undergraduate_1_4", "Andhra Pradesh"),
+            ("University of Madras", "university", "undergraduate_1_4", "Tamil Nadu"),
+            ("Bangalore University", "university", "undergraduate_1_4", "Karnataka"),
+            ("University of Rajasthan", "university", "undergraduate_1_4", "Rajasthan"),
+            ("Panjab University", "university", "undergraduate_1_4", "Chandigarh"),
+            ("Gujarat University", "university", "undergraduate_1_4", "Gujarat"),
+            ("Osmania University", "university", "undergraduate_1_4", "Telangana"),
+            ("Indian Institute of Technology Bombay", "higher_institute", "undergraduate_1_4", "Maharashtra"),
+            ("Indian Institute of Technology Delhi", "higher_institute", "undergraduate_1_4", "Delhi"),
+            ("Indian Institute of Technology Madras", "higher_institute", "undergraduate_1_4", "Tamil Nadu"),
+            ("Birla Institute of Technology and Science, Pilani", "higher_institute", "undergraduate_1_4", "Rajasthan"),
+            ("Manipal Academy of Higher Education", "higher_institute", "undergraduate_1_4", "Karnataka"),
+        ]
+
+        for name, institution_type, categories, state in starter_institutions:
+            normalized = normalize_institution_name(name)
+
+            existing = Institution.query.filter_by(
+                normalized_name=normalized
+            ).first()
+
+            if existing is None:
+                db.session.add(
+                    Institution(
+                        name=name,
+                        normalized_name=normalized,
+                        institution_type=institution_type,
+                        education_categories=categories,
+                        state=state,
+                        is_verified=True,
+                    )
+                )
+
+        db.session.add_all(demo_scholarships)
+        db.session.commit()
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}{{ category_title }} | GovScale{% endblock %}
+
+{% block content %}
+<section class="dashboard-section">
+    <span class="section-kicker">GOVSCALE OPPORTUNITIES</span>
+
+    <h1>{{ category_title }}</h1>
+
+    <p class="dashboard-intro">
+        {% if category == "grade" %}
+            Explore scholarships matching your saved education category.
+        {% else %}
+            Explore scholarships available through examinations or assessments.
+        {% endif %}
+    </p>
+
+    <a class="text-link" href="{{ url_for('dashboard') }}">
+        ← Back to dashboard
+    </a>
+
+    <div class="scholarship-grid">
+        {% for scholarship in scholarships %}
+            <article class="scholarship-card-redesign">
+                <div class="card-top-row">
+                    <span class="type-label">
+                        {{ "GRADE-BASED" if category == "grade" else "EXAM-BASED" }}
+                    </span>
+                </div>
+
+                <h2>{{ scholarship.title }}</h2>
+
+                <p>{{ scholarship.description }}</p>
+
+                <p>
+                    <strong>Award:</strong>
+                    ₹{{ "{:,}".format(scholarship.award_amount) }}
+                </p>
+
+                {% if scholarship.deadline %}
+                    <p>
+                        <strong>Deadline:</strong>
+                        {{ scholarship.deadline.strftime("%d %b %Y") }}
+                    </p>
+                {% endif %}
+
+                <a class="text-link"
+                   href="{{ url_for('scholarship_detail', scholarship_id=scholarship.id) }}">
+                    View scholarship →
+                </a>
+            </article>
+        {% else %}
+            <article class="dashboard-card">
+                <h2>No scholarships available yet</h2>
+                <p>
+                    There are currently no active scholarships in this category
+                    matching your profile.
+                </p>
+            </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
