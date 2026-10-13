@@ -1,7 +1,8 @@
 
 import os
 import re
-from sqlalchemy import text
+from functools import wraps
+from sqlalchemy import text, or_
 from pathlib import Path
 from urllib.parse import urlsplit
 from datetime import date, datetime, time, timedelta
@@ -80,6 +81,7 @@ class User(UserMixin, db.Model):
     indian_citizen_declared = db.Column(
         db.Boolean, nullable=False, default=False
     )
+    is_admin = db.Column(db.Boolean, nullable=False, default=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -308,6 +310,27 @@ def load_user(user_id):
     except (TypeError, ValueError):
         return None
 
+def admin_required(view):
+    @wraps(view)
+    @login_required
+    def wrapped_view(*args, **kwargs):
+        if not current_user.is_admin:
+            abort(403)
+
+        return view(*args, **kwargs)
+
+    return wrapped_view
+
+def student_required(view):
+    @wraps(view)
+    @login_required
+    def wrapped_view(*args, **kwargs):
+        if current_user.is_admin:
+            return redirect(url_for("admin_dashboard"))
+
+        return view(*args, **kwargs)
+
+    return wrapped_view
 
 class SignUpForm(FlaskForm):
     full_name = StringField(
@@ -464,6 +487,8 @@ def check_scholarship_eligibility(user, scholarship):
 
 @app.route("/")
 def home():
+    if current_user.is_authenticated and current_user.is_admin:
+        return redirect(url_for("admin_dashboard"))
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
 
@@ -642,7 +667,7 @@ def scholarship_detail(scholarship_id):
     )
 
 @app.route("/exams/<int:exam_id>/register", methods=["POST"])
-@login_required
+@student_required
 def register_for_exam(exam_id):
     exam = db.session.get(DemoExam, exam_id)
 
@@ -786,7 +811,7 @@ def register_for_exam(exam_id):
     "/scholarships/<int:scholarship_id>/apply",
     methods=["POST"],
 )
-@login_required
+@student_required
 def apply_for_scholarship(scholarship_id):
     scholarship = db.session.get(Scholarship, scholarship_id)
 
@@ -853,7 +878,7 @@ def apply_for_scholarship(scholarship_id):
     "/applications/<int:application_id>/withdraw",
     methods=["POST"],
 )
-@login_required
+@student_required
 def withdraw_scholarship_application(application_id):
     application = db.session.get(
         ScholarshipApplication, application_id
@@ -891,7 +916,7 @@ def withdraw_scholarship_application(application_id):
     "/exam-registrations/<int:registration_id>/cancel",
     methods=["POST"],
 )
-@login_required
+@student_required
 def cancel_exam_registration(registration_id):
     registration = db.session.get(
         ExamRegistration, registration_id
@@ -933,7 +958,7 @@ def cancel_exam_registration(registration_id):
     return redirect(url_for("my_applications"))
 
 @app.route("/my-applications")
-@login_required
+@student_required
 def my_applications():
     applications = (
         ScholarshipApplication.query
@@ -961,7 +986,7 @@ def my_applications():
 
 
 @app.route("/scholarships/category/<category>")
-@login_required
+@student_required
 def scholarship_category(category):
     if category not in ("grade", "exam"):
         abort(404)
@@ -1050,26 +1075,33 @@ def login():
     next_url = request.args.get("next", "")
 
     if current_user.is_authenticated:
+        if current_user.is_admin:
+            return redirect(url_for("admin_dashboard"))
+
         if (
             next_url
             and urlsplit(next_url).path.startswith("/")
             and not urlsplit(next_url).netloc
         ):
             return redirect(next_url)
+
         return redirect(url_for("dashboard"))
 
     form = LoginForm()
 
     if form.validate_on_submit():
         user = db.session.query(User).filter_by(
-            email=form.email.data
+            email=form.email.data.strip().lower()
         ).first()
 
         if user and user.check_password(form.password.data):
             login_user(user)
             flash("You are now logged in.", "success")
 
-            next_url = request.args.get("next", "")
+            # Admins must always enter the admin panel.
+            if user.is_admin:
+                return redirect(url_for("admin_dashboard"))
+
             if (
                 next_url
                 and urlsplit(next_url).path.startswith("/")
@@ -1092,7 +1124,7 @@ def logout():
     return redirect(url_for("home"))
 
 @app.route("/exams/<int:exam_id>/start")
-@login_required
+@student_required
 def exam_entry(exam_id):
     exam = db.session.get(DemoExam, exam_id)
 
@@ -1132,7 +1164,7 @@ def exam_entry(exam_id):
     return redirect(url_for("exam_page", exam_id=exam.id))
 
 @app.route("/exams/<int:exam_id>")
-@login_required
+@student_required
 def exam_lobby(exam_id):
     exam = db.session.get(DemoExam, exam_id)
 
@@ -1176,7 +1208,7 @@ def exam_lobby(exam_id):
     )
 
 @app.route("/exams/<int:exam_id>/take")
-@login_required
+@student_required
 def exam_page(exam_id):
     exam = db.session.get(DemoExam, exam_id)
 
@@ -1210,7 +1242,7 @@ def exam_page(exam_id):
     return render_template("exam_page.html", exam=exam)
 
 @app.route("/dashboard")
-@login_required
+@student_required
 def dashboard():
     profile = StudentProfile.query.filter_by(
         user_id=current_user.id
@@ -1289,7 +1321,7 @@ def dashboard():
     )
 
 @app.route("/profile", methods=["GET", "POST"])
-@login_required
+@student_required
 def student_profile():
     profile = StudentProfile.query.filter_by(
         user_id=current_user.id
@@ -1431,6 +1463,290 @@ def student_profile():
         institutions=institution_data,
     )
 
+@app.route("/admin/applications")
+@admin_required
+def admin_applications():
+    search = request.args.get("q", "").strip()
+    status_filter = request.args.get("status", "").strip()
+
+    allowed_statuses = {
+        "submitted", "pending", "approved", "rejected", "withdrawn"
+    }
+
+    applications_query = (
+        ScholarshipApplication.query
+        .join(User, ScholarshipApplication.user_id == User.id)
+        .join(Scholarship, ScholarshipApplication.scholarship_id == Scholarship.id)
+    )
+
+    if search:
+        term = f"%{search}%"
+        applications_query = applications_query.filter(
+            or_(
+                User.full_name.ilike(term),
+                User.email.ilike(term),
+                Scholarship.title.ilike(term),
+            )
+        )
+
+    if status_filter in allowed_statuses:
+        applications_query = applications_query.filter(
+            ScholarshipApplication.status == status_filter
+        )
+    else:
+        status_filter = ""
+
+    applications = applications_query.order_by(
+        ScholarshipApplication.submitted_at.desc()
+    ).all()
+
+    return render_template(
+        "admin/applications.html",
+        applications=applications,
+        search=search,
+        status_filter=status_filter,
+    )
+
+
+@app.route("/admin/applications/<int:application_id>/review", methods=["POST"])
+@admin_required
+def admin_review_application(application_id):
+    application = db.session.get(ScholarshipApplication, application_id)
+
+    if application is None:
+        abort(404)
+
+    requested_status = request.form.get("status", "").strip().lower()
+
+    if requested_status not in ("approved", "rejected"):
+        flash("Invalid application review action.", "error")
+        return redirect(url_for("admin_applications"))
+
+    if application.status not in ("submitted", "pending"):
+        flash(
+            "Only submitted applications can be approved or rejected.",
+            "error",
+        )
+        return redirect(url_for("admin_applications"))
+
+    application.status = requested_status
+    db.session.commit()
+
+    flash(
+        f"Application #{application.id} has been {requested_status}.",
+        "success",
+    )
+    return redirect(url_for("admin_applications"))
+
+
+
+@app.route("/admin/scholarships")
+@admin_required
+def admin_scholarships():
+    search = request.args.get("q", "").strip()
+    category = request.args.get("category", "").strip()
+    status = request.args.get("status", "").strip()
+
+    query = Scholarship.query
+
+    if search:
+        query = query.filter(Scholarship.title.ilike(f"%{search}%"))
+
+    if category in ("grade", "exam"):
+        query = query.filter_by(category=category)
+    else:
+        category = ""
+
+    if status == "active":
+        query = query.filter_by(is_active=True)
+    elif status == "inactive":
+        query = query.filter_by(is_active=False)
+    else:
+        status = ""
+
+    scholarships = query.order_by(Scholarship.id.desc()).all()
+
+    return render_template(
+        "admin/scholarships.html",
+        scholarships=scholarships,
+        search=search,
+        category_filter=category,
+        status_filter=status,
+    )
+
+
+@app.route("/admin/scholarships/new", methods=["GET", "POST"])
+@app.route("/admin/scholarships/<int:scholarship_id>/edit", methods=["GET", "POST"])
+@admin_required
+def admin_scholarship_form(scholarship_id=None):
+    scholarship = (
+        db.session.get(Scholarship, scholarship_id)
+        if scholarship_id is not None else None
+    )
+
+    if scholarship_id is not None and scholarship is None:
+        abort(404)
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        category = request.form.get("category", "").strip()
+        education_category = request.form.get("education_category", "").strip()
+        description = request.form.get("description", "").strip()
+        eligibility = request.form.get("eligibility_description", "").strip()
+        # Keep the legacy database field populated without a duplicate form field.
+        education_levels = education_category
+        amount_text = request.form.get("award_amount", "").strip()
+        deadline_text = request.form.get("deadline", "").strip()
+
+        errors = []
+
+        if not title or len(title) > 160:
+            errors.append("Enter a title between 1 and 160 characters.")
+
+        if category not in ("grade", "exam"):
+            errors.append("Choose Grade-based or Exam-based.")
+
+        if not description:
+            errors.append("Enter a scholarship description.")
+
+        if not eligibility:
+            errors.append("Enter the eligibility requirements.")
+
+        allowed_education_categories = {
+            "school_8_10",
+            "school_11_12",
+            "undergraduate_1_4",
+        }
+        if education_category not in allowed_education_categories:
+            errors.append("Choose one valid education category.")
+
+        try:
+            amount = int(amount_text)
+            if amount <= 0:
+                raise ValueError
+        except (ValueError, TypeError):
+            amount = None
+            errors.append("Award amount must be a positive whole number in rupees.")
+
+        deadline = None
+        if deadline_text:
+            try:
+                deadline = date.fromisoformat(deadline_text)
+            except ValueError:
+                errors.append("Enter a valid deadline.")
+
+        if errors:
+            for error in errors:
+                flash(error, "error")
+        else:
+            if scholarship is None:
+                scholarship = Scholarship()
+                db.session.add(scholarship)
+
+            scholarship.title = title
+            scholarship.category = category
+            scholarship.education_category = education_category or None
+            scholarship.description = description
+            scholarship.award_amount = amount
+            scholarship.eligibility_description = eligibility
+            scholarship.eligible_education_levels = education_levels
+            scholarship.deadline = deadline
+
+            try:
+                db.session.commit()
+                flash(
+                    "Scholarship created successfully."
+                    if scholarship_id is None
+                    else "Scholarship updated successfully.",
+                    "success",
+                )
+                return redirect(url_for("admin_scholarships"))
+            except Exception:
+                db.session.rollback()
+                app.logger.exception("Could not save scholarship")
+                flash("The scholarship could not be saved. Please try again.", "error")
+
+    return render_template(
+        "admin/scholarship_form.html",
+        scholarship=scholarship,
+        is_edit=scholarship is not None,
+    )
+
+
+@app.route("/admin/scholarships/<int:scholarship_id>/toggle", methods=["POST"])
+@admin_required
+def admin_toggle_scholarship(scholarship_id):
+    scholarship = db.session.get(Scholarship, scholarship_id)
+
+    if scholarship is None:
+        abort(404)
+
+    scholarship.is_active = not scholarship.is_active
+    db.session.commit()
+
+    state = "activated" if scholarship.is_active else "deactivated"
+    flash(f"'{scholarship.title}' has been {state}. Existing application history was retained.", "success")
+    return redirect(url_for("admin_scholarships"))
+
+
+@app.route("/admin")
+@admin_required
+def admin_dashboard():
+    from datetime import datetime
+
+    now = datetime.now()
+
+    search = request.args.get("q", "").strip()
+    category_filter = request.args.get("category", "").strip()
+    status_filter = request.args.get("status", "").strip()
+
+    # Every statistic is calculated from existing database records.
+    stats = {
+        "students": User.query.filter_by(is_admin=False).count(),
+        "applications": ScholarshipApplication.query.count(),
+        "pending_applications": ScholarshipApplication.query.filter_by(
+            status="submitted"
+        ).count(),
+        "active_scholarships": Scholarship.query.filter_by(
+            is_active=True
+        ).count(),
+        "upcoming_exams": DemoExam.query.filter(
+            DemoExam.is_active.is_(True),
+            DemoExam.end_at >= now,
+        ).count(),
+    }
+
+    scholarship_query = Scholarship.query
+
+    if search:
+        scholarship_query = scholarship_query.filter(
+            Scholarship.title.ilike(f"%{search}%")
+        )
+
+    if category_filter in ("grade", "exam"):
+        scholarship_query = scholarship_query.filter_by(
+            category=category_filter
+        )
+
+    if status_filter == "active":
+        scholarship_query = scholarship_query.filter_by(is_active=True)
+    elif status_filter == "inactive":
+        scholarship_query = scholarship_query.filter_by(is_active=False)
+
+    total_scholarships = scholarship_query.count()
+    scholarships = scholarship_query.order_by(
+        Scholarship.id.desc()
+    ).all()
+
+    return render_template(
+        "admin/dashboard.html",
+        stats=stats,
+        scholarships=scholarships,
+        total_scholarships=total_scholarships,
+        search=search,
+        category_filter=category_filter,
+        status_filter=status_filter,
+    )
 
 @app.route("/health")
 def health():
@@ -1439,6 +1755,23 @@ def health():
 
 with app.app_context():
     db.create_all()
+
+    # Safely add admin authorization to existing SQLite databases.
+    user_columns = {
+        row[1]
+        for row in db.session.execute(
+            text("PRAGMA table_info(user)")
+        ).fetchall()
+    }
+
+    if "is_admin" not in user_columns:
+        db.session.execute(
+            text(
+                "ALTER TABLE user "
+                "ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0"
+            )
+        )
+        db.session.commit()
 
     # Safely add registration opening time to existing SQLite databases.
     exam_columns = {

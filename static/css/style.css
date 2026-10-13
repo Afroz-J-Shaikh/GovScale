@@ -6103,3 +6103,150 @@ body {
     color: #294b3a;
     margin-bottom: 12px;
 }
+/* GovScale homepage: banner background with text overlay */
+.hero-redesign {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 540px;
+    padding: clamp(2rem, 5vw, 4.5rem);
+    overflow: hidden;
+    isolation: isolate;
+
+    background-image:
+        linear-gradient(
+            90deg,
+            rgba(255, 253, 248, 0.97) 0%,
+            rgba(255, 253, 248, 0.91) 38%,
+            rgba(255, 253, 248, 0.68) 56%,
+            rgba(255, 253, 248, 0.12) 100%
+        ),
+        url("/static/images/gemini-govscale-1.png") !important;
+
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+}
+
+.hero-redesign .hero-content {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 620px;
+    margin: 0;
+}
+
+.hero-redesign .hero-image-placeholder {
+    display: none !important;
+}
+
+.hero-redesign .hero-label,
+.hero-redesign h1,
+.hero-redesign .hero-description,
+.hero-redesign .hero-actions,
+.hero-redesign .audience-note {
+    position: relative;
+    z-index: 2;
+}
+
+.hero-redesign .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.hero-redesign .button {
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Mobile: keep the image visible and text readable */
+@media (max-width: 700px) {
+    .hero-redesign {
+        min-height: 520px;
+        padding: 2rem 1.25rem;
+        background-image:
+            linear-gradient(
+                90deg,
+                rgba(255, 253, 248, 0.94),
+                rgba(255, 253, 248, 0.78)
+            ),
+            url("/static/images/gemini-govscale-1.png") !important;
+        background-position: center center !important;
+    }
+
+    .hero-redesign .hero-content {
+        max-width: 100%;
+    }
+
+    .hero-redesign .hero-actions .button {
+        max-width: 100%;
+    }
+}
+
+
+/* GovScale banner: shorter height, original image colors */
+.hero-redesign {
+    min-height: 380px !important;
+    padding: 2.5rem 3.5rem !important;
+
+    /* Remove the white overlay */
+    background-image: url("/static/images/gemini-govscale-1.png") !important;
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+}
+
+.hero-redesign .hero-content {
+    max-width: 580px;
+}
+
+/* Keep the text readable without washing out the banner */
+@media (max-width: 700px) {
+    .hero-redesign {
+        min-height: 400px !important;
+        padding: 2rem 1.25rem !important;
+        background-position: center center !important;
+    }
+}
+
+/* GovScale hero: full-width banner, no card styling */
+.hero-redesign {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 380px !important;
+    margin: 0 !important;
+    padding: 2.5rem 3.5rem !important;
+
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+
+    background-image: url("/static/images/gemini-govscale-1.png") !important;
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+}
+
+/* Remove card styling from the hero's inner elements */
+.hero-redesign .hero-content {
+    max-width: 580px;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Hide the old image placeholder */
+.hero-redesign .hero-image-placeholder {
+    display: none !important;
+}
+
+@media (max-width: 700px) {
+    .hero-redesign {
+        min-height: 400px !important;
+        padding: 2rem 1.25rem !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+}
