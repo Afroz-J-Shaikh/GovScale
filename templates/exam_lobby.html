@@ -1,13 +1,13 @@
  {% extends "base.html" %}
 
-{% block title %}{{ exam.title }} | GovScale{% endblock %}
+{% block title %}{{ exam.scholarship.title if exam.scholarship else 'GovScale Exam' }} | GovScale{% endblock %}
 
 {% block content %}
 <section class="dashboard-section">
     <div class="dashboard-card exam-countdown-card exam-lobby-card">
         <span class="section-kicker exam-lobby-heading">Your Exam Starts Soon</span>
 
-        <h1>{{ exam.title }}</h1>
+        <h1>{{ exam.scholarship.title if exam.scholarship else 'GovScale Exam' }}</h1>
 
         <p>
             Scheduled for {{ exam.start_at.strftime("%d %B %Y") }}

@@ -287,7 +287,14 @@
                 closeButton.addEventListener("click", dismissNotice);
             }
 
-            window.setTimeout(dismissNotice, 5000);
+            // Keep error notifications visible until manually closed.
+            // Success and informational notices retain their auto-dismiss timer.
+            if (
+                !notice.classList.contains("flash-error") &&
+                !notice.classList.contains("flash-danger")
+            ) {
+                window.setTimeout(dismissNotice, 5000);
+            }
         });
     });
     </script>

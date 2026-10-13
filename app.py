@@ -214,6 +214,10 @@ class DemoExam(db.Model):
         nullable=True,
         index=True,
     )
+    scholarship = db.relationship(
+        "Scholarship",
+        backref=db.backref("demo_exams", lazy=True),
+    )
 
 class ExamRegistration(db.Model):
     __tablename__ = "exam_registration"
@@ -540,6 +544,25 @@ def home():
         Scholarship.id.asc(),
     ).all()
 
+    visible_exam_scholarship_ids = {
+        row[0]
+        for row in db.session.query(DemoExam.scholarship_id)
+        .join(Scholarship, DemoExam.scholarship_id == Scholarship.id)
+        .filter(
+            DemoExam.is_active.is_(True),
+            DemoExam.end_at > now_ist,
+            Scholarship.is_active.is_(True),
+            Scholarship.category == "exam",
+        )
+        .all()
+    }
+
+    scholarships = [
+        scholarship for scholarship in scholarships
+        if scholarship.category != "exam"
+        or scholarship.id in visible_exam_scholarship_ids
+    ]
+
     # Homepage impact metrics use global database totals,
     # not the personalized scholarship list shown to a logged-in student.
     impact_active_count = Scholarship.query.filter_by(
@@ -606,6 +629,10 @@ def scholarship_detail(scholarship_id):
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
 
+    if scholarship.category == "exam":
+        if linked_exam is None or linked_exam.end_at <= now_ist:
+            abort(404)
+
     exam_registration = None
     registration_status = None
     registration_closes_at = None
@@ -664,6 +691,7 @@ def scholarship_detail(scholarship_id):
         exam_registration=exam_registration,
         registration_status=registration_status,
         registration_closes_at=registration_closes_at,
+        now_ist=now_ist,
     )
 
 @app.route("/exams/<int:exam_id>/register", methods=["POST"])
@@ -1016,6 +1044,27 @@ def scholarship_category(category):
             Scholarship.id.asc(),
         ).all()
 
+        india_tz = ZoneInfo("Asia/Kolkata")
+        now_ist = datetime.now(india_tz).replace(tzinfo=None)
+
+        visible_exam_scholarship_ids = {
+            row[0]
+            for row in db.session.query(DemoExam.scholarship_id)
+            .join(Scholarship, DemoExam.scholarship_id == Scholarship.id)
+            .filter(
+                DemoExam.is_active.is_(True),
+                DemoExam.end_at > now_ist,
+                Scholarship.is_active.is_(True),
+                Scholarship.category == "exam",
+            )
+            .all()
+        }
+
+        scholarships = [
+            scholarship for scholarship in scholarships
+            if scholarship.id in visible_exam_scholarship_ids
+        ]
+
     category_title = (
         "Grade-based Scholarships"
         if category == "grade"
@@ -1029,9 +1078,30 @@ def scholarship_category(category):
         category_title=category_title,
     )
 
+def _safe_next_url(next_url):
+    """Reject external redirects and admin destinations for students."""
+    if not next_url or "\\" in next_url:
+        return None
+
+    parsed = urlsplit(next_url)
+
+    if parsed.scheme or parsed.netloc or not parsed.path.startswith("/"):
+        return None
+
+    if parsed.path.startswith("//"):
+        return None
+
+    if parsed.path == "/admin" or parsed.path.startswith("/admin/"):
+        return None
+
+    return next_url
+
+
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if current_user.is_authenticated:
+        if current_user.is_admin:
+            return redirect(url_for("admin_dashboard"))
         return redirect(url_for("dashboard"))
 
     form = SignUpForm()
@@ -1078,12 +1148,9 @@ def login():
         if current_user.is_admin:
             return redirect(url_for("admin_dashboard"))
 
-        if (
-            next_url
-            and urlsplit(next_url).path.startswith("/")
-            and not urlsplit(next_url).netloc
-        ):
-            return redirect(next_url)
+        safe_next_url = _safe_next_url(next_url)
+        if safe_next_url:
+            return redirect(safe_next_url)
 
         return redirect(url_for("dashboard"))
 
@@ -1102,12 +1169,9 @@ def login():
             if user.is_admin:
                 return redirect(url_for("admin_dashboard"))
 
-            if (
-                next_url
-                and urlsplit(next_url).path.startswith("/")
-                and not urlsplit(next_url).netloc
-            ):
-                return redirect(next_url)
+            safe_next_url = _safe_next_url(next_url)
+            if safe_next_url:
+                return redirect(safe_next_url)
 
             return redirect(url_for("dashboard"))
 
@@ -1268,6 +1332,26 @@ def dashboard():
 
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
+
+    visible_exam_scholarship_ids = {
+        row[0]
+        for row in db.session.query(DemoExam.scholarship_id)
+        .join(Scholarship, DemoExam.scholarship_id == Scholarship.id)
+        .filter(
+            DemoExam.is_active.is_(True),
+            DemoExam.end_at > now_ist,
+            Scholarship.is_active.is_(True),
+            Scholarship.category == "exam",
+        )
+        .all()
+    }
+
+    scholarships = [
+        scholarship for scholarship in scholarships
+        if scholarship.category != "exam"
+        or scholarship.id in visible_exam_scholarship_ids
+    ]
+
     registered_exam = (
         DemoExam.query
         .join(
@@ -1544,18 +1628,12 @@ def admin_review_application(application_id):
 @admin_required
 def admin_scholarships():
     search = request.args.get("q", "").strip()
-    category = request.args.get("category", "").strip()
     status = request.args.get("status", "").strip()
 
-    query = Scholarship.query
+    query = Scholarship.query.filter_by(category="grade")
 
     if search:
         query = query.filter(Scholarship.title.ilike(f"%{search}%"))
-
-    if category in ("grade", "exam"):
-        query = query.filter_by(category=category)
-    else:
-        category = ""
 
     if status == "active":
         query = query.filter_by(is_active=True)
@@ -1570,7 +1648,6 @@ def admin_scholarships():
         "admin/scholarships.html",
         scholarships=scholarships,
         search=search,
-        category_filter=category,
         status_filter=status,
     )
 
@@ -1587,13 +1664,17 @@ def admin_scholarship_form(scholarship_id=None):
     if scholarship_id is not None and scholarship is None:
         abort(404)
 
+    if scholarship is not None and scholarship.category != "grade":
+        flash("Exam-based scholarships must be managed under Exam Management.", "error")
+        return redirect(url_for("admin_scholarships"))
+
     if request.method == "POST":
         title = request.form.get("title", "").strip()
-        category = request.form.get("category", "").strip()
+        category = "grade"
         education_category = request.form.get("education_category", "").strip()
         description = request.form.get("description", "").strip()
         eligibility = request.form.get("eligibility_description", "").strip()
-        # Keep the legacy database field populated without a duplicate form field.
+
         education_levels = education_category
         amount_text = request.form.get("award_amount", "").strip()
         deadline_text = request.form.get("deadline", "").strip()
@@ -1602,9 +1683,6 @@ def admin_scholarship_form(scholarship_id=None):
 
         if not title or len(title) > 160:
             errors.append("Enter a title between 1 and 160 characters.")
-
-        if category not in ("grade", "exam"):
-            errors.append("Choose Grade-based or Exam-based.")
 
         if not description:
             errors.append("Enter a scholarship description.")
@@ -1617,21 +1695,30 @@ def admin_scholarship_form(scholarship_id=None):
             "school_11_12",
             "undergraduate_1_4",
         }
-        if education_category not in allowed_education_categories:
+        if category == "grade" and education_category not in allowed_education_categories:
             errors.append("Choose one valid education category.")
 
         try:
             amount = int(amount_text)
-            if amount <= 0:
+            if amount < 2000:
                 raise ValueError
         except (ValueError, TypeError):
             amount = None
-            errors.append("Award amount must be a positive whole number in rupees.")
+            errors.append("Reward amount must be a whole number of at least ₹2,000.")
 
         deadline = None
-        if deadline_text:
+        if not deadline_text:
+            errors.append("Enter an application deadline.")
+        else:
             try:
                 deadline = date.fromisoformat(deadline_text)
+                today_ist = datetime.now(
+                    ZoneInfo("Asia/Kolkata")
+                ).date()
+                if deadline <= today_ist:
+                    errors.append(
+                        "Application deadline must be later than today's date."
+                    )
             except ValueError:
                 errors.append("Enter a valid deadline.")
 
@@ -1687,6 +1774,229 @@ def admin_toggle_scholarship(scholarship_id):
     state = "activated" if scholarship.is_active else "deactivated"
     flash(f"'{scholarship.title}' has been {state}. Existing application history was retained.", "success")
     return redirect(url_for("admin_scholarships"))
+
+
+
+
+@app.route("/admin/exams")
+@admin_required
+def admin_exams():
+    exam_rows = []
+
+    exam_scholarships = Scholarship.query.filter_by(
+        category="exam"
+    ).order_by(Scholarship.id.desc()).all()
+
+    for scholarship in exam_scholarships:
+        linked_exams = DemoExam.query.filter_by(
+            scholarship_id=scholarship.id
+        ).order_by(DemoExam.start_at.asc()).all()
+
+        if linked_exams:
+            for exam in linked_exams:
+                exam_rows.append((scholarship, exam))
+        else:
+            # Keep existing exam scholarships visible so an admin can
+            # complete their schedule without recreating the scholarship.
+            exam_rows.append((scholarship, None))
+
+    return render_template(
+        "admin/exams.html",
+        exam_rows=exam_rows,
+    )
+
+
+@app.route("/admin/exams/new", methods=["GET", "POST"])
+@app.route("/admin/exams/<int:exam_id>/edit", methods=["GET", "POST"])
+@app.route(
+    "/admin/exams/scholarship/<int:scholarship_id>/schedule",
+    methods=["GET", "POST"],
+)
+@admin_required
+def admin_exam_form(exam_id=None, scholarship_id=None):
+    exam = None
+    scholarship = None
+
+    if exam_id is not None:
+        exam = db.session.get(DemoExam, exam_id)
+        if exam is None or exam.scholarship_id is None:
+            abort(404)
+
+        scholarship = db.session.get(Scholarship, exam.scholarship_id)
+        if scholarship is None or scholarship.category != "exam":
+            abort(404)
+
+    elif scholarship_id is not None:
+        scholarship = db.session.get(Scholarship, scholarship_id)
+        if scholarship is None or scholarship.category != "exam":
+            abort(404)
+
+        exam = DemoExam.query.filter_by(
+            scholarship_id=scholarship.id
+        ).order_by(DemoExam.start_at.asc()).first()
+
+        if exam is not None:
+            return redirect(
+                url_for("admin_exam_form", exam_id=exam.id)
+            )
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        eligibility = request.form.get("eligibility_description", "").strip()
+        amount_text = request.form.get("award_amount", "").strip()
+        registration_text = request.form.get("registration_opens_at", "").strip()
+        start_text = request.form.get("start_at", "").strip()
+        duration_text = request.form.get("duration_minutes", "").strip()
+        is_active = request.form.get("is_active") == "on"
+
+        errors = []
+
+        if not title or len(title) > 160:
+            errors.append("Enter a title between 1 and 160 characters.")
+        if not description:
+            errors.append("Enter a scholarship description.")
+        if not eligibility:
+            errors.append("Enter the eligibility requirements.")
+
+        try:
+            amount = int(amount_text)
+            if amount < 2000:
+                raise ValueError
+        except (ValueError, TypeError):
+            amount = None
+            errors.append("Reward amount must be a whole number of at least ₹2,000.")
+
+        registration_opens_at = None
+        start_at = None
+        end_at = None
+        duration_minutes = None
+
+        for value, field_name in (
+            (registration_text, "registration opening time"),
+            (start_text, "exam start time"),
+        ):
+            if not value:
+                errors.append(f"Enter the {field_name}.")
+                continue
+            try:
+                parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M")
+                if field_name == "registration opening time":
+                    registration_opens_at = parsed
+                else:
+                    start_at = parsed
+            except ValueError:
+                errors.append(f"Enter a valid {field_name}.")
+
+        try:
+            duration_minutes = int(duration_text)
+            if duration_minutes <= 15 or duration_minutes > 1440:
+                raise ValueError
+        except (ValueError, TypeError):
+            duration_minutes = None
+            errors.append(
+                "Exam duration must be a whole number from 16 to 1440 minutes."
+            )
+
+        if start_at and duration_minutes:
+            end_at = start_at + timedelta(minutes=duration_minutes)
+
+        india_tz = ZoneInfo("Asia/Kolkata")
+        now_ist = datetime.now(india_tz).replace(tzinfo=None)
+
+        if registration_opens_at and registration_opens_at < now_ist:
+            errors.append(
+                "Registration opening must be the current date/time or a future time."
+            )
+
+        if registration_opens_at and start_at:
+            if registration_opens_at > start_at - timedelta(days=1):
+                errors.append(
+                    "Registration must open at least 24 hours before the exam starts."
+                )
+
+        if registration_opens_at:
+            latest_other_end = (
+                db.session.query(db.func.max(DemoExam.end_at))
+                .filter(
+                    DemoExam.start_at.isnot(None),
+                    DemoExam.end_at.isnot(None),
+                    *(
+                        [DemoExam.id != exam.id]
+                        if exam is not None else []
+                    ),
+                )
+                .scalar()
+            )
+
+            if (
+                latest_other_end is not None
+                and registration_opens_at <= latest_other_end
+            ):
+                errors.append(
+                    "Registration must open after the end of every other "
+                    "scheduled exam. The latest existing exam ends at "
+                    f"{latest_other_end.strftime('%d %b %Y, %I:%M %p')} IST."
+                )
+
+        if errors:
+            for error in errors:
+                flash(error, "error")
+        else:
+            try:
+                if scholarship is None:
+                    scholarship = Scholarship()
+                    db.session.add(scholarship)
+
+                scholarship.title = title
+                scholarship.category = "exam"
+                scholarship.education_category = None
+                scholarship.description = description
+                scholarship.award_amount = amount
+                scholarship.eligibility_description = eligibility
+                scholarship.eligible_education_levels = (
+                    "school_8_10,school_11_12,undergraduate_1_4"
+                )
+                scholarship.is_active = is_active
+
+                if exam is None:
+                    exam = DemoExam()
+                    db.session.add(exam)
+
+                exam.title = title
+                exam.description = description
+                exam.registration_opens_at = registration_opens_at
+                exam.start_at = start_at
+                exam.end_at = end_at
+                exam.is_active = is_active
+                exam.scholarship = scholarship
+
+                # One transaction: the scholarship and its exam schedule
+                # are committed together or rolled back together.
+                db.session.commit()
+
+                flash(
+                    "Exam-based scholarship and schedule saved successfully.",
+                    "success",
+                )
+                return redirect(url_for("admin_exams"))
+
+            except Exception:
+                db.session.rollback()
+                app.logger.exception(
+                    "Could not save exam-based scholarship and schedule"
+                )
+                flash(
+                    "Could not save the exam opportunity. Please try again.",
+                    "error",
+                )
+
+    return render_template(
+        "admin/exam_form.html",
+        scholarship=scholarship,
+        exam=exam,
+        is_edit=scholarship is not None,
+    )
 
 
 @app.route("/admin")

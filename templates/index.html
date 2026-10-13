@@ -106,7 +106,7 @@
         <span class="section-kicker">MARK YOUR CALENDAR</span>
 
         {% if upcoming_exam %}
-            <h2>{{ upcoming_exam.title }}</h2>
+            <h2>{{ upcoming_exam.scholarship.title if upcoming_exam.scholarship else 'Upcoming Scholarship Exam' }}</h2>
             <p>
                 {{ upcoming_exam.description or
                    "Get ready for the upcoming GovScale demonstration exam." }}

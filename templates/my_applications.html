@@ -90,7 +90,7 @@
     <div class="dashboard-grid dashboard-management-grid">
         {% for registration in exam_registrations %}
             <article class="dashboard-card">
-                <h3>{{ registration.exam.title }}</h3>
+                <h3>{{ registration.exam.scholarship.title if registration.exam.scholarship else 'GovScale Exam' }}</h3>
 
                 <p>
                     Registered:
