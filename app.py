@@ -1830,10 +1830,11 @@ with app.app_context():
             ),
             Scholarship(
                 title="Future Learners Grant",
-                category="merit",
+                category="grade",
+                education_category="school_11_12",
                 description=(
                     "A fictional education grant recognising academic "
-                    "performance and consistent grades."
+                    "performance and consistent grades for senior-school students."
                 ),
                 award_amount=10000,
                 eligibility_description=(
@@ -1846,10 +1847,11 @@ with app.app_context():
             ),
             Scholarship(
                 title="Digital Skills Award",
-                category="merit",
+                category="grade",
+                education_category="undergraduate_1_4",
                 description=(
                     "A fictional award recognising academic achievement "
-                    "and interest in digital skills."
+                    "and interest in digital skills for undergraduate students."
                 ),
                 award_amount=15000,
                 eligibility_description=(
@@ -1918,6 +1920,31 @@ with app.app_context():
 
         db.session.add_all(demo_scholarships)
         db.session.commit()
+
+    # Ensure a fresh or previously seeded database has a demo exam attached
+    # to the exam scholarship. Keep this idempotent for repeated app starts.
+    if db.session.query(DemoExam.id).first() is None:
+        exam_scholarship = Scholarship.query.filter_by(
+            category="exam",
+            is_active=True,
+        ).order_by(Scholarship.id.asc()).first()
+
+        if exam_scholarship is not None:
+            db.session.add(
+                DemoExam(
+                    title="National Merit Challenge — Practice Exam",
+                    description=(
+                        "A fictional timed practice assessment for the GovScale "
+                        "demo. It is not an official examination."
+                    ),
+                    registration_opens_at=datetime(2026, 11, 1, 9, 0),
+                    start_at=datetime(2026, 11, 20, 10, 0),
+                    end_at=datetime(2026, 11, 20, 11, 0),
+                    is_active=True,
+                    scholarship_id=exam_scholarship.id,
+                )
+            )
+            db.session.commit()
 
 
 if __name__ == "__main__":
