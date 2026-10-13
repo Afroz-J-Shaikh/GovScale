@@ -48,11 +48,17 @@
                 {% if exam_state == "upcoming" %}
                     Your exam will start soon. Please return when the countdown reaches zero.
                 {% elif exam_state == "started" %}
-                    The scheduled exam window is open. The exam-taking feature will be connected in a later step.
+                    The exam window is open. You can begin your attempt now.
                 {% else %}
                     This exam has concluded. Stay tuned for announcements about upcoming scholarship exams.
                 {% endif %}
             </p>
+            <a
+                id="lobby-start-exam"
+                href="{{ url_for('exam_entry', exam_id=exam.id) }}"
+                class="exam-action"
+                {% if exam_state != "started" %}hidden{% endif %}
+            >Start exam</a>
         </div>
 
         <a href="{{ url_for('dashboard') }}" class="exam-action">
@@ -97,14 +103,17 @@ document.addEventListener("DOMContentLoaded", function () {
         } else if (now < endTime) {
             countdown.hidden = true;
             heading.textContent = "EXAM WINDOW OPEN";
-            message.textContent =
-                "The scheduled exam window is open. The exam-taking feature will be connected in a later step.";
+            message.textContent = "The exam window is open. You can begin your attempt now.";
+            const startLink = document.getElementById("lobby-start-exam");
+            if (startLink) startLink.hidden = false;
             return;
         } else {
             countdown.hidden = true;
             heading.textContent = "EXAM CONCLUDED";
             message.textContent =
                 "This exam has concluded. Stay tuned for announcements about upcoming scholarship exams.";
+            const startLink = document.getElementById("lobby-start-exam");
+            if (startLink) startLink.hidden = true;
             return;
         }
 

@@ -52,6 +52,14 @@ app.config["SECRET_KEY"] = os.environ.get(
     "local-development-key-change-before-deployment",
 )
 
+if (
+    os.environ.get("GOVSCALE_ENV", "").lower() == "production"
+    and not os.environ.get("GOVSCALE_SECRET_KEY")
+):
+    raise RuntimeError(
+        "GOVSCALE_SECRET_KEY must be set when GOVSCALE_ENV=production."
+    )
+
 Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
@@ -261,6 +269,73 @@ class ExamRegistration(db.Model):
         "DemoExam",
         backref=db.backref("registrations", lazy=True),
     )
+
+class ExamQuestion(db.Model):
+    __tablename__ = "exam_question"
+
+    id = db.Column(db.Integer, primary_key=True)
+    exam_id = db.Column(
+        db.Integer, db.ForeignKey("demo_exam.id"), nullable=False, index=True
+    )
+    prompt = db.Column(db.Text, nullable=False)
+    option_a = db.Column(db.String(500), nullable=False)
+    option_b = db.Column(db.String(500), nullable=False)
+    option_c = db.Column(db.String(500), nullable=False)
+    option_d = db.Column(db.String(500), nullable=False)
+    correct_option = db.Column(db.String(1), nullable=False)
+    explanation = db.Column(db.Text, nullable=True)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+
+    exam = db.relationship(
+        "DemoExam",
+        backref=db.backref("questions", lazy=True, order_by="ExamQuestion.sort_order"),
+    )
+
+
+class ExamAttempt(db.Model):
+    __tablename__ = "exam_attempt"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    exam_id = db.Column(db.Integer, db.ForeignKey("demo_exam.id"), nullable=False)
+    started_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    submitted_at = db.Column(db.DateTime, nullable=True)
+    score = db.Column(db.Integer, nullable=True)
+    total_questions = db.Column(db.Integer, nullable=False, default=0)
+    status = db.Column(db.String(20), nullable=False, default="in_progress")
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "exam_id", name="uq_user_exam_attempt"),
+    )
+
+    user = db.relationship("User", backref=db.backref("exam_attempts", lazy=True))
+    exam = db.relationship("DemoExam", backref=db.backref("attempts", lazy=True))
+    answers = db.relationship(
+        "ExamAnswer", backref="attempt", lazy=True, cascade="all, delete-orphan"
+    )
+
+
+class ExamAnswer(db.Model):
+    __tablename__ = "exam_answer"
+
+    id = db.Column(db.Integer, primary_key=True)
+    attempt_id = db.Column(
+        db.Integer, db.ForeignKey("exam_attempt.id"), nullable=False
+    )
+    question_id = db.Column(
+        db.Integer, db.ForeignKey("exam_question.id"), nullable=False
+    )
+    selected_option = db.Column(db.String(1), nullable=True)
+    is_correct = db.Column(db.Boolean, nullable=False, default=False)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "attempt_id", "question_id", name="uq_attempt_question_answer"
+        ),
+    )
+
+    question = db.relationship("ExamQuestion")
+
 
 class Institution(db.Model):
     __tablename__ = "institution"
@@ -566,8 +641,9 @@ def home():
         status="approved"
     ).count()
 
-    # TODO: Replace with a real count when exam registration is implemented.
-    impact_exam_participants = 0
+    impact_exam_participants = ExamRegistration.query.filter_by(
+        status="registered"
+    ).count()
 
     return render_template(
         "index.html",
@@ -1207,7 +1283,7 @@ def exam_lobby(exam_id):
         exam_state=exam_state,
     )
 
-@app.route("/exams/<int:exam_id>/take")
+@app.route("/exams/<int:exam_id>/take", methods=["GET", "POST"])
 @student_required
 def exam_page(exam_id):
     exam = db.session.get(DemoExam, exam_id)
@@ -1227,7 +1303,6 @@ def exam_page(exam_id):
 
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
-
     scholarship = db.session.get(Scholarship, exam.scholarship_id)
 
     if (
@@ -1239,7 +1314,81 @@ def exam_page(exam_id):
     ):
         return redirect(url_for("exam_entry", exam_id=exam.id))
 
-    return render_template("exam_page.html", exam=exam)
+    questions = ExamQuestion.query.filter_by(exam_id=exam.id).order_by(
+        ExamQuestion.sort_order.asc(), ExamQuestion.id.asc()
+    ).all()
+    if not questions:
+        flash("This exam has no questions yet. Please contact the administrator.", "error")
+        return redirect(url_for("exam_lobby", exam_id=exam.id))
+
+    attempt = ExamAttempt.query.filter_by(
+        user_id=current_user.id, exam_id=exam.id
+    ).first()
+
+    if attempt is not None and attempt.status == "submitted":
+        existing_answers = {
+            answer.question_id: answer
+            for answer in ExamAnswer.query.filter_by(attempt_id=attempt.id).all()
+        }
+        return render_template(
+            "exam_page.html", exam=exam, questions=questions,
+            attempt=attempt, submitted=True, existing_answers=existing_answers,
+        )
+
+    if attempt is None:
+        attempt = ExamAttempt(
+            user_id=current_user.id,
+            exam_id=exam.id,
+            total_questions=len(questions),
+            status="in_progress",
+        )
+        db.session.add(attempt)
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            attempt = ExamAttempt.query.filter_by(
+                user_id=current_user.id, exam_id=exam.id
+            ).first()
+
+    if request.method == "POST":
+        score = 0
+        for question in questions:
+            selected = request.form.get(f"question_{question.id}", "").upper()
+            if selected not in {"A", "B", "C", "D"}:
+                selected = None
+            is_correct = selected == question.correct_option
+            if is_correct:
+                score += 1
+            db.session.add(
+                ExamAnswer(
+                    attempt_id=attempt.id,
+                    question_id=question.id,
+                    selected_option=selected,
+                    is_correct=is_correct,
+                )
+            )
+
+        attempt.score = score
+        attempt.total_questions = len(questions)
+        attempt.submitted_at = now_ist
+        attempt.status = "submitted"
+        db.session.commit()
+        flash("Your exam answers have been submitted.", "success")
+        return redirect(url_for("exam_page", exam_id=exam.id))
+
+    existing_answers = {
+        answer.question_id: answer
+        for answer in ExamAnswer.query.filter_by(attempt_id=attempt.id).all()
+    }
+    return render_template(
+        "exam_page.html",
+        exam=exam,
+        questions=questions,
+        attempt=attempt,
+        submitted=False,
+        existing_answers=existing_answers,
+    )
 
 @app.route("/dashboard")
 @student_required
@@ -1750,7 +1899,15 @@ def admin_dashboard():
 
 @app.route("/health")
 def health():
-    return {"status": "healthy"}, 200
+    """Lightweight readiness check that verifies the database is reachable."""
+    try:
+        db.session.execute(text("SELECT 1"))
+    except Exception:
+        app.logger.exception("Health check failed: database is unavailable")
+        db.session.rollback()
+        return {"status": "unhealthy", "database": "unavailable"}, 503
+
+    return {"status": "healthy", "database": "reachable"}, 200
 
 
 with app.app_context():
@@ -1821,10 +1978,11 @@ with app.app_context():
             ),
             Scholarship(
                 title="Future Learners Grant",
-                category="merit",
+                category="grade",
+                education_category="school_11_12",
                 description=(
                     "A fictional education grant recognising academic "
-                    "performance and consistent grades."
+                    "performance and consistent grades for senior-school students."
                 ),
                 award_amount=10000,
                 eligibility_description=(
@@ -1837,10 +1995,11 @@ with app.app_context():
             ),
             Scholarship(
                 title="Digital Skills Award",
-                category="merit",
+                category="grade",
+                education_category="undergraduate_1_4",
                 description=(
                     "A fictional award recognising academic achievement "
-                    "and interest in digital skills."
+                    "and interest in digital skills for undergraduate students."
                 ),
                 award_amount=15000,
                 eligibility_description=(
@@ -1910,6 +2069,78 @@ with app.app_context():
         db.session.add_all(demo_scholarships)
         db.session.commit()
 
+    # Repair legacy seed rows created before grade scholarships used the
+    # supported category names. Restrict the migration to known demo records.
+    legacy_demo_categories = {
+        "Future Learners Grant": "school_11_12",
+        "Digital Skills Award": "undergraduate_1_4",
+    }
+    for title, education_category in legacy_demo_categories.items():
+        legacy_scholarship = Scholarship.query.filter_by(
+            title=title,
+            category="merit",
+        ).first()
+        if legacy_scholarship is not None:
+            legacy_scholarship.category = "grade"
+            legacy_scholarship.education_category = education_category
+    db.session.commit()
+
+    # Ensure a fresh or previously seeded database has a demo exam attached
+    # to the exam scholarship. Keep this idempotent for repeated app starts.
+    if db.session.query(DemoExam.id).first() is None:
+        exam_scholarship = Scholarship.query.filter_by(
+            category="exam",
+            is_active=True,
+        ).order_by(Scholarship.id.asc()).first()
+
+        if exam_scholarship is not None:
+            db.session.add(
+                DemoExam(
+                    title="National Merit Challenge — Practice Exam",
+                    description=(
+                        "A fictional timed practice assessment for the GovScale "
+                        "demo. It is not an official examination."
+                    ),
+                    registration_opens_at=datetime(2026, 11, 1, 9, 0),
+                    start_at=datetime(2026, 11, 20, 10, 0),
+                    end_at=datetime(2026, 11, 20, 11, 0),
+                    is_active=True,
+                    scholarship_id=exam_scholarship.id,
+                )
+            )
+            db.session.commit()
+
+
+    # Populate a small fictional multiple-choice question bank for seeded exams.
+    demo_questions = [
+        ("What is the primary purpose of a scholarship?", "To support education costs", "To guarantee a job", "To replace all examinations", "To issue identity cards", "A", "Scholarships provide financial or educational support to eligible learners."),
+        ("Which practice best protects an online account?", "Reuse one password everywhere", "Share passwords with friends", "Use a unique strong password", "Disable account security", "C", "A unique, strong password reduces the impact of credential reuse."),
+        ("Which unit is commonly used to measure digital storage?", "Kilogram", "Gigabyte", "Litre", "Metre", "B", "A gigabyte is a common unit of digital storage."),
+        ("What should you do before submitting an online application?", "Check the required details", "Enter random information", "Ignore validation messages", "Close the browser immediately", "A", "Reviewing required fields helps avoid incomplete applications."),
+        ("Which is an example of personal information?", "A generic weather fact", "A public arithmetic rule", "A person's email address", "A universal unit conversion", "C", "An email address can identify or contact a person and should be protected."),
+    ]
+    for seeded_exam in DemoExam.query.filter_by(
+        title="National Merit Challenge — Practice Exam"
+    ).all():
+        if not ExamQuestion.query.filter_by(exam_id=seeded_exam.id).first():
+            for index, (prompt, option_a, option_b, option_c, option_d, correct, explanation) in enumerate(demo_questions, start=1):
+                db.session.add(ExamQuestion(
+                    exam_id=seeded_exam.id,
+                    prompt=prompt,
+                    option_a=option_a,
+                    option_b=option_b,
+                    option_c=option_c,
+                    option_d=option_d,
+                    correct_option=correct,
+                    explanation=explanation,
+                    sort_order=index,
+                ))
+    db.session.commit()
+
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Debug mode must be explicitly enabled for local development only.
+    debug_enabled = os.environ.get("GOVSCALE_DEBUG", "").lower() in {
+        "1", "true", "yes"
+    }
+    app.run(debug=debug_enabled)
