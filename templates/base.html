@@ -57,10 +57,14 @@
             </button>
 
             <div class="nav-links" id="primary-navigation">
-                <a href="{{ url_for('home') }}#scholarships">Scholarships</a>
-                <a href="{{ url_for('home') }}#how-it-works">How it works</a>
-                <a href="{{ url_for('home') }}#about">About</a>
-                <a href="{{ url_for('home') }}#contact">Contact us</a>
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                    <a href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+                {% else %}
+                    <a href="{{ url_for('home') }}#scholarships">Scholarships</a>
+                    <a href="{{ url_for('home') }}#how-it-works">How it works</a>
+                    <a href="{{ url_for('home') }}#about">About</a>
+                    <a href="{{ url_for('home') }}#contact">Contact us</a>
+                {% endif %}
             </div>
 
             <div class="nav-actions">
@@ -90,11 +94,10 @@
                             </svg>
                         </button>
 
-                        <div class="profile-dropdown-menu"
-                             id="profile-menu" hidden>
+                        <div class="profile-dropdown-menu" id="profile-menu" hidden>
                             <div class="profile-menu-header">
                                 <a class="profile-menu-name"
-                                href="{{ url_for('dashboard') }}">
+                                href="{{ url_for('admin_dashboard') if current_user.is_admin else url_for('dashboard') }}">
                                     {{ current_user.full_name }}
                                 </a>
                                 <span class="profile-menu-email">
@@ -104,32 +107,36 @@
 
                             <div class="profile-menu-divider"></div>
 
-                            <a class="profile-menu-item"
-                               href="{{ url_for('student_profile') }}">
-                                <span class="profile-menu-icon"
-                                      aria-hidden="true">◎</span>
-                                <span>My Profile</span>
-                            </a>
+                            {% if current_user.is_admin %}
+                                <a class="profile-menu-item"
+                                href="{{ url_for('admin_dashboard') }}">
+                                    <span>Admin Dashboard</span>
+                                </a>
+                            {% else %}
+                                <a class="profile-menu-item"
+                                href="{{ url_for('student_profile') }}">
+                                    <span class="profile-menu-icon" aria-hidden="true">◎</span>
+                                    <span>My Profile</span>
+                                </a>
 
-                            <a class="profile-menu-item"
-                               href="{{ url_for('my_applications') }}">
-                                <span class="profile-menu-icon"
-                                      aria-hidden="true">▤</span>
-                                <span>My Applications</span>
-                            </a>
+                                <a class="profile-menu-item"
+                                href="{{ url_for('my_applications') }}">
+                                    <span class="profile-menu-icon" aria-hidden="true">▤</span>
+                                    <span>My Applications</span>
+                                </a>
+                            {% endif %}
 
                             <div class="profile-menu-divider"></div>
 
                             <form action="{{ url_for('logout') }}"
-                                  method="POST"
-                                  class="profile-logout-form">
+                                method="POST"
+                                class="profile-logout-form">
                                 <input type="hidden"
-                                       name="csrf_token"
-                                       value="{{ csrf_token() }}">
+                                    name="csrf_token"
+                                    value="{{ csrf_token() }}">
                                 <button type="submit"
                                         class="profile-menu-item profile-logout">
-                                    <span class="profile-menu-icon"
-                                          aria-hidden="true">↪</span>
+                                    <span class="profile-menu-icon" aria-hidden="true">↪</span>
                                     <span>Log out</span>
                                 </button>
                             </form>
