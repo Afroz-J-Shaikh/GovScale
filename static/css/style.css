@@ -6250,3 +6250,98 @@ body {
         box-shadow: none !important;
     }
 }
+
+
+/* Multiple-choice practice exam */
+.exam-question-form,
+.exam-question-review {
+    display: grid;
+    gap: 18px;
+    margin-top: 24px;
+    text-align: left;
+}
+
+.exam-question-card {
+    min-width: 0;
+    margin: 0;
+    padding: 22px;
+    border: 1px solid #dce6dc;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.exam-question-card legend {
+    width: 100%;
+    margin-bottom: 14px;
+    color: var(--gs-green, #174b37);
+    line-height: 1.55;
+}
+
+.exam-question-number {
+    display: block;
+    margin-bottom: 6px;
+    color: #65766b;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.exam-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 10px;
+    padding: 12px 14px;
+    border: 1px solid #e1e8e1;
+    border-radius: 9px;
+    cursor: pointer;
+    line-height: 1.5;
+}
+
+.exam-option:has(input:checked) {
+    border-color: #438467;
+    background: #f1f8f3;
+}
+
+.exam-option input {
+    flex: 0 0 auto;
+    margin-top: 5px;
+    accent-color: var(--gs-green, #174b37);
+}
+
+.exam-question-form button.exam-action {
+    justify-self: start;
+    font: inherit;
+    cursor: pointer;
+}
+
+.exam-result-score {
+    margin: 18px 0;
+    font-size: 1.2rem;
+}
+
+.exam-result-score strong {
+    color: var(--gs-green, #174b37);
+}
+
+.exam-question-review .exam-question-card h2 {
+    margin: 0 0 12px;
+    font-size: 1.05rem;
+    line-height: 1.5;
+}
+
+.exam-question-review .exam-question-card p {
+    margin: 8px 0 0;
+    line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+    .exam-question-card {
+        padding: 16px;
+    }
+
+    .exam-option {
+        padding: 10px;
+    }
+}
