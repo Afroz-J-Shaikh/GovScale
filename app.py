@@ -566,8 +566,9 @@ def home():
         status="approved"
     ).count()
 
-    # TODO: Replace with a real count when exam registration is implemented.
-    impact_exam_participants = 0
+    impact_exam_participants = ExamRegistration.query.filter_by(
+        status="registered"
+    ).count()
 
     return render_template(
         "index.html",
@@ -1750,7 +1751,15 @@ def admin_dashboard():
 
 @app.route("/health")
 def health():
-    return {"status": "healthy"}, 200
+    """Lightweight readiness check that verifies the database is reachable."""
+    try:
+        db.session.execute(text("SELECT 1"))
+    except Exception:
+        app.logger.exception("Health check failed: database is unavailable")
+        db.session.rollback()
+        return {"status": "unhealthy", "database": "unavailable"}, 503
+
+    return {"status": "healthy", "database": "reachable"}, 200
 
 
 with app.app_context():
@@ -1912,4 +1921,8 @@ with app.app_context():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Debug mode must be explicitly enabled for local development only.
+    debug_enabled = os.environ.get("GOVSCALE_DEBUG", "").lower() in {
+        "1", "true", "yes"
+    }
+    app.run(debug=debug_enabled)
