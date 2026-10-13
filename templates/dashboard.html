@@ -67,7 +67,7 @@
     <div class="dashboard-card exam-countdown-card">
         <span class="section-kicker">YOUR REGISTERED EXAM</span>
 
-        <h2>{{ registered_exam.title }}</h2>
+        <h2>{{ registered_exam.scholarship.title if registered_exam.scholarship else 'Registered Scholarship Exam' }}</h2>
 
         <p>
             Scheduled for {{ registered_exam.start_at.strftime("%d %B %Y") }}

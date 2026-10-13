@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}{{ exam.title }} | GovScale{% endblock %}
+{% block title %}{{ exam.scholarship.title if exam.scholarship else 'GovScale Exam' }} | GovScale{% endblock %}
 
 {% block content %}
 <section class="dashboard-section">
     <div class="dashboard-card exam-lobby-card">
         <span class="section-kicker">EXAM IN PROGRESS</span>
-        <h1>{{ exam.title }}</h1>
+        <h1>{{ exam.scholarship.title if exam.scholarship else 'GovScale Exam' }}</h1>
         <p>
             Your scheduled exam window is open.
             The question and submission functionality will be added later.

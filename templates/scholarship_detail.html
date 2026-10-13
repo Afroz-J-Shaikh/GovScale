@@ -44,7 +44,12 @@
                 <span class="detail-info-label">Eligible education levels</span>
                 <div class="education-level-chips">
                     {% for level in scholarship.eligible_education_levels.split(',') %}
-                    <span>{{ level.strip()|capitalize }}</span>
+                    {% set level = level.strip() %}
+                    <span>{{ {
+                        'school_8_10': 'School 8–10',
+                        'school_11_12': 'College 11–12',
+                        'undergraduate_1_4': 'Undergraduate'
+                    }.get(level, level|replace('_', ' ')|title) }}</span>
                     {% endfor %}
                 </div>
             </div>
@@ -53,7 +58,7 @@
         {% if scholarship.category == 'exam' and linked_exam %}
         <section class="detail-exam-panel">
             <span class="detail-info-label">EXAM SCHEDULE</span>
-            <h2>{{ linked_exam.title }}</h2>
+            <h2>{{ scholarship.title }}</h2>
 
             {% if linked_exam.description %}
             <p>{{ linked_exam.description }}</p>
@@ -88,6 +93,19 @@
                     ✓ You are registered for this exam.
                 </span>
                 <p>Your registration is confirmed. Check the exam schedule for details.</p>
+
+                {% if linked_exam and now_ist < linked_exam.start_at %}
+                    <a class="detail-apply-button"
+                       href="{{ url_for('exam_lobby', exam_id=linked_exam.id) }}">
+                        View Countdown →
+                    </a>
+                {% elif linked_exam and now_ist >= linked_exam.start_at
+                    and now_ist < linked_exam.end_at %}
+                    <a class="detail-apply-button"
+                       href="{{ url_for('exam_entry', exam_id=linked_exam.id) }}">
+                        Start Exam →
+                    </a>
+                {% endif %}
             </div>
         {% elif not existing_application and eligible is not none
             and not (scholarship.category == 'exam'

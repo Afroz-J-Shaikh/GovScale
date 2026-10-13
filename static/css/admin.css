@@ -1346,3 +1346,51 @@ button, a, select { -webkit-tap-highlight-color: transparent; }
     transform: translateY(-4px);
     pointer-events: none;
 }
+
+/* Create buttons beside opportunity totals */
+.table-heading-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 22px;
+    flex-shrink: 0;
+}
+
+.table-heading-actions .scholarship-create-button {
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-width: max-content;
+}
+
+@media (max-width: 760px) {
+    .table-heading-actions {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+    }
+
+    .table-heading-actions .scholarship-create-button {
+        min-height: 40px;
+        padding: 0 12px;
+        font-size: 12px;
+    }
+}
+
+/* Compact Total label and count beside create buttons */
+.table-heading-actions .table-total {
+    align-items: center;
+    gap: 2px;
+    min-width: 48px;
+}
+
+.table-heading-actions .table-total-label {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.2;
+    color: var(--admin-muted);
+}
+
+.table-heading-actions .table-total strong {
+    font-size: 27px;
+    line-height: 1.2;
+}

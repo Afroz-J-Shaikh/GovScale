@@ -7,10 +7,8 @@
     <div>
         <span class="dashboard-overview-kicker">GOVSCALE ADMINISTRATION</span>
         <h1>Scholarship Management</h1>
-        <p>Create and manage scholarship opportunities for students across India.</p>
+        <p>Create and manage grade-based scholarship opportunities. Exam-based scholarships are managed under Exam Management.</p>
     </div>
-    <a class="scholarship-create-button"
-       href="{{ url_for('admin_scholarship_form') }}">+ Create Scholarship</a>
 </section>
 
 <section class="management-section applications-section">
@@ -20,9 +18,13 @@
             <h2>All scholarships</h2>
             <p>Changes here update the opportunities shown to students.</p>
         </div>
-        <div class="table-total">
-            <strong>{{ scholarships|length }}</strong>
-            <span>matching scholarships</span>
+        <div class="table-heading-actions">
+            <a class="scholarship-create-button"
+               href="{{ url_for('admin_scholarship_form') }}">+ Create Scholarship</a>
+            <div class="table-total">
+                <span class="table-total-label">Total</span>
+                <strong>{{ scholarships|length }}</strong>
+            </div>
         </div>
     </div>
 
@@ -35,11 +37,6 @@
                    aria-label="Search scholarships">
         </label>
 
-        <select name="category" aria-label="Filter by category">
-            <option value="">All categories</option>
-            <option value="grade" {% if category_filter == 'grade' %}selected{% endif %}>Grade-based</option>
-            <option value="exam" {% if category_filter == 'exam' %}selected{% endif %}>Exam-based</option>
-        </select>
 
         <select name="status" aria-label="Filter by status">
             <option value="">All status</option>
@@ -48,7 +45,7 @@
         </select>
 
         <button class="filter-button" type="submit">Apply filters</button>
-        {% if search or category_filter or status_filter %}
+        {% if search or status_filter %}
         <a class="clear-filters" href="{{ url_for('admin_scholarships') }}">Clear</a>
         {% endif %}
     </form>
@@ -58,7 +55,6 @@
             <thead>
                 <tr>
                     <th>SCHOLARSHIP</th>
-                    <th>CATEGORY</th>
                     <th>AWARD AMOUNT</th>
                     <th>DEADLINE</th>
                     <th>STATUS</th>
@@ -73,13 +69,6 @@
                         <div class="application-student-email">
                             {{ scholarship.education_category or 'All education categories' }}
                         </div>
-                    </td>
-                    <td>
-                        {% if scholarship.category == 'exam' %}
-                            Exam-based
-                        {% else %}
-                            Grade-based
-                        {% endif %}
                     </td>
                     <td class="amount-cell">₹{{ "{:,}".format(scholarship.award_amount) }}</td>
                     <td>
@@ -113,7 +102,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6">
+                    <td colspan="5">
                         <div class="empty-state">
                             <strong>No scholarships found</strong>
                             <p>Create a scholarship or change your search filters.</p>
