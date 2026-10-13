@@ -30,41 +30,89 @@
                 </span>
             </a>
 
-            <div class="sidebar-label">WORKSPACE</div>
+
 
             <nav class="admin-nav" aria-label="Admin navigation">
                 <a class="admin-nav-link {% if request.endpoint == 'admin_dashboard' %}active{% endif %}"
                    href="{{ url_for('admin_dashboard') }}">
-                    <span class="nav-icon">▦</span>
+                    <span class="nav-icon" aria-hidden="true">📊</span>
                     <span>Dashboard</span>
                 </a>
 
-                <a class="admin-nav-link {% if request.endpoint in ('admin_scholarships', 'admin_scholarship_form', 'admin_toggle_scholarship') %}active{% endif %}"
-                   href="{{ url_for('admin_scholarships') }}">
-                    <span class="nav-icon">♜</span>
-                    <span>Scholarships</span>
+                <a class="admin-nav-link {% if request.endpoint == 'admin_students' %}active{% endif %}"
+                   href="{{ url_for('admin_students') }}">
+                    <span class="nav-icon" aria-hidden="true">🧑‍🎓</span>
+                    <span>Students</span>
                 </a>
 
-                <a class="admin-nav-link {% if request.endpoint == 'admin_applications' %}active{% endif %}"
-                   href="{{ url_for('admin_applications') }}">
-                    <span class="nav-icon">▤</span>
-                    <span>Applications</span>
-                </a>
+                {% set scholarship_endpoints = (
+                    'admin_scholarships',
+                    'admin_scholarship_form',
+                    'admin_toggle_scholarship',
+                    'admin_exams',
+                    'admin_exam_form'
+                ) %}
+                <details class="admin-nav-group"
+                         {% if request.endpoint in scholarship_endpoints %}open{% endif %}>
+                    <summary class="admin-nav-link {% if request.endpoint in scholarship_endpoints %}active{% endif %}">
+                        <span class="nav-icon" aria-hidden="true">🎓</span>
+                        <span>Scholarship Management</span>
+                        <span class="nav-group-chevron">⌄</span>
+                    </summary>
+                    <div class="admin-subnav">
+                        <a class="admin-subnav-link {% if request.endpoint in ('admin_scholarships', 'admin_scholarship_form', 'admin_toggle_scholarship') %}active{% endif %}"
+                           href="{{ url_for('admin_scholarships') }}">
+                            📚 Grade-based
+                        </a>
+                        <a class="admin-subnav-link {% if request.endpoint in ('admin_exams', 'admin_exam_form') %}active{% endif %}"
+                           href="{{ url_for('admin_exams') }}">
+                            📝 Exam-based
+                        </a>
+                    </div>
+                </details>
 
-                {% for label, symbol in [
-                    ('Students', '♙'),
-                    ('Exam Management', '◷'),
-                    ('Exam History', '↗'),
-                    ('Application History', '▧'),
-                    ('Payments', '₹')
-                ] %}
-                <div class="admin-nav-link nav-pending" aria-disabled="true"
-                     title="This section will be enabled when its page is built">
-                    <span class="nav-icon">{{ symbol }}</span>
-                    <span>{{ label }}</span>
-                    <span class="nav-soon">NEXT</span>
-                </div>
-                {% endfor %}
+                <details class="admin-nav-group"
+                         {% if request.endpoint == 'admin_applications' %}open{% endif %}>
+                    <summary class="admin-nav-link {% if request.endpoint == 'admin_applications' %}active{% endif %}">
+                        <span class="nav-icon" aria-hidden="true">📂</span>
+                        <span>Applications</span>
+                        <span class="nav-group-chevron">⌄</span>
+                    </summary>
+                    <div class="admin-subnav">
+                        <a class="admin-subnav-link {% if request.endpoint == 'admin_applications' %}active{% endif %}"
+                           href="{{ url_for('admin_applications') }}">
+                            📚 Grade-based
+                        </a>
+                        <a class="admin-subnav-link {% if request.endpoint == 'admin_exam_applications' %}active{% endif %}"
+                           href="{{ url_for('admin_exam_applications') }}">
+                            📝 Exam-based
+                        </a>
+                    </div>
+                </details>
+
+                <details class="admin-nav-group">
+                    <summary class="admin-nav-link">
+                        <span class="nav-icon" aria-hidden="true">🕘</span>
+                        <span>Application History</span>
+                        <span class="nav-group-chevron">⌄</span>
+                    </summary>
+                    <div class="admin-subnav">
+                        <a class="admin-subnav-link {% if request.endpoint == 'admin_applications' %}active{% endif %}"
+                           href="{{ url_for('admin_applications') }}">
+                            📚 Grade-based
+                        </a>
+                        <a class="admin-subnav-link {% if request.endpoint == 'admin_exam_applications' %}active{% endif %}"
+                           href="{{ url_for('admin_exam_applications') }}">
+                            📝 Exam-based
+                        </a>
+                    </div>
+                </details>
+
+                <a class="admin-nav-link {% if request.endpoint in ('admin_exams', 'admin_exam_form') %}active{% endif %}"
+                   href="{{ url_for('admin_exams') }}">
+                    <span class="nav-icon" aria-hidden="true">📑</span>
+                    <span>Exam Management</span>
+                </a>
             </nav>
 
             <div class="sidebar-bottom">
@@ -80,17 +128,17 @@
                     <div class="account-dropdown">
                         <div class="account-dropdown-heading">Account</div>
                         <span class="account-menu-item account-menu-muted">
-                            <span>♙</span> Profile
+                            <span aria-hidden="true">🪪</span> Profile
                         </span>
                         <span class="account-menu-item account-menu-muted">
-                            <span>⚙</span> Settings
+                            <span aria-hidden="true">⚙️</span> Settings
                         </span>
                         <form action="{{ url_for('logout') }}" method="POST">
                             <input type="hidden" name="csrf_token"
                                    value="{{ csrf_token() }}">
                             <button class="account-menu-item account-signout"
                                     type="submit">
-                                <span>↪</span> Sign out
+                                <span aria-hidden="true">🚪</span> Sign out
                             </button>
                         </form>
                     </div>

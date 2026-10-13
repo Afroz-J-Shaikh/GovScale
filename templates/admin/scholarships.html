@@ -39,9 +39,11 @@
 
 
         <select name="status" aria-label="Filter by status">
-            <option value="">All status</option>
+            <option value="">All statuses</option>
             <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
             <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+            <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+            <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>Expired</option>
         </select>
 
         <button class="filter-button" type="submit">Apply filters</button>
@@ -79,8 +81,9 @@
                         {% endif %}
                     </td>
                     <td>
-                        <span class="status-pill {{ 'status-approved' if scholarship.is_active else 'status-withdrawn' }}">
-                            <span></span>{{ 'Active' if scholarship.is_active else 'Inactive' }}
+                        {% set lifecycle = scholarship.lifecycle_status or ('active' if scholarship.is_active else 'inactive') %}
+                        <span class="status-pill {% if lifecycle in ('active', 'completed') %}status-approved{% elif lifecycle == 'expired' %}status-rejected{% else %}status-withdrawn{% endif %}">
+                            <span></span>{{ lifecycle|capitalize }}
                         </span>
                     </td>
                     <td>
@@ -89,14 +92,16 @@
                                href="{{ url_for('admin_scholarship_form', scholarship_id=scholarship.id) }}">
                                 Edit
                             </a>
+                            {% if lifecycle not in ('completed', 'expired') %}
                             <form method="POST"
                                   action="{{ url_for('admin_toggle_scholarship', scholarship_id=scholarship.id) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button class="review-button {{ 'review-reject' if scholarship.is_active else 'review-approve' }}"
+                                <button class="review-button {{ 'review-reject' if lifecycle == 'active' else 'review-approve' }}"
                                         type="submit">
-                                    {{ 'Deactivate' if scholarship.is_active else 'Activate' }}
+                                    {{ 'Deactivate' if lifecycle == 'active' else 'Activate' }}
                                 </button>
                             </form>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>

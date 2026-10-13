@@ -66,13 +66,10 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if not scholarship.is_active or (exam and not exam.is_active) %}
-                            <span class="status-pill status-withdrawn"><span></span>Inactive</span>
-                        {% elif not exam %}
-                            <span class="status-pill status-withdrawn"><span></span>Incomplete</span>
-                        {% else %}
-                            <span class="status-pill status-approved"><span></span>Active</span>
-                        {% endif %}
+                        {% set lifecycle = scholarship.lifecycle_status or ('active' if scholarship.is_active else 'inactive') %}
+                        <span class="status-pill {% if lifecycle in ('active', 'completed') %}status-approved{% elif lifecycle == 'expired' %}status-rejected{% else %}status-withdrawn{% endif %}">
+                            <span></span>{{ lifecycle|capitalize }}
+                        </span>
                     </td>
                     <td>
                         <div class="scholarship-row-actions">
@@ -82,6 +79,17 @@
                             {% else %}
                             <a class="review-button review-approve"
                                href="{{ url_for('admin_exam_form', scholarship_id=scholarship.id) }}">Add schedule</a>
+                            {% endif %}
+
+                            {% if lifecycle not in ('completed', 'expired') %}
+                            <form method="POST"
+                                  action="{{ url_for('admin_toggle_scholarship', scholarship_id=scholarship.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="review-button {{ 'review-reject' if lifecycle == 'active' else 'review-approve' }}"
+                                        type="submit">
+                                    {{ 'Deactivate' if lifecycle == 'active' else 'Activate' }}
+                                </button>
+                            </form>
                             {% endif %}
                         </div>
                     </td>
