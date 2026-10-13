@@ -24,13 +24,15 @@ class GovScaleSmokeTests(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_demo_exam_is_seeded(self):
-        self.assertIsNotNone(DemoExam.query.first())
+        with app.app_context():
+            self.assertIsNotNone(DemoExam.query.first())
 
     def test_seeded_scholarships_use_supported_categories(self):
-        unsupported = Scholarship.query.filter(
-            Scholarship.category.notin_(["grade", "exam"])
-        ).all()
-        self.assertEqual(unsupported, [])
+        with app.app_context():
+            unsupported = Scholarship.query.filter(
+                Scholarship.category.notin_(["grade", "exam"])
+            ).all()
+            self.assertEqual(unsupported, [])
 
 
 if __name__ == "__main__":
