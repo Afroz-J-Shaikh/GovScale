@@ -2111,7 +2111,9 @@ with app.app_context():
         ("What should you do before submitting an online application?", "Check the required details", "Enter random information", "Ignore validation messages", "Close the browser immediately", "A", "Reviewing required fields helps avoid incomplete applications."),
         ("Which is an example of personal information?", "A generic weather fact", "A public arithmetic rule", "A person's email address", "A universal unit conversion", "C", "An email address can identify or contact a person and should be protected."),
     ]
-    for seeded_exam in DemoExam.query.all():
+    for seeded_exam in DemoExam.query.filter_by(
+        title="National Merit Challenge — Practice Exam"
+    ).all():
         if not ExamQuestion.query.filter_by(exam_id=seeded_exam.id).first():
             for index, (prompt, option_a, option_b, option_c, option_d, correct, explanation) in enumerate(demo_questions, start=1):
                 db.session.add(ExamQuestion(
