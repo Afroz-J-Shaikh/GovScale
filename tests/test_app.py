@@ -1,6 +1,6 @@
 import unittest
 
-from app import app
+from app import DemoExam, Scholarship, app
 
 
 class GovScaleSmokeTests(unittest.TestCase):
@@ -22,6 +22,15 @@ class GovScaleSmokeTests(unittest.TestCase):
     def test_unknown_route_returns_not_found(self):
         response = self.client.get("/this-route-does-not-exist")
         self.assertEqual(response.status_code, 404)
+
+    def test_demo_exam_is_seeded(self):
+        self.assertIsNotNone(DemoExam.query.first())
+
+    def test_seeded_scholarships_use_supported_categories(self):
+        unsupported = Scholarship.query.filter(
+            Scholarship.category.notin_(["grade", "exam"])
+        ).all()
+        self.assertEqual(unsupported, [])
 
 
 if __name__ == "__main__":
