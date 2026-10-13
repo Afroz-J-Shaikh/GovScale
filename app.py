@@ -1921,6 +1921,22 @@ with app.app_context():
         db.session.add_all(demo_scholarships)
         db.session.commit()
 
+    # Repair legacy seed rows created before grade scholarships used the
+    # supported category names. Restrict the migration to known demo records.
+    legacy_demo_categories = {
+        "Future Learners Grant": "school_11_12",
+        "Digital Skills Award": "undergraduate_1_4",
+    }
+    for title, education_category in legacy_demo_categories.items():
+        legacy_scholarship = Scholarship.query.filter_by(
+            title=title,
+            category="merit",
+        ).first()
+        if legacy_scholarship is not None:
+            legacy_scholarship.category = "grade"
+            legacy_scholarship.education_category = education_category
+    db.session.commit()
+
     # Ensure a fresh or previously seeded database has a demo exam attached
     # to the exam scholarship. Keep this idempotent for repeated app starts.
     if db.session.query(DemoExam.id).first() is None:
