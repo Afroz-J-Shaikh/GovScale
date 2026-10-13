@@ -262,6 +262,73 @@ class ExamRegistration(db.Model):
         backref=db.backref("registrations", lazy=True),
     )
 
+class ExamQuestion(db.Model):
+    __tablename__ = "exam_question"
+
+    id = db.Column(db.Integer, primary_key=True)
+    exam_id = db.Column(
+        db.Integer, db.ForeignKey("demo_exam.id"), nullable=False, index=True
+    )
+    prompt = db.Column(db.Text, nullable=False)
+    option_a = db.Column(db.String(500), nullable=False)
+    option_b = db.Column(db.String(500), nullable=False)
+    option_c = db.Column(db.String(500), nullable=False)
+    option_d = db.Column(db.String(500), nullable=False)
+    correct_option = db.Column(db.String(1), nullable=False)
+    explanation = db.Column(db.Text, nullable=True)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+
+    exam = db.relationship(
+        "DemoExam",
+        backref=db.backref("questions", lazy=True, order_by="ExamQuestion.sort_order"),
+    )
+
+
+class ExamAttempt(db.Model):
+    __tablename__ = "exam_attempt"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    exam_id = db.Column(db.Integer, db.ForeignKey("demo_exam.id"), nullable=False)
+    started_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    submitted_at = db.Column(db.DateTime, nullable=True)
+    score = db.Column(db.Integer, nullable=True)
+    total_questions = db.Column(db.Integer, nullable=False, default=0)
+    status = db.Column(db.String(20), nullable=False, default="in_progress")
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "exam_id", name="uq_user_exam_attempt"),
+    )
+
+    user = db.relationship("User", backref=db.backref("exam_attempts", lazy=True))
+    exam = db.relationship("DemoExam", backref=db.backref("attempts", lazy=True))
+    answers = db.relationship(
+        "ExamAnswer", backref="attempt", lazy=True, cascade="all, delete-orphan"
+    )
+
+
+class ExamAnswer(db.Model):
+    __tablename__ = "exam_answer"
+
+    id = db.Column(db.Integer, primary_key=True)
+    attempt_id = db.Column(
+        db.Integer, db.ForeignKey("exam_attempt.id"), nullable=False
+    )
+    question_id = db.Column(
+        db.Integer, db.ForeignKey("exam_question.id"), nullable=False
+    )
+    selected_option = db.Column(db.String(1), nullable=True)
+    is_correct = db.Column(db.Boolean, nullable=False, default=False)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "attempt_id", "question_id", name="uq_attempt_question_answer"
+        ),
+    )
+
+    question = db.relationship("ExamQuestion")
+
+
 class Institution(db.Model):
     __tablename__ = "institution"
 
@@ -1208,7 +1275,7 @@ def exam_lobby(exam_id):
         exam_state=exam_state,
     )
 
-@app.route("/exams/<int:exam_id>/take")
+@app.route("/exams/<int:exam_id>/take", methods=["GET", "POST"])
 @student_required
 def exam_page(exam_id):
     exam = db.session.get(DemoExam, exam_id)
@@ -1228,7 +1295,6 @@ def exam_page(exam_id):
 
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
-
     scholarship = db.session.get(Scholarship, exam.scholarship_id)
 
     if (
@@ -1240,7 +1306,77 @@ def exam_page(exam_id):
     ):
         return redirect(url_for("exam_entry", exam_id=exam.id))
 
-    return render_template("exam_page.html", exam=exam)
+    questions = ExamQuestion.query.filter_by(exam_id=exam.id).order_by(
+        ExamQuestion.sort_order.asc(), ExamQuestion.id.asc()
+    ).all()
+    if not questions:
+        flash("This exam has no questions yet. Please contact the administrator.", "error")
+        return redirect(url_for("exam_lobby", exam_id=exam.id))
+
+    attempt = ExamAttempt.query.filter_by(
+        user_id=current_user.id, exam_id=exam.id
+    ).first()
+
+    if attempt is not None and attempt.status == "submitted":
+        return render_template(
+            "exam_page.html", exam=exam, questions=questions,
+            attempt=attempt, submitted=True,
+        )
+
+    if attempt is None:
+        attempt = ExamAttempt(
+            user_id=current_user.id,
+            exam_id=exam.id,
+            total_questions=len(questions),
+            status="in_progress",
+        )
+        db.session.add(attempt)
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            attempt = ExamAttempt.query.filter_by(
+                user_id=current_user.id, exam_id=exam.id
+            ).first()
+
+    if request.method == "POST":
+        score = 0
+        for question in questions:
+            selected = request.form.get(f"question_{question.id}", "").upper()
+            if selected not in {"A", "B", "C", "D"}:
+                selected = None
+            is_correct = selected == question.correct_option
+            if is_correct:
+                score += 1
+            db.session.add(
+                ExamAnswer(
+                    attempt_id=attempt.id,
+                    question_id=question.id,
+                    selected_option=selected,
+                    is_correct=is_correct,
+                )
+            )
+
+        attempt.score = score
+        attempt.total_questions = len(questions)
+        attempt.submitted_at = now_ist
+        attempt.status = "submitted"
+        db.session.commit()
+        flash("Your exam answers have been submitted.", "success")
+        return redirect(url_for("exam_page", exam_id=exam.id))
+
+    existing_answers = {
+        answer.question_id: answer
+        for answer in ExamAnswer.query.filter_by(attempt_id=attempt.id).all()
+    }
+    return render_template(
+        "exam_page.html",
+        exam=exam,
+        questions=questions,
+        attempt=attempt,
+        submitted=False,
+        existing_answers=existing_answers,
+    )
 
 @app.route("/dashboard")
 @student_required
@@ -1961,6 +2097,31 @@ with app.app_context():
                 )
             )
             db.session.commit()
+
+
+    # Populate a small fictional multiple-choice question bank for seeded exams.
+    demo_questions = [
+        ("What is the primary purpose of a scholarship?", "To support education costs", "To guarantee a job", "To replace all examinations", "To issue identity cards", "A", "Scholarships provide financial or educational support to eligible learners."),
+        ("Which practice best protects an online account?", "Reuse one password everywhere", "Share passwords with friends", "Use a unique strong password", "Disable account security", "C", "A unique, strong password reduces the impact of credential reuse."),
+        ("Which unit is commonly used to measure digital storage?", "Kilogram", "Gigabyte", "Litre", "Metre", "B", "A gigabyte is a common unit of digital storage."),
+        ("What should you do before submitting an online application?", "Check the required details", "Enter random information", "Ignore validation messages", "Close the browser immediately", "A", "Reviewing required fields helps avoid incomplete applications."),
+        ("Which is an example of personal information?", "A generic weather fact", "A public arithmetic rule", "A person's email address", "A universal unit conversion", "C", "An email address can identify or contact a person and should be protected."),
+    ]
+    for seeded_exam in DemoExam.query.all():
+        if not ExamQuestion.query.filter_by(exam_id=seeded_exam.id).first():
+            for index, (prompt, option_a, option_b, option_c, option_d, correct, explanation) in enumerate(demo_questions, start=1):
+                db.session.add(ExamQuestion(
+                    exam_id=seeded_exam.id,
+                    prompt=prompt,
+                    option_a=option_a,
+                    option_b=option_b,
+                    option_c=option_c,
+                    option_d=option_d,
+                    correct_option=correct,
+                    explanation=explanation,
+                    sort_order=index,
+                ))
+    db.session.commit()
 
 
 if __name__ == "__main__":
