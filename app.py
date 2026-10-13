@@ -223,6 +223,56 @@ class DemoExam(db.Model):
         backref=db.backref("demo_exams", lazy=True),
     )
 
+class ExamQuestionPaper(db.Model):
+    __tablename__ = "exam_question_paper"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # One paper per exam. Keep this record even when the exam finishes.
+    exam_id = db.Column(
+        db.Integer,
+        db.ForeignKey("demo_exam.id"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    exam = db.relationship(
+        "DemoExam",
+        backref=db.backref("question_paper", uselist=False),
+    )
+
+    questions = db.relationship(
+        "ExamQuestion",
+        backref="paper",
+        lazy=True,
+        order_by="ExamQuestion.id",
+    )
+
+class ExamQuestion(db.Model):
+    __tablename__ = "exam_question"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    paper_id = db.Column(
+        db.Integer,
+        db.ForeignKey("exam_question_paper.id"),
+        nullable=False,
+        index=True,
+    )
+
+    question_text = db.Column(db.Text, nullable=False)
+
+    option_a = db.Column(db.String(500), nullable=False)
+    option_b = db.Column(db.String(500), nullable=False)
+    option_c = db.Column(db.String(500), nullable=False)
+    option_d = db.Column(db.String(500), nullable=False)
+
+    # Allowed values: A, B, C, D
+    correct_option = db.Column(db.String(1), nullable=False)
+
+    marks = db.Column(db.Integer, nullable=False, default=1)
+
 class ExamRegistration(db.Model):
     __tablename__ = "exam_registration"
 
@@ -1946,7 +1996,178 @@ def admin_toggle_scholarship(scholarship_id):
         )
     )
 
+@app.route("/admin/exams/<int:exam_id>/questions", methods=["GET", "POST"])
+@admin_required
+def admin_exam_questions(exam_id):
+    exam = db.session.get(DemoExam, exam_id)
 
+    if exam is None or exam.scholarship_id is None:
+        abort(404)
+
+    scholarship = db.session.get(Scholarship, exam.scholarship_id)
+
+    if scholarship is None or scholarship.category != "exam":
+        abort(404)
+
+    paper = ExamQuestionPaper.query.filter_by(exam_id=exam.id).first()
+
+    if request.method == "POST":
+        question_id_text = request.form.get("question_id", "").strip()
+        question = None
+
+        # If an existing question is being edited, verify that it belongs
+        # to this exam's paper.
+        if question_id_text:
+            try:
+                question_id = int(question_id_text)
+            except ValueError:
+                abort(400)
+
+            if paper is None:
+                abort(404)
+
+            question = ExamQuestion.query.filter_by(
+                id=question_id,
+                paper_id=paper.id,
+            ).first()
+
+            if question is None:
+                abort(404)
+
+        question_text = request.form.get("question_text", "").strip()
+        option_a = request.form.get("option_a", "").strip()
+        option_b = request.form.get("option_b", "").strip()
+        option_c = request.form.get("option_c", "").strip()
+        option_d = request.form.get("option_d", "").strip()
+        correct_option = request.form.get(
+            "correct_option", ""
+        ).strip().upper()
+
+        errors = []
+
+        if not question_text:
+            errors.append("Enter the question text.")
+
+        if len(question_text) > 10000:
+            errors.append("Question text must be 10,000 characters or fewer.")
+
+        for option_name, option_value in (
+            ("A", option_a),
+            ("B", option_b),
+            ("C", option_c),
+            ("D", option_d),
+        ):
+            if not option_value:
+                errors.append(f"Enter option {option_name}.")
+            elif len(option_value) > 500:
+                errors.append(
+                    f"Option {option_name} must be 500 characters or fewer."
+                )
+
+        if correct_option not in ("A", "B", "C", "D"):
+            errors.append("Choose one correct answer.")
+
+        try:
+            marks = int(request.form.get("marks", "1").strip())
+            if marks < 1 or marks > 1000:
+                raise ValueError
+        except (ValueError, TypeError):
+            marks = None
+            errors.append("Marks must be a whole number from 1 to 1000.")
+
+        if errors:
+            for error in errors:
+                flash(error, "error")
+
+            return redirect(
+                url_for("admin_exam_questions", exam_id=exam.id)
+            )
+
+        try:
+            # Create the paper only when its first question is saved.
+            if paper is None:
+                paper = ExamQuestionPaper(exam_id=exam.id)
+                db.session.add(paper)
+                db.session.flush()
+
+            if question is None:
+                question = ExamQuestion(paper_id=paper.id)
+                db.session.add(question)
+
+            question.question_text = question_text
+            question.option_a = option_a
+            question.option_b = option_b
+            question.option_c = option_c
+            question.option_d = option_d
+            question.correct_option = correct_option
+            question.marks = marks
+
+            db.session.commit()
+
+            flash("Question saved successfully.", "success")
+
+        except Exception:
+            db.session.rollback()
+            app.logger.exception(
+                "Could not save question for exam %s", exam.id
+            )
+            flash("Could not save the question. Please try again.", "error")
+
+        return redirect(
+            url_for("admin_exam_questions", exam_id=exam.id)
+        )
+
+    return render_template(
+        "admin/exam_questions.html",
+        exam=exam,
+        scholarship=scholarship,
+        paper=paper,
+    )
+
+@app.route(
+    "/admin/exams/<int:exam_id>/questions/<int:question_id>/delete",
+    methods=["POST"],
+)
+@admin_required
+def admin_exam_question_delete(exam_id, question_id):
+    exam = db.session.get(DemoExam, exam_id)
+
+    if exam is None or exam.scholarship_id is None:
+        abort(404)
+
+    scholarship = db.session.get(Scholarship, exam.scholarship_id)
+
+    if scholarship is None or scholarship.category != "exam":
+        abort(404)
+
+    paper = ExamQuestionPaper.query.filter_by(exam_id=exam.id).first()
+
+    if paper is None:
+        abort(404)
+
+    question = ExamQuestion.query.filter_by(
+        id=question_id,
+        paper_id=paper.id,
+    ).first()
+
+    if question is None:
+        abort(404)
+
+    try:
+        db.session.delete(question)
+        db.session.commit()
+        flash("Question deleted.", "success")
+
+    except Exception:
+        db.session.rollback()
+        app.logger.exception(
+            "Could not delete question %s", question_id
+        )
+        flash("Could not delete the question. Please try again.", "error")
+
+    return redirect(
+        url_for("admin_exam_questions", exam_id=exam.id)
+    )
 
 
 @app.route("/admin/exams")
@@ -1967,12 +2188,30 @@ def admin_exams():
             for exam in linked_exams:
                 exam_rows.append((scholarship, exam))
         else:
-            # Keep existing exam scholarships visible so an admin can
-            # complete their schedule without recreating the scholarship.
             exam_rows.append((scholarship, None))
 
     return render_template(
         "admin/exams.html",
+        exam_rows=exam_rows,
+    )
+
+
+@app.route("/admin/question-papers")
+@admin_required
+def admin_question_papers():
+    exam_rows = (
+        db.session.query(Scholarship, DemoExam)
+        .join(
+            DemoExam,
+            DemoExam.scholarship_id == Scholarship.id,
+        )
+        .filter(Scholarship.category == "exam")
+        .order_by(DemoExam.start_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "admin/question_papers.html",
         exam_rows=exam_rows,
     )
 

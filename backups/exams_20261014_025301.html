@@ -1,0 +1,111 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Exam Management | GovScale Admin{% endblock %}
+
+{% block admin_content %}
+<section class="dashboard-overview">
+    <div>
+        <span class="dashboard-overview-kicker">OPPORTUNITY MANAGEMENT</span>
+        <h1>Exam Management</h1>
+        <p>Create exam-based scholarship opportunities and manage their registration and exam schedules in one place.</p>
+    </div>
+</section>
+
+<section class="management-section">
+    <div class="section-heading table-heading">
+        <div>
+            <span class="eyebrow"><span class="eyebrow-line"></span> EXAM OPPORTUNITIES</span>
+            <h2>Exam-based scholarships</h2>
+            <p>Existing opportunities are retained. Add a schedule to any opportunity that needs one.</p>
+        </div>
+        <div class="table-heading-actions">
+            <a class="scholarship-create-button"
+               href="{{ url_for('admin_exam_form') }}">+ Create Exam Opportunity</a>
+            <div class="table-total">
+                <span class="table-total-label">Total</span>
+                <strong>{{ exam_rows|length }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table class="scholarship-table">
+            <thead>
+                <tr>
+                    <th>OPPORTUNITY</th>
+                    <th>AWARD</th>
+                    <th>REGISTRATION OPENS</th>
+                    <th>EXAM SCHEDULE</th>
+                    <th>STATUS</th>
+                    <th>ACTIONS</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scholarship, exam in exam_rows %}
+                <tr>
+                    <td>
+                        <div class="opportunity-name">{{ scholarship.title }}</div>
+                        <div class="application-student-email">ID #{{ scholarship.id }}</div>
+                    </td>
+                    <td class="amount-cell">₹{{ "{:,}".format(scholarship.award_amount) }}</td>
+                    <td>
+                        {% if exam and exam.registration_opens_at %}
+                            {{ exam.registration_opens_at.strftime('%d %b %Y, %I:%M %p') }}
+                        {% else %}
+                            Not configured
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if exam %}
+                            {{ exam.start_at.strftime('%d %b %Y, %I:%M %p') }}
+                            <div class="application-student-email">
+                                Ends {{ exam.end_at.strftime('%d %b %Y, %I:%M %p') }}
+                            </div>
+                        {% else %}
+                            <span class="status-pill status-withdrawn"><span></span>Schedule needed</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% set lifecycle = scholarship.lifecycle_status or ('active' if scholarship.is_active else 'inactive') %}
+                        <span class="status-pill {% if lifecycle in ('active', 'completed') %}status-approved{% elif lifecycle == 'expired' %}status-rejected{% else %}status-withdrawn{% endif %}">
+                            <span></span>{{ lifecycle|capitalize }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="scholarship-row-actions">
+                            {% if exam %}
+                            <a class="review-button review-approve"
+                               href="{{ url_for('admin_exam_form', exam_id=exam.id) }}">Edit</a>
+                            {% else %}
+                            <a class="review-button review-approve"
+                               href="{{ url_for('admin_exam_form', scholarship_id=scholarship.id) }}">Add schedule</a>
+                            {% endif %}
+
+                            {% if lifecycle not in ('completed', 'expired') %}
+                            <form method="POST"
+                                  action="{{ url_for('admin_toggle_scholarship', scholarship_id=scholarship.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="review-button {{ 'review-reject' if lifecycle == 'active' else 'review-approve' }}"
+                                        type="submit">
+                                    {{ 'Deactivate' if lifecycle == 'active' else 'Activate' }}
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <strong>No exam-based scholarships yet</strong>
+                            <p>Create an exam opportunity to add its scholarship details and schedule together.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,107 @@
+
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Exam Management | GovScale Admin{% endblock %}
+
+{% block admin_content %}
+<section class="dashboard-overview">
+    <div>
+        <span class="dashboard-overview-kicker">QUESTION PAPER MANAGEMENT</span>
+        <h1>Exam Management</h1>
+        <p>Manage question papers for existing exams. Exam schedules and scholarship settings are managed separately.</p>
+    </div>
+</section>
+
+<section class="management-section">
+    <div class="section-heading table-heading">
+        <div>
+            <span class="eyebrow">
+                <span class="eyebrow-line"></span>
+                EXISTING EXAMS
+            </span>
+            <h2>Question papers</h2>
+            <p>Question papers and questions remain stored when an exam finishes.</p>
+        </div>
+
+        <div class="table-total">
+            <span class="table-total-label">Total exams</span>
+            <strong>{{ exam_rows|length }}</strong>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table class="scholarship-table">
+            <thead>
+                <tr>
+                    <th>EXAM</th>
+                    <th>EXAM SCHEDULE</th>
+                    <th>QUESTION PAPER</th>
+                    <th>STATUS</th>
+                    <th>ACTIONS</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for scholarship, exam in exam_rows %}
+                {% set lifecycle = scholarship.lifecycle_status or ('active' if scholarship.is_active else 'inactive') %}
+
+                <tr>
+                    <td>
+                        <div class="opportunity-name">{{ scholarship.title }}</div>
+                        <div class="application-student-email">
+                            Exam ID #{{ exam.id }} · Scholarship ID #{{ scholarship.id }}
+                        </div>
+                    </td>
+
+                    <td>
+                        {{ exam.start_at.strftime('%d %b %Y, %I:%M %p') }}
+                        <div class="application-student-email">
+                            Ends {{ exam.end_at.strftime('%d %b %Y, %I:%M %p') }}
+                        </div>
+                    </td>
+
+                    <td>
+                        {% if exam.question_paper %}
+                            <strong>{{ exam.question_paper.questions|length }} questions</strong>
+                            <div class="application-student-email">
+                                Total marks:
+                                {{ exam.question_paper.questions|sum(attribute='marks') }}
+                            </div>
+                        {% else %}
+                            <span class="status-pill status-withdrawn">
+                                <span></span>Not created
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <span class="status-pill {% if lifecycle == 'active' %}status-approved{% elif lifecycle == 'completed' %}status-approved{% elif lifecycle == 'expired' %}status-rejected{% else %}status-withdrawn{% endif %}">
+                            <span></span>{{ lifecycle|capitalize }}
+                        </span>
+                    </td>
+
+                    <td>
+                        <div class="scholarship-row-actions">
+                            <a class="review-button review-approve"
+                               href="{{ url_for('admin_exam_questions', exam_id=exam.id) }}">
+                                Manage Questions
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+
+                {% else %}
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state">
+                            <strong>No scheduled exams found</strong>
+                            <p>Once an exam exists under Scholarship Management, it will appear here.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

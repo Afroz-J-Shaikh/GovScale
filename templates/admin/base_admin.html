@@ -64,7 +64,7 @@
                            href="{{ url_for('admin_scholarships') }}">
                             📚 Grade-based
                         </a>
-                        <a class="admin-subnav-link {% if request.endpoint in ('admin_exams', 'admin_exam_form') %}active{% endif %}"
+                        <a class="admin-subnav-link {% if request.endpoint in ('admin_exams', 'admin_exam_questions') %}active{% endif %}"
                            href="{{ url_for('admin_exams') }}">
                             📝 Exam-based
                         </a>
@@ -108,8 +108,8 @@
                     </div>
                 </details>
 
-                <a class="admin-nav-link {% if request.endpoint in ('admin_exams', 'admin_exam_form') %}active{% endif %}"
-                   href="{{ url_for('admin_exams') }}">
+                <a class="admin-nav-link {% if request.endpoint in ('admin_question_papers', 'admin_exam_questions') %}active{% endif %}"
+                   href="{{ url_for('admin_question_papers') }}">
                     <span class="nav-icon" aria-hidden="true">📑</span>
                     <span>Exam Management</span>
                 </a>
