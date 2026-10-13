@@ -5,15 +5,80 @@
 {% block content %}
 <section class="dashboard-section">
     <div class="dashboard-card exam-lobby-card">
-        <span class="section-kicker">EXAM IN PROGRESS</span>
+        <span class="section-kicker">
+            {% if submitted %}EXAM RESULTS{% else %}EXAM IN PROGRESS{% endif %}
+        </span>
         <h1>{{ exam.title }}</h1>
-        <p>
-            Your scheduled exam window is open.
-            The question and submission functionality will be added later.
-        </p>
-        <a href="{{ url_for('dashboard') }}" class="exam-action">
-            ← Back to dashboard
-        </a>
+
+        {% if submitted %}
+            <p class="exam-result-score">
+                Your score: <strong>{{ attempt.score }} / {{ attempt.total_questions }}</strong>
+                {% if attempt.total_questions %}
+                    ({{ ((attempt.score / attempt.total_questions) * 100) | round(1) }}%)
+                {% endif %}
+            </p>
+            <p>Your answers have been recorded. This practice assessment is for demonstration purposes only.</p>
+        {% else %}
+            <p>Answer each multiple-choice question, then submit your attempt before the scheduled exam window closes.</p>
+            <form method="post" class="exam-question-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% for question in questions %}
+                    <fieldset class="exam-question-card">
+                        <legend>
+                            <span class="exam-question-number">Question {{ loop.index }} of {{ questions|length }}</span>
+                            <strong>{{ question.prompt }}</strong>
+                        </legend>
+                        {% for letter, option in [
+                            ("A", question.option_a),
+                            ("B", question.option_b),
+                            ("C", question.option_c),
+                            ("D", question.option_d)
+                        ] %}
+                            <label class="exam-option">
+                                <input
+                                    type="radio"
+                                    name="question_{{ question.id }}"
+                                    value="{{ letter }}"
+                                    {% if existing_answers.get(question.id) and existing_answers.get(question.id).selected_option == letter %}checked{% endif %}
+                                >
+                                <span><strong>{{ letter }}.</strong> {{ option }}</span>
+                            </label>
+                        {% endfor %}
+                    </fieldset>
+                {% endfor %}
+                <button type="submit" class="exam-action">Submit exam</button>
+            </form>
+        {% endif %}
+
+        {% if submitted %}
+            <div class="exam-question-review">
+                {% for question in questions %}
+                    {% set answer = existing_answers.get(question.id) %}
+                    <section class="exam-question-card">
+                        <h2>Question {{ loop.index }}: {{ question.prompt }}</h2>
+                        <p>
+                            Your answer:
+                            {% if answer and answer.selected_option %}
+                                {{ answer.selected_option }}
+                            {% else %}
+                                Not answered
+                            {% endif %}
+                            {% if answer and answer.is_correct %}
+                                — Correct
+                            {% else %}
+                                — Incorrect
+                            {% endif %}
+                        </p>
+                        <p><strong>Correct answer:</strong> {{ question.correct_option }}</p>
+                        {% if question.explanation %}
+                            <p>{{ question.explanation }}</p>
+                        {% endif %}
+                    </section>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <a href="{{ url_for('dashboard') }}" class="exam-action">← Back to dashboard</a>
     </div>
 </section>
 {% endblock %}
