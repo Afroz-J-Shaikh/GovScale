@@ -1,0 +1,127 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Students | GovScale Admin{% endblock %}
+
+{% block admin_content %}
+<section class="dashboard-overview" aria-label="Students overview">
+    <div>
+        <span class="dashboard-overview-kicker">GOVSCALE ADMINISTRATION</span>
+        <h1>Students</h1>
+        <p>View registered student accounts and their saved academic profiles.</p>
+    </div>
+    <span class="dashboard-overview-mark" aria-hidden="true">♙</span>
+</section>
+
+<section class="management-section">
+    <div class="section-heading table-heading">
+        <div>
+            <span class="eyebrow"><span class="eyebrow-line"></span> STUDENT DIRECTORY</span>
+            <h2>Registered students</h2>
+            <p>This directory is read-only. Student accounts cannot be edited or deleted here.</p>
+        </div>
+        <div class="table-total">
+            <strong>{{ total_students }}</strong>
+            <span>total students</span>
+        </div>
+    </div>
+
+    <form class="filter-bar" method="GET"
+          action="{{ url_for('admin_students') }}">
+        <label class="search-field">
+            <span aria-hidden="true">⌕</span>
+            <input type="search" name="q" value="{{ search }}"
+                   placeholder="Search name or email…"
+                   aria-label="Search students by name or email">
+        </label>
+        <button class="filter-button" type="submit">Search</button>
+        {% if search %}
+        <a class="clear-filters" href="{{ url_for('admin_students') }}">Clear</a>
+        {% endif %}
+    </form>
+
+    <div class="table-wrap">
+        <table class="scholarship-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>STUDENT</th>
+                    <th>EDUCATION</th>
+                    <th>INSTITUTION</th>
+                    <th>STUDY LEVEL</th>
+                    <th>ACADEMIC SCORE</th>
+                    <th>TOTAL APPLICATIONS</th>
+                    <th>ACTIVE APPLICATIONS</th>
+                    <th>INDIAN CITIZEN</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                {% set profile = student.student_profile %}
+                <tr>
+                    <td>#{{ student.id }}</td>
+                    <td>
+                        <div class="opportunity-name">{{ student.full_name }}</div>
+                        <div class="application-student-email">{{ student.email }}</div>
+                    </td>
+                    <td>{{ student.education_level|replace('_', ' ')|title }}</td>
+                    <td>
+                        {% if profile %}
+                            {{ profile.institution_name }}
+                        {% else %}
+                            <span class="muted-cell">Profile incomplete</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if profile %}
+                            {{ profile.study_level|replace('_', ' ')|title }}
+                        {% else %}
+                            <span class="muted-cell">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if profile and profile.academic_score is not none %}
+                            {{ profile.academic_score }}
+                            {% if profile.grading_system %}
+                                <span class="muted-cell">({{ profile.grading_system|upper }})</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="muted-cell">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ application_counts.get(student.id, 0) }}</td>
+                    <td>{{ active_application_counts.get(student.id, 0) }}</td>
+                    <td>
+                        {% if student.indian_citizen_declared %}
+                            Yes
+                        {% else %}
+                            No
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9">
+                        <div class="empty-state">
+                            <span class="empty-state-icon">♙</span>
+                            <strong>No students found</strong>
+                            <p>
+                                {% if search %}
+                                    Try another name or email address.
+                                {% else %}
+                                    Registered student accounts will appear here.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-footer">
+        <span>Showing {{ students|length }} matching students</span>
+        <span>Read-only directory · No account modification actions</span>
+    </div>
+</section>
+{% endblock %}

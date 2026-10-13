@@ -1394,3 +1394,129 @@ button, a, select { -webkit-tap-highlight-color: transparent; }
     font-size: 27px;
     line-height: 1.2;
 }
+
+
+/* Scholarship and application navigation groups */
+.admin-nav-group {
+    min-width: 0;
+}
+
+.admin-nav-group > summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.admin-nav-group > summary::-webkit-details-marker {
+    display: none;
+}
+
+.nav-group-chevron {
+    margin-left: auto;
+    color: #A9BEAD;
+    font-size: 16px;
+    transition: transform .18s ease;
+}
+
+.admin-nav-group[open] > summary .nav-group-chevron {
+    transform: rotate(180deg);
+}
+
+.admin-subnav {
+    display: grid;
+    gap: 3px;
+    margin: 4px 0 7px 35px;
+    padding-left: 10px;
+    border-left: 1px solid rgba(182, 204, 184, .25);
+}
+
+.admin-subnav-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 7px 9px;
+    border-radius: 7px;
+    color: var(--admin-sidebar-muted);
+    font-size: 12px;
+    line-height: 1.4;
+    text-decoration: none;
+    transition: background .18s ease, color .18s ease;
+}
+
+.admin-subnav-link:not(.nav-pending):hover,
+.admin-subnav-link.active {
+    color: #fff;
+    background: rgba(255, 255, 255, .075);
+}
+
+.admin-subnav-link.active {
+    box-shadow: inset 2px 0 0 #D9B76D;
+}
+
+.admin-subnav-link.nav-pending {
+    justify-content: space-between;
+    cursor: default;
+}
+
+.admin-subnav-link .nav-soon {
+    flex-shrink: 0;
+}
+
+/* Improve readability and consistency of admin action buttons */
+.admin-content button,
+.admin-content .filter-button,
+.admin-content .review-button,
+.admin-content .scholarship-create-button {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.admin-content .review-button {
+    font-size: 13px;
+}
+
+/* Sidebar readability improvements */
+.admin-nav-link {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.admin-subnav-link {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    min-height: 39px;
+}
+
+.admin-nav-link .nav-icon {
+    font-size: 19px;
+}
+
+/* Account dropdown readability */
+.admin-account-menu .admin-profile-copy strong {
+    font-size: 14px;
+}
+
+.admin-account-menu .admin-profile-copy span {
+    font-size: 12px;
+}
+
+.account-dropdown-heading {
+    font-size: 12px;
+}
+
+.account-menu-item {
+    font-size: 14px;
+    font-weight: 500;
+    min-height: 42px;
+}
+
+.sidebar-version {
+    font-size: 9px;
+    line-height: 1.6;
+}
+
+.nav-soon {
+    font-size: 9px;
+}

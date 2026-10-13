@@ -102,6 +102,10 @@ class Scholarship(db.Model):
     eligible_education_levels = db.Column(db.String(100), nullable=False)
     deadline = db.Column(db.Date, nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    # Persistent lifecycle: active, inactive, completed, or expired.
+    lifecycle_status = db.Column(
+        db.String(20), nullable=False, default="active"
+    )
 
 
 class StudentProfile(db.Model):
@@ -1547,6 +1551,90 @@ def student_profile():
         institutions=institution_data,
     )
 
+@app.route("/admin/students")
+@admin_required
+def admin_students():
+    search = request.args.get("q", "").strip()
+
+    students_query = User.query.filter(User.is_admin.is_(False))
+
+    if search:
+        term = f"%{search}%"
+        students_query = students_query.filter(
+            or_(
+                User.full_name.ilike(term),
+                User.email.ilike(term),
+            )
+        )
+
+    total_students = User.query.filter(User.is_admin.is_(False)).count()
+    students = students_query.order_by(User.full_name.asc()).all()
+
+    # Count scholarship applications and exam registrations together.
+    scholarship_application_counts = dict(
+        db.session.query(
+            ScholarshipApplication.user_id,
+            db.func.count(ScholarshipApplication.id),
+        )
+        .group_by(ScholarshipApplication.user_id)
+        .all()
+    )
+
+    exam_registration_counts = dict(
+        db.session.query(
+            ExamRegistration.user_id,
+            db.func.count(ExamRegistration.id),
+        )
+        .group_by(ExamRegistration.user_id)
+        .all()
+    )
+
+    application_counts = {
+        student.id: (
+            scholarship_application_counts.get(student.id, 0)
+            + exam_registration_counts.get(student.id, 0)
+        )
+        for student in students
+    }
+
+    active_scholarship_application_counts = dict(
+        db.session.query(
+            ScholarshipApplication.user_id,
+            db.func.count(ScholarshipApplication.id),
+        )
+        .filter(ScholarshipApplication.status.in_(("submitted", "pending")))
+        .group_by(ScholarshipApplication.user_id)
+        .all()
+    )
+
+    active_exam_registration_counts = dict(
+        db.session.query(
+            ExamRegistration.user_id,
+            db.func.count(ExamRegistration.id),
+        )
+        .filter(ExamRegistration.status == "registered")
+        .group_by(ExamRegistration.user_id)
+        .all()
+    )
+
+    active_application_counts = {
+        student.id: (
+            active_scholarship_application_counts.get(student.id, 0)
+            + active_exam_registration_counts.get(student.id, 0)
+        )
+        for student in students
+    }
+
+    return render_template(
+        "admin/students.html",
+        students=students,
+        search=search,
+        total_students=total_students,
+        application_counts=application_counts,
+        active_application_counts=active_application_counts,
+    )
+
+
 @app.route("/admin/applications")
 @admin_required
 def admin_applications():
@@ -1587,6 +1675,49 @@ def admin_applications():
     return render_template(
         "admin/applications.html",
         applications=applications,
+        search=search,
+        status_filter=status_filter,
+    )
+
+
+@app.route("/admin/applications/exam-based")
+@admin_required
+def admin_exam_applications():
+    search = request.args.get("q", "").strip()
+    status_filter = request.args.get("status", "").strip().lower()
+
+    registrations_query = (
+        ExamRegistration.query
+        .join(User, ExamRegistration.user_id == User.id)
+        .join(DemoExam, ExamRegistration.exam_id == DemoExam.id)
+        .outerjoin(Scholarship, DemoExam.scholarship_id == Scholarship.id)
+    )
+
+    if search:
+        term = f"%{search}%"
+        registrations_query = registrations_query.filter(
+            or_(
+                User.full_name.ilike(term),
+                User.email.ilike(term),
+                DemoExam.title.ilike(term),
+                Scholarship.title.ilike(term),
+            )
+        )
+
+    if status_filter in ("registered", "cancelled"):
+        registrations_query = registrations_query.filter(
+            ExamRegistration.status == status_filter
+        )
+    else:
+        status_filter = ""
+
+    registrations = registrations_query.order_by(
+        ExamRegistration.registered_at.desc()
+    ).all()
+
+    return render_template(
+        "admin/exam_applications.html",
+        registrations=registrations,
         search=search,
         status_filter=status_filter,
     )
@@ -1635,10 +1766,9 @@ def admin_scholarships():
     if search:
         query = query.filter(Scholarship.title.ilike(f"%{search}%"))
 
-    if status == "active":
-        query = query.filter_by(is_active=True)
-    elif status == "inactive":
-        query = query.filter_by(is_active=False)
+    allowed_statuses = {"active", "inactive", "completed", "expired"}
+    if status in allowed_statuses:
+        query = query.filter_by(lifecycle_status=status)
     else:
         status = ""
 
@@ -1768,12 +1898,53 @@ def admin_toggle_scholarship(scholarship_id):
     if scholarship is None:
         abort(404)
 
-    scholarship.is_active = not scholarship.is_active
+    # Refresh this opportunity before deciding whether it can be toggled.
+    refresh_one_opportunity(scholarship)
+
+    if scholarship.lifecycle_status in ("completed", "expired"):
+        flash(
+            f"'{scholarship.title}' is {scholarship.lifecycle_status} "
+            "and can no longer be activated or deactivated.",
+            "error",
+        )
+        return redirect(
+            url_for(
+                "admin_exams"
+                if scholarship.category == "exam"
+                else "admin_scholarships"
+            )
+        )
+
+    if scholarship.lifecycle_status == "active":
+        scholarship.lifecycle_status = "inactive"
+        scholarship.is_active = False
+        new_active_state = False
+    else:
+        scholarship.lifecycle_status = "active"
+        scholarship.is_active = True
+        new_active_state = True
+
+    if scholarship.category == "exam":
+        for linked_exam in DemoExam.query.filter_by(
+            scholarship_id=scholarship.id
+        ).all():
+            linked_exam.is_active = new_active_state
+
     db.session.commit()
 
-    state = "activated" if scholarship.is_active else "deactivated"
-    flash(f"'{scholarship.title}' has been {state}. Existing application history was retained.", "success")
-    return redirect(url_for("admin_scholarships"))
+    state = "activated" if new_active_state else "deactivated"
+    flash(
+        f"'{scholarship.title}' has been {state}. "
+        "Existing student records were retained.",
+        "success",
+    )
+    return redirect(
+        url_for(
+            "admin_exams"
+            if scholarship.category == "exam"
+            else "admin_scholarships"
+        )
+    )
 
 
 
@@ -1957,7 +2128,13 @@ def admin_exam_form(exam_id=None, scholarship_id=None):
                 scholarship.eligible_education_levels = (
                     "school_8_10,school_11_12,undergraduate_1_4"
                 )
-                scholarship.is_active = is_active
+                if scholarship.lifecycle_status not in ("completed", "expired"):
+                    scholarship.lifecycle_status = (
+                        "active" if is_active else "inactive"
+                    )
+                    scholarship.is_active = is_active
+                else:
+                    scholarship.is_active = False
 
                 if exam is None:
                     exam = DemoExam()
@@ -1968,7 +2145,7 @@ def admin_exam_form(exam_id=None, scholarship_id=None):
                 exam.registration_opens_at = registration_opens_at
                 exam.start_at = start_at
                 exam.end_at = end_at
-                exam.is_active = is_active
+                exam.is_active = scholarship.is_active
                 exam.scholarship = scholarship
 
                 # One transaction: the scholarship and its exam schedule
@@ -2063,8 +2240,110 @@ def health():
     return {"status": "healthy"}, 200
 
 
+def refresh_one_opportunity(scholarship, now_ist=None):
+    """Persist completion/expiration when an opportunity times out."""
+    if now_ist is None:
+        now_ist = datetime.now(
+            ZoneInfo("Asia/Kolkata")
+        ).replace(tzinfo=None)
+
+    status = scholarship.lifecycle_status or (
+        "active" if scholarship.is_active else "inactive"
+    )
+
+    if status in ("completed", "expired"):
+        scholarship.is_active = False
+        if scholarship.category == "exam":
+            for linked_exam in DemoExam.query.filter_by(
+                scholarship_id=scholarship.id
+            ).all():
+                linked_exam.is_active = False
+        return False
+
+    timed_out = False
+
+    if scholarship.category == "grade":
+        # The deadline date remains valid through that day.
+        timed_out = (
+            scholarship.deadline is not None
+            and now_ist.date() > scholarship.deadline
+        )
+    elif scholarship.category == "exam":
+        linked_exams = DemoExam.query.filter_by(
+            scholarship_id=scholarship.id
+        ).all()
+        # An opportunity with no schedule is not timed out yet.
+        # If it has multiple exams, all must have ended.
+        timed_out = bool(linked_exams) and all(
+            exam.end_at <= now_ist for exam in linked_exams
+        )
+
+    if timed_out:
+        scholarship.lifecycle_status = (
+            "completed" if status == "active" else "expired"
+        )
+        scholarship.is_active = False
+
+        if scholarship.category == "exam":
+            for linked_exam in DemoExam.query.filter_by(
+                scholarship_id=scholarship.id
+            ).all():
+                linked_exam.is_active = False
+        return True
+
+    # Keep the existing Boolean consistent with the lifecycle status.
+    scholarship.is_active = status == "active"
+    return False
+
+
+@app.before_request
+def update_opportunity_lifecycles():
+    """Persist lifecycle transitions without a separate background worker."""
+    now_ist = datetime.now(
+        ZoneInfo("Asia/Kolkata")
+    ).replace(tzinfo=None)
+
+    changed = False
+    for opportunity in Scholarship.query.all():
+        if refresh_one_opportunity(opportunity, now_ist):
+            changed = True
+        elif opportunity.lifecycle_status in ("completed", "expired"):
+            # Keep legacy Boolean flags synchronized for terminal records.
+            changed = True
+
+    if changed:
+        db.session.commit()
+
+
 with app.app_context():
     db.create_all()
+
+    # Safely add persistent lifecycle tracking to existing SQLite databases.
+    scholarship_columns = {
+        row[1]
+        for row in db.session.execute(
+            text("PRAGMA table_info(scholarship)")
+        ).fetchall()
+    }
+
+    if "lifecycle_status" not in scholarship_columns:
+        db.session.execute(
+            text(
+                "ALTER TABLE scholarship "
+                "ADD COLUMN lifecycle_status VARCHAR(20) "
+                "NOT NULL DEFAULT 'active'"
+            )
+        )
+        db.session.execute(
+            text("""
+                UPDATE scholarship
+                SET lifecycle_status = CASE
+                    WHEN is_active = 1 THEN 'active'
+                    ELSE 'inactive'
+                END
+            """)
+        )
+        db.session.commit()
 
     # Safely add admin authorization to existing SQLite databases.
     user_columns = {
