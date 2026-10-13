@@ -1,6 +1,6 @@
 import unittest
 
-from app import DemoExam, Scholarship, app
+from app import DemoExam, ExamQuestion, Scholarship, app
 
 
 class GovScaleSmokeTests(unittest.TestCase):
@@ -23,9 +23,13 @@ class GovScaleSmokeTests(unittest.TestCase):
         response = self.client.get("/this-route-does-not-exist")
         self.assertEqual(response.status_code, 404)
 
-    def test_demo_exam_is_seeded(self):
+    def test_demo_exam_and_questions_are_seeded(self):
         with app.app_context():
-            self.assertIsNotNone(DemoExam.query.first())
+            exam = DemoExam.query.filter_by(
+                title="National Merit Challenge — Practice Exam"
+            ).first()
+            self.assertIsNotNone(exam)
+            self.assertGreater(ExamQuestion.query.filter_by(exam_id=exam.id).count(), 0)
 
     def test_seeded_scholarships_use_supported_categories(self):
         with app.app_context():
