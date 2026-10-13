@@ -1318,9 +1318,13 @@ def exam_page(exam_id):
     ).first()
 
     if attempt is not None and attempt.status == "submitted":
+        existing_answers = {
+            answer.question_id: answer
+            for answer in ExamAnswer.query.filter_by(attempt_id=attempt.id).all()
+        }
         return render_template(
             "exam_page.html", exam=exam, questions=questions,
-            attempt=attempt, submitted=True,
+            attempt=attempt, submitted=True, existing_answers=existing_answers,
         )
 
     if attempt is None:
