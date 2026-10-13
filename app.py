@@ -52,6 +52,14 @@ app.config["SECRET_KEY"] = os.environ.get(
     "local-development-key-change-before-deployment",
 )
 
+if (
+    os.environ.get("GOVSCALE_ENV", "").lower() == "production"
+    and not os.environ.get("GOVSCALE_SECRET_KEY")
+):
+    raise RuntimeError(
+        "GOVSCALE_SECRET_KEY must be set when GOVSCALE_ENV=production."
+    )
+
 Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
