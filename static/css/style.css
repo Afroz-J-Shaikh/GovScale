@@ -6250,3 +6250,386 @@ body {
         box-shadow: none !important;
     }
 }
+
+/* Dashboard emoji icons */
+.dashboard-card .dashboard-emoji-icon {
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    font-size: 25px;
+    line-height: 1;
+}
+
+/* Keep dashboard card icons beside their titles */
+.dashboard-card .dashboard-card-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.dashboard-card .dashboard-card-heading .dashboard-icon {
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.dashboard-card .dashboard-card-heading h2 {
+    margin: 0;
+}
+
+/* Student dashboard: green action buttons for all card links */
+.dashboard-section .dashboard-card .text-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 11px 16px;
+    border: 1px solid var(--gs-green, #28643b);
+    border-radius: 10px;
+    background: var(--gs-green, #28643b);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-decoration: none;
+    transition: background-color 160ms ease,
+                border-color 160ms ease,
+                box-shadow 160ms ease,
+                transform 160ms ease;
+}
+
+.dashboard-section .dashboard-card .text-link:hover {
+    background: #204f30;
+    border-color: #204f30;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgb(25 70 40 / 18%);
+    transform: translateY(-1px);
+}
+
+.dashboard-section .dashboard-card .text-link:focus-visible {
+    outline: 3px solid #9bc9a6;
+    outline-offset: 3px;
+}
+
+.dashboard-section .dashboard-card .text-link:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+
+/* Student dashboard cards: scholarship-style shadow and readable text */
+.dashboard-section .dashboard-grid > .dashboard-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #ffffff;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.dashboard-section .dashboard-grid > .dashboard-card:hover {
+    box-shadow: 0 12px 30px rgba(36, 78, 59, 0.07);
+}
+
+.dashboard-section .dashboard-grid > .dashboard-card > p {
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+/* Student dashboard: warm gold shadow and subtle left tilt */
+.dashboard-section .dashboard-grid > .dashboard-card {
+    box-shadow: 4px 5px 0 rgba(190, 151, 65, 0.28);
+    transition: transform 200ms ease, box-shadow 200ms ease;
+    transform-origin: center center;
+}
+
+.dashboard-section .dashboard-grid > .dashboard-card:hover {
+    transform: translateY(-3px) rotate(-1deg);
+    box-shadow: 8px 10px 0 rgba(190, 151, 65, 0.38);
+}
+
+
+/* Compact card layout scoped only to My History */
+.history-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 320px));
+    justify-content: start;
+    align-items: start;
+    gap: 14px;
+    width: 100%;
+    max-width: 654px;
+}
+
+.history-card-grid .history-card {
+    align-self: start;
+    padding: 17px 18px;
+    height: fit-content;
+}
+
+.history-card-grid .history-card h3 {
+    margin-top: 0;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.history-card-grid .history-card p {
+    min-height: 0;
+    margin: 10px 0;
+    line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+    .history-card-grid {
+        grid-template-columns: minmax(0, 1fr);
+        max-width: 440px;
+    }
+}
+
+/* Shared student-page Back to Dashboard button */
+.student-dashboard-return {
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px solid #e6ebe2;
+}
+
+.student-back-dashboard {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 46px;
+    padding: 12px 20px;
+    border: 1px solid #28643b;
+    border-radius: 10px;
+    background: #28643b;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-decoration: none;
+    box-shadow: 0 3px 0 rgba(190, 151, 65, 0.24);
+    transition: background-color 180ms ease,
+                box-shadow 180ms ease,
+                transform 180ms ease;
+}
+
+.student-back-dashboard:hover {
+    background: #204f30;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 0 rgba(190, 151, 65, 0.34);
+}
+
+.student-back-dashboard:focus-visible {
+    outline: 3px solid #9bc9a6;
+    outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+    .student-back-dashboard {
+        min-height: 44px;
+        padding: 11px 16px;
+        font-size: 15px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .student-back-dashboard {
+        transition: none;
+    }
+}
+
+
+/* Exam result: keep the outcome inside the existing main result card. */
+.exam-result-section {
+    max-width: 900px;
+    margin-inline: auto;
+}
+
+.exam-result-card {
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    padding: clamp(24px, 4vw, 42px);
+}
+
+.exam-result-heading {
+    position: relative;
+    padding: 8px 0 24px;
+}
+
+.exam-result-heading .section-kicker {
+    display: block;
+    font-size: 0.82rem;
+    letter-spacing: 0.14em;
+    margin-bottom: 12px;
+}
+
+.exam-result-heading h1.exam-result-status {
+    position: relative;
+    z-index: 1;
+    margin: 8px 0 18px;
+    font-size: clamp(2.8rem, 8vw, 5rem);
+    line-height: 1.05;
+    font-weight: 900;
+    letter-spacing: 0.035em;
+}
+
+.exam-result-heading h2 {
+    margin: 0;
+    font-size: clamp(1.15rem, 3vw, 1.65rem);
+}
+
+.exam-result-card.result-passed h1.exam-result-status {
+    color: var(--govscale-green, #198754);
+    text-shadow: 0 3px 18px rgba(25, 135, 84, 0.16);
+}
+
+.exam-result-card.result-failed h1.exam-result-status {
+    color: #dc3545;
+    text-shadow: 0 3px 18px rgba(220, 53, 69, 0.13);
+}
+
+.exam-result-details {
+    max-width: 540px;
+    margin: 0 auto;
+    text-align: left;
+    border-top: 1px solid rgba(128, 128, 128, 0.22);
+    padding-top: 18px;
+}
+
+.exam-result-details p {
+    margin: 12px 0;
+    line-height: 1.6;
+}
+
+.exam-result-footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 28px;
+}
+
+.exam-result-back {
+    text-decoration: none;
+}
+
+/* Small celebratory bursts are only rendered for passing results. */
+.result-celebration {
+    position: absolute;
+    inset: -10px 0 auto;
+    height: 150px;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.result-firework,
+.result-sparkle {
+    position: absolute;
+    display: block;
+    font-size: 2rem;
+    opacity: 0;
+    animation: exam-result-firework 1.25s ease-out both;
+}
+
+.firework-one {
+    left: 17%;
+    top: 25px;
+    color: #e8b931;
+    animation-delay: 0.05s;
+}
+
+.firework-two {
+    right: 18%;
+    top: 12px;
+    color: #24a878;
+    animation-delay: 0.22s;
+}
+
+.firework-three {
+    left: 49%;
+    top: 2px;
+    color: #e8b931;
+    animation-delay: 0.38s;
+}
+
+.sparkle-one {
+    left: 30%;
+    top: 65px;
+    color: #24a878;
+    animation-delay: 0.18s;
+}
+
+.sparkle-two {
+    right: 30%;
+    top: 55px;
+    color: #e8b931;
+    animation-delay: 0.32s;
+}
+
+@keyframes exam-result-firework {
+    0% {
+        opacity: 0;
+        transform: scale(0.15) rotate(0deg);
+    }
+    35% {
+        opacity: 1;
+        transform: scale(1.35) rotate(45deg);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.8) rotate(90deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .result-firework,
+    .result-sparkle {
+        animation: none;
+        opacity: 0;
+    }
+}\n
+
+/* Exam review: align marks to the right and center the history button. */
+.exam-review-marks {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    text-align: right;
+    font-weight: 600;
+}
+
+.exam-review-footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+}
+
+
+/* Align question text left and marks right on the same row. */
+.exam-review-question-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.exam-review-question-heading h3 {
+    flex: 1;
+    min-width: 0;
+    margin-top: 0;
+}
+
+.exam-review-question-heading .exam-review-marks {
+    flex: 0 0 auto;
+    display: block;
+    margin: 0;
+    text-align: right;
+    white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+    .exam-review-question-heading {
+        gap: 10px;
+    }
+
+    .exam-review-question-heading .exam-review-marks {
+        font-size: 0.9rem;
+    }
+}

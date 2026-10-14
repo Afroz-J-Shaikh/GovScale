@@ -187,6 +187,9 @@ class ScholarshipApplication(db.Model):
         server_default=db.func.current_timestamp(),
     )
 
+    approved_at = db.Column(db.DateTime, nullable=True)
+    withdrawn_at = db.Column(db.DateTime, nullable=True)
+
     __table_args__ = (
         db.UniqueConstraint(
             "user_id",
@@ -642,36 +645,32 @@ def home():
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
 
-    upcoming_exam = None
-
-    # Show the home-page exam reminder only to a student
-    # who has registered for an exam that has not ended.
-    if current_user.is_authenticated and not current_user.is_admin:
-        upcoming_exam = (
-            DemoExam.query
-            .join(
-                Scholarship,
-                DemoExam.scholarship_id == Scholarship.id,
-            )
-            .join(
-                ExamRegistration,
-                ExamRegistration.exam_id == DemoExam.id,
-            )
-            .filter(
-                ExamRegistration.user_id == current_user.id,
-                ExamRegistration.status == "registered",
-                ~db.exists().where(
-                    ExamSubmission.user_id == current_user.id,
-                    ExamSubmission.exam_id == DemoExam.id,
-                ),
-                DemoExam.is_active.is_(True),
-                DemoExam.end_at > now_ist,
-                Scholarship.is_active.is_(True),
-                Scholarship.category == "exam",
-            )
-            .order_by(DemoExam.start_at.asc())
-            .first()
+    # Show the next eligible exam on the public homepage,
+    # including to visitors who are not logged in.
+    upcoming_exam = (
+        DemoExam.query
+        .join(
+            Scholarship,
+            DemoExam.scholarship_id == Scholarship.id,
         )
+        .filter(
+            DemoExam.is_active.is_(True),
+            DemoExam.end_at > now_ist,
+            Scholarship.is_active.is_(True),
+            Scholarship.lifecycle_status == "active",
+            Scholarship.category == "exam",
+        )
+        .order_by(DemoExam.start_at.asc())
+        .first()
+    )
+
+    upcoming_exam_registration = None
+
+    if current_user.is_authenticated and upcoming_exam:
+        upcoming_exam_registration = ExamRegistration.query.filter_by(
+            user_id=current_user.id,
+            exam_id=upcoming_exam.id,
+        ).first()
 
     upcoming_exam_start_iso = (
         upcoming_exam.start_at.replace(
@@ -769,6 +768,7 @@ def home():
         impact_exam_participants=impact_exam_participants,
         upcoming_exam=upcoming_exam,
         upcoming_exam_start_iso=upcoming_exam_start_iso,
+        upcoming_exam_registration=upcoming_exam_registration,
     )
 
 
@@ -776,12 +776,30 @@ def home():
 @app.route("/scholarships/<int:scholarship_id>")
 def scholarship_detail(scholarship_id):
     scholarship = db.session.get(Scholarship, scholarship_id)
+    if scholarship is None:
+        abort(404)
+
     if (
-        scholarship is None
-        or not scholarship.is_active
+        not scholarship.is_active
         or scholarship.lifecycle_status != "active"
     ):
-        abort(404)
+        approved_existing = False
+
+        if (
+            current_user.is_authenticated
+            and scholarship.category == "grade"
+        ):
+            approved_existing = (
+                ScholarshipApplication.query.filter_by(
+                    user_id=current_user.id,
+                    scholarship_id=scholarship.id,
+                    status="approved",
+                ).first()
+                is not None
+            )
+
+        if not approved_existing:
+            abort(404)
 
     linked_exam = None
     if scholarship.category == "exam":
@@ -1035,7 +1053,11 @@ def register_for_exam(exam_id):
 def apply_for_scholarship(scholarship_id):
     scholarship = db.session.get(Scholarship, scholarship_id)
 
-    if scholarship is None or not scholarship.is_active:
+    if (
+        scholarship is None
+        or not scholarship.is_active
+        or scholarship.lifecycle_status != "active"
+    ):
         abort(404)
 
     eligible, reasons = check_scholarship_eligibility(
@@ -1122,6 +1144,7 @@ def withdraw_scholarship_application(application_id):
         return redirect(url_for("my_applications"))
 
     application.status = "withdrawn"
+    application.withdrawn_at = datetime.now()
     db.session.commit()
 
     flash(
@@ -1182,7 +1205,7 @@ def cancel_exam_registration(registration_id):
 def my_applications():
     applications = (
         ScholarshipApplication.query
-        .filter_by(user_id=current_user.id)
+        .filter_by(user_id=current_user.id, status="submitted")
         .order_by(ScholarshipApplication.submitted_at.desc())
         .all()
     )
@@ -1224,6 +1247,7 @@ def my_history():
         .filter(
             ScholarshipApplication.user_id == current_user.id,
             Scholarship.category == "grade",
+            ScholarshipApplication.status != "submitted",
         )
         .order_by(ScholarshipApplication.submitted_at.desc())
         .all()
@@ -2336,6 +2360,8 @@ def admin_review_application(application_id):
         return redirect(url_for("admin_applications"))
 
     application.status = requested_status
+    if requested_status == "approved":
+        application.approved_at = datetime.now()
     db.session.commit()
 
     flash(
@@ -3314,6 +3340,53 @@ with app.app_context():
             SET registration_opens_at = datetime(start_at, '-15 days')
             WHERE registration_opens_at IS NULL
         """)
+    )
+    db.session.commit()
+
+    # Safely add application decision timestamps to existing SQLite databases.
+    application_columns = {
+        row[1]
+        for row in db.session.execute(
+            text("PRAGMA table_info(scholarship_application)")
+        ).fetchall()
+    }
+
+    if "approved_at" not in application_columns:
+        db.session.execute(
+            text(
+                "ALTER TABLE scholarship_application "
+                "ADD COLUMN approved_at DATETIME"
+            )
+        )
+
+    if "withdrawn_at" not in application_columns:
+        db.session.execute(
+            text(
+                "ALTER TABLE scholarship_application "
+                "ADD COLUMN withdrawn_at DATETIME"
+            )
+        )
+
+    db.session.commit()
+
+    # Existing database accounts are demo students. Backfill only missing
+    # timestamps for applications already in these terminal statuses.
+    backfill_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    db.session.execute(
+        text("""
+            UPDATE scholarship_application
+            SET approved_at = :timestamp
+            WHERE status = 'approved' AND approved_at IS NULL
+        """),
+        {"timestamp": backfill_timestamp},
+    )
+    db.session.execute(
+        text("""
+            UPDATE scholarship_application
+            SET withdrawn_at = :timestamp
+            WHERE status = 'withdrawn' AND withdrawn_at IS NULL
+        """),
+        {"timestamp": backfill_timestamp},
     )
     db.session.commit()
 
