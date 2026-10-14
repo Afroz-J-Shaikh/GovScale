@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Exam Review | GovScale{% endblock %}
+
+{% block content %}
+<section class="dashboard-section">
+    <div class="dashboard-card exam-lobby-card">
+        <span class="section-kicker">EXAM REVIEW</span>
+        <h1>{{ exam.scholarship.title if exam.scholarship else exam.title }}</h1>
+        <p>
+            Score: <strong>{{ submission.score }} / {{ submission.total_marks }}</strong>
+            ({{ "%.2f"|format(submission.percentage) }}%)
+        </p>
+        <p>
+            Status:
+            <strong>{{ "Passed" if submission.passed else "Not passed" }}</strong>
+        </p>
+    </div>
+
+    <section class="dashboard-card" aria-labelledby="answer-review-title">
+        <span class="section-kicker">DETAILED FEEDBACK</span>
+        <h2 id="answer-review-title">Answer Review</h2>
+
+        {% for item in answer_review %}
+        <article class="exam-history-item">
+            <h3>Question {{ loop.index }}: {{ item.question_text }}</h3>
+            <p>
+                <strong>Your answer:</strong>
+                {% if item.selected_option %}
+                    {{ item.selected_option }}. {{ item.selected_text }}
+                {% else %}
+                    {{ item.selected_text }}
+                {% endif %}
+            </p>
+            <p>
+                <strong>Correct answer:</strong>
+                {{ item.correct_option }}. {{ item.correct_text }}
+            </p>
+            <p>
+                <strong>Outcome:</strong>
+                {{ "Correct" if item.is_correct else "Incorrect" }}
+            </p>
+            <p><strong>Marks:</strong> {{ item.awarded_marks }} / {{ item.marks }}</p>
+        </article>
+        {% else %}
+        <p>No answer details are available for this submission.</p>
+        {% endfor %}
+    </section>
+
+    <a href="{{ url_for('dashboard') }}" class="exam-action">← Back to dashboard</a>
+</section>
+{% endblock %}

@@ -114,15 +114,9 @@
                                 </a>
                             {% else %}
                                 <a class="profile-menu-item"
-                                href="{{ url_for('student_profile') }}">
-                                    <span class="profile-menu-icon" aria-hidden="true">◎</span>
-                                    <span>My Profile</span>
-                                </a>
-
-                                <a class="profile-menu-item"
-                                href="{{ url_for('my_applications') }}">
-                                    <span class="profile-menu-icon" aria-hidden="true">▤</span>
-                                    <span>My Applications</span>
+                                href="{{ url_for('settings') }}">
+                                    <span class="profile-menu-icon" aria-hidden="true">⚙</span>
+                                    <span>Settings</span>
                                 </a>
                             {% endif %}
 

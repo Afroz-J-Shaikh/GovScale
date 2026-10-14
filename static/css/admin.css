@@ -1520,3 +1520,69 @@ button, a, select { -webkit-tap-highlight-color: transparent; }
 .nav-soon {
     font-size: 9px;
 }
+
+
+/* Scholarship History: detailed, read-only archive */
+.history-table-wrap {
+    overflow-x: auto;
+}
+.history-table {
+    min-width: 1120px;
+}
+.history-table th {
+    vertical-align: top;
+}
+.history-table td {
+    vertical-align: top;
+    white-space: normal;
+    line-height: 1.65;
+}
+.history-table .history-scholarship-cell {
+    min-width: 175px;
+    max-width: 220px;
+}
+.history-table .history-detail-cell {
+    min-width: 210px;
+    max-width: 310px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.history-table .history-detail-cell strong {
+    display: block;
+    margin: 0 0 3px;
+    color: var(--admin-green);
+    font-size: 11px;
+}
+.history-table .history-detail-cell p {
+    margin: 0 0 12px;
+    color: var(--admin-muted);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.65;
+}
+.history-table .history-detail-cell p:last-child {
+    margin-bottom: 0;
+}
+.history-table .history-category {
+    color: var(--admin-muted);
+    font-size: 11px;
+}
+.history-table .history-award {
+    margin-top: 6px;
+    color: var(--admin-green);
+    font-weight: 800;
+    font-size: 13px;
+}
+.history-table .history-date-cell {
+    min-width: 215px;
+}
+
+
+/* GovScale: visibly locked admin actions for started/terminal opportunities. */
+.review-disabled,
+.review-button:disabled {
+    opacity: 0.48;
+    cursor: not-allowed;
+    filter: grayscale(0.35);
+    text-decoration: none;
+}

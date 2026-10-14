@@ -74,6 +74,17 @@
             at {{ registered_exam.start_at.strftime("%I:%M %p") }} IST.
         </p>
 
+        <div class="countdown-panel" id="exam-countdown-panel">
+            <span class="countdown-heading" id="exam-countdown-heading">COUNTDOWN TO THE EXAM</span>
+            <div id="exam-countdown" class="countdown-grid" aria-live="off">
+                <div class="countdown-unit"><strong id="exam-days">00</strong><span>Days</span></div>
+                <div class="countdown-unit"><strong id="exam-hours">00</strong><span>Hours</span></div>
+                <div class="countdown-unit"><strong id="exam-minutes">00</strong><span>Minutes</span></div>
+                <div class="countdown-unit"><strong id="exam-seconds">00</strong><span>Seconds</span></div>
+            </div>
+            <p id="exam-countdown-message" class="countdown-message">Your exam will start soon.</p>
+        </div>
+
         <a href="{{ url_for('exam_entry', exam_id=registered_exam.id) }}"
         class="exam-action">
             Start Exam <span aria-hidden="true">→</span>
@@ -102,10 +113,16 @@
                 View my applications →
             </a>
         </article>
+
+        <article class="dashboard-card">
+            <h2>My History</h2>
+            <p>Review grade-based applications, exam registrations, results, and answer reviews.</p>
+            <a class="text-link" href="{{ url_for('my_history') }}">
+                View my history →
+            </a>
+        </article>
     </div>
 </section>
-
-
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -114,8 +131,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const startIso = {{ registered_exam_start_iso | tojson }};
     const endIso = {{ registered_exam_end_iso | tojson }};
+    const startUrl = {{ registered_exam_start_url | tojson }};
 
-    if (!startIso || !endIso) return;
+    if (!startIso || !endIso || !startUrl) return;
 
     const startTime = new Date(startIso).getTime();
     const endTime = new Date(endIso).getTime();
@@ -139,9 +157,13 @@ document.addEventListener("DOMContentLoaded", function () {
             heading.textContent = "COUNTDOWN TO THE EXAM";
             message.textContent = "Your exam will start soon. Open the exam page for details.";
         } else if (now < endTime) {
-            remaining = endTime - now;
-            heading.textContent = "TIME REMAINING TO COMPLETE THE EXAM";
-            message.textContent = "The scheduled exam window is now open.";
+            heading.textContent = "EXAM WINDOW OPEN";
+            message.textContent = "Your exam is available. Click Start Exam when you're ready.";
+            fields.days.textContent = "00";
+            fields.hours.textContent = "00";
+            fields.minutes.textContent = "00";
+            fields.seconds.textContent = "00";
+            return;
         } else {
             countdown.textContent = "Exam concluded";
             heading.textContent = "EXAM COMPLETED";

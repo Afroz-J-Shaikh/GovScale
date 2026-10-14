@@ -148,8 +148,11 @@
     </div>
 {% else %}
     <article class="dashboard-card">
-        <h3>No exam registrations yet</h3>
-        <p>Register for an eligible exam scholarship to see it here.</p>
+        <h3>Not registered for any upcoming exams</h3>
+        <p>You have no active exam registrations at the moment. Missed and completed exams are available in My History.</p>
+        <a class="text-link" href="{{ url_for('my_history') }}">
+            View my history →
+        </a>
         <a class="text-link" href="{{ url_for('home') }}#scholarships">
             Browse scholarships →
         </a>

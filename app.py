@@ -106,6 +106,10 @@ class Scholarship(db.Model):
     lifecycle_status = db.Column(
         db.String(20), nullable=False, default="active"
     )
+    # Minimum percentage required to pass an exam-based scholarship.
+    passing_threshold = db.Column(
+        db.Float, nullable=False, default=80.0
+    )
 
 
 class StudentProfile(db.Model):
@@ -320,6 +324,59 @@ class ExamRegistration(db.Model):
         backref=db.backref("registrations", lazy=True),
     )
 
+
+
+class ExamSubmission(db.Model):
+    __tablename__ = "exam_submission"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    exam_id = db.Column(db.Integer, db.ForeignKey("demo_exam.id"), nullable=False)
+    submitted_at = db.Column(db.DateTime, nullable=False)
+    score = db.Column(db.Integer, nullable=False, default=0)
+    total_marks = db.Column(db.Integer, nullable=False, default=0)
+    percentage = db.Column(db.Float, nullable=False, default=0.0)
+    passing_threshold = db.Column(db.Float, nullable=False, default=80.0)
+    passed = db.Column(db.Boolean, nullable=False, default=False)
+
+    user = db.relationship("User")
+    exam = db.relationship("DemoExam")
+    answers = db.relationship(
+        "ExamAnswer",
+        backref="submission",
+        cascade="all, delete-orphan",
+        lazy=True,
+        order_by="ExamAnswer.id",
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "exam_id", name="uq_exam_submission_user_exam"),
+    )
+
+
+class ExamAnswer(db.Model):
+    __tablename__ = "exam_answer"
+
+    id = db.Column(db.Integer, primary_key=True)
+    submission_id = db.Column(
+        db.Integer, db.ForeignKey("exam_submission.id"), nullable=False, index=True
+    )
+    question_id = db.Column(
+        db.Integer, db.ForeignKey("exam_question.id"), nullable=False
+    )
+    selected_option = db.Column(db.String(1), nullable=True)
+    is_correct = db.Column(db.Boolean, nullable=False, default=False)
+    awarded_marks = db.Column(db.Integer, nullable=False, default=0)
+
+    question = db.relationship("ExamQuestion")
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "submission_id", "question_id", name="uq_exam_answer_submission_question"
+        ),
+    )
+
+
 class Institution(db.Model):
     __tablename__ = "institution"
 
@@ -497,6 +554,41 @@ class StudentProfileForm(FlaskForm):
 
     submit = SubmitField("Save profile")
 
+class SettingsForm(FlaskForm):
+    full_name = StringField(
+        "Full name",
+        validators=[DataRequired(), Length(min=2, max=100)],
+    )
+    submit = SubmitField("Save personal information")
+
+    def validate_full_name(self, field):
+        field.data = field.data.strip()
+        if len(field.data) < 2:
+            raise ValidationError("Please enter your full name.")
+
+
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField(
+        "Current password",
+        validators=[DataRequired()],
+    )
+    new_password = PasswordField(
+        "New password",
+        validators=[
+            DataRequired(),
+            Length(min=8, max=128, message="Use 8–128 characters."),
+        ],
+    )
+    confirm_password = PasswordField(
+        "Confirm new password",
+        validators=[
+            DataRequired(),
+            EqualTo("new_password", message="Passwords must match."),
+        ],
+    )
+    submit = SubmitField("Update password")
+
+
 def check_scholarship_eligibility(user, scholarship):
     """Return (eligible, reasons) using GovScale's existing rules."""
     reasons = []
@@ -550,17 +642,36 @@ def home():
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
 
-    upcoming_exam = DemoExam.query.join(
-        Scholarship,
-        DemoExam.scholarship_id == Scholarship.id,
-    ).filter(
-        DemoExam.is_active.is_(True),
-        DemoExam.end_at > now_ist,
-        Scholarship.is_active.is_(True),
-        Scholarship.category == "exam",
-    ).order_by(
-        DemoExam.start_at.asc()
-    ).first()
+    upcoming_exam = None
+
+    # Show the home-page exam reminder only to a student
+    # who has registered for an exam that has not ended.
+    if current_user.is_authenticated and not current_user.is_admin:
+        upcoming_exam = (
+            DemoExam.query
+            .join(
+                Scholarship,
+                DemoExam.scholarship_id == Scholarship.id,
+            )
+            .join(
+                ExamRegistration,
+                ExamRegistration.exam_id == DemoExam.id,
+            )
+            .filter(
+                ExamRegistration.user_id == current_user.id,
+                ExamRegistration.status == "registered",
+                ~db.exists().where(
+                    ExamSubmission.user_id == current_user.id,
+                    ExamSubmission.exam_id == DemoExam.id,
+                ),
+                DemoExam.is_active.is_(True),
+                DemoExam.end_at > now_ist,
+                Scholarship.is_active.is_(True),
+                Scholarship.category == "exam",
+            )
+            .order_by(DemoExam.start_at.asc())
+            .first()
+        )
 
     upcoming_exam_start_iso = (
         upcoming_exam.start_at.replace(
@@ -604,7 +715,7 @@ def home():
         .join(Scholarship, DemoExam.scholarship_id == Scholarship.id)
         .filter(
             DemoExam.is_active.is_(True),
-            DemoExam.end_at > now_ist,
+            DemoExam.start_at > now_ist,
             Scholarship.is_active.is_(True),
             Scholarship.category == "exam",
         )
@@ -665,7 +776,11 @@ def home():
 @app.route("/scholarships/<int:scholarship_id>")
 def scholarship_detail(scholarship_id):
     scholarship = db.session.get(Scholarship, scholarship_id)
-    if scholarship is None or not scholarship.is_active:
+    if (
+        scholarship is None
+        or not scholarship.is_active
+        or scholarship.lifecycle_status != "active"
+    ):
         abort(404)
 
     linked_exam = None
@@ -687,6 +802,17 @@ def scholarship_detail(scholarship_id):
         if linked_exam is None or linked_exam.end_at <= now_ist:
             abort(404)
 
+        if now_ist >= linked_exam.start_at:
+            active_registration = None
+            if current_user.is_authenticated:
+                active_registration = ExamRegistration.query.filter_by(
+                    user_id=current_user.id,
+                    exam_id=linked_exam.id,
+                    status="registered",
+                ).first()
+            if active_registration is None:
+                abort(404)
+
     exam_registration = None
     registration_status = None
     registration_closes_at = None
@@ -700,13 +826,19 @@ def scholarship_detail(scholarship_id):
             registration_status = "finished"
         elif linked_exam.registration_opens_at is None:
             registration_status = "unconfigured"
-        elif linked_exam.registration_opens_at > (
-            linked_exam.start_at - timedelta(days=1)
+        elif (
+            linked_exam.title != "GovScale Phase 2 Demo Exam"
+            and linked_exam.registration_opens_at > (
+                linked_exam.start_at - timedelta(days=1)
+            )
         ):
             registration_status = "invalid"
         elif now_ist < linked_exam.registration_opens_at:
             registration_status = "upcoming"
-        elif now_ist >= registration_closes_at:
+        elif (
+            linked_exam.title != "GovScale Phase 2 Demo Exam"
+            and now_ist >= registration_closes_at
+        ):
             registration_status = "closed"
         else:
             registration_status = "open"
@@ -800,7 +932,9 @@ def register_for_exam(exam_id):
             )
         )
 
-    if now_ist >= registration_closes_at:
+    is_demo_fast_start = exam.title == "GovScale Phase 2 Demo Exam"
+
+    if not is_demo_fast_start and now_ist >= registration_closes_at:
         flash("Registration for this exam has closed.", "error")
         return redirect(
             url_for(
@@ -809,9 +943,13 @@ def register_for_exam(exam_id):
             )
         )
 
-    # Require at least 24 hours between opening and exam start.
-    if exam.registration_opens_at > (
-        exam.start_at - timedelta(days=1)
+    # Normal exams require 24 hours' notice. The named demo is intentionally
+    # exempt so students can test registration shortly before its start.
+    if (
+        not is_demo_fast_start
+        and exam.registration_opens_at > (
+            exam.start_at - timedelta(days=1)
+        )
     ):
         flash(
             "This exam's registration schedule is invalid. "
@@ -1049,21 +1187,73 @@ def my_applications():
         .all()
     )
 
-    exam_registrations = (
-        ExamRegistration.query
-        .filter_by(user_id=current_user.id)
-        .order_by(ExamRegistration.registered_at.desc())
-        .all()
-    )
-
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
+
+    # Only show registrations for active exams that have not ended.
+    # Missed, completed, cancelled, and expired registrations remain in History.
+    exam_registrations = (
+        ExamRegistration.query
+        .join(DemoExam, ExamRegistration.exam_id == DemoExam.id)
+        .filter(
+            ExamRegistration.user_id == current_user.id,
+            ExamRegistration.status == "registered",
+            DemoExam.is_active.is_(True),
+            DemoExam.end_at > now_ist,
+        )
+        .order_by(DemoExam.start_at.asc())
+        .all()
+    )
 
     return render_template(
         "my_applications.html",
         applications=applications,
         exam_registrations=exam_registrations,
         now_ist=now_ist,
+    )
+
+
+@app.route("/my-history")
+@student_required
+def my_history():
+    close_expired_exams()
+
+    grade_applications = (
+        ScholarshipApplication.query
+        .join(Scholarship, ScholarshipApplication.scholarship_id == Scholarship.id)
+        .filter(
+            ScholarshipApplication.user_id == current_user.id,
+            Scholarship.category == "grade",
+        )
+        .order_by(ScholarshipApplication.submitted_at.desc())
+        .all()
+    )
+
+    registrations = (
+        ExamRegistration.query
+        .filter_by(user_id=current_user.id)
+        .join(DemoExam, ExamRegistration.exam_id == DemoExam.id)
+        .order_by(DemoExam.start_at.desc())
+        .all()
+    )
+
+    exam_history = []
+    for registration in registrations:
+        exam = registration.exam
+        submission = ExamSubmission.query.filter_by(
+            user_id=current_user.id,
+            exam_id=exam.id,
+        ).first()
+        exam_history.append({
+            "registration": registration,
+            "exam": exam,
+            "submission": submission,
+        })
+
+    return render_template(
+        "my_history.html",
+        grade_applications=grade_applications,
+        exam_history=exam_history,
     )
 
 
@@ -1075,6 +1265,7 @@ def scholarship_category(category):
 
     query = Scholarship.query.filter_by(
         is_active=True,
+        lifecycle_status="active",
         category=category,
     )
 
@@ -1107,7 +1298,7 @@ def scholarship_category(category):
             .join(Scholarship, DemoExam.scholarship_id == Scholarship.id)
             .filter(
                 DemoExam.is_active.is_(True),
-                DemoExam.end_at > now_ist,
+                DemoExam.start_at > now_ist,
                 Scholarship.is_active.is_(True),
                 Scholarship.category == "exam",
             )
@@ -1241,6 +1432,44 @@ def logout():
     flash("You have been logged out.", "success")
     return redirect(url_for("home"))
 
+def close_expired_exams(now_ist=None):
+    """Close expired exams and finalize registered students' outcomes."""
+    if now_ist is None:
+        now_ist = datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
+
+    expired_exams = DemoExam.query.filter(DemoExam.end_at <= now_ist).all()
+
+    for exam in expired_exams:
+        exam.is_active = False
+
+        registrations = ExamRegistration.query.filter_by(
+            exam_id=exam.id,
+            status="registered",
+        ).all()
+
+        for registration in registrations:
+            submission = ExamSubmission.query.filter_by(
+                user_id=registration.user_id,
+                exam_id=exam.id,
+            ).first()
+            registration.status = "completed" if submission else "missed"
+
+        scholarship = db.session.get(Scholarship, exam.scholarship_id)
+        if scholarship is not None:
+            other_future_exam = DemoExam.query.filter(
+                DemoExam.scholarship_id == scholarship.id,
+                DemoExam.id != exam.id,
+                DemoExam.is_active.is_(True),
+                DemoExam.end_at > now_ist,
+            ).first()
+
+            if other_future_exam is None:
+                scholarship.is_active = False
+                scholarship.lifecycle_status = "completed"
+
+    db.session.commit()
+
+
 @app.route("/exams/<int:exam_id>/start")
 @student_required
 def exam_entry(exam_id):
@@ -1249,15 +1478,23 @@ def exam_entry(exam_id):
     if exam is None:
         abort(404)
 
+    close_expired_exams()
+
     registration = ExamRegistration.query.filter_by(
         user_id=current_user.id,
         exam_id=exam.id,
-        status="registered",
     ).first()
 
-    if registration is None:
-        flash("You must have an active registration to access this exam.", "error")
+    if registration is None or registration.status not in ("registered", "completed"):
+        flash("You do not have an active registration for this exam.", "error")
         return redirect(url_for("dashboard"))
+
+    existing_submission = ExamSubmission.query.filter_by(
+        user_id=current_user.id,
+        exam_id=exam.id,
+    ).first()
+    if existing_submission is not None:
+        return redirect(url_for("exam_result", exam_id=exam.id))
 
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
@@ -1289,15 +1526,23 @@ def exam_lobby(exam_id):
     if exam is None:
         abort(404)
 
+    close_expired_exams()
+
     registration = ExamRegistration.query.filter_by(
         user_id=current_user.id,
         exam_id=exam.id,
-        status="registered",
     ).first()
 
-    if registration is None:
-        flash("You must have an active registration to access this exam.", "error")
+    if registration is None or registration.status not in ("registered", "completed"):
+        flash("You do not have an active registration for this exam.", "error")
         return redirect(url_for("dashboard"))
+
+    existing_submission = ExamSubmission.query.filter_by(
+        user_id=current_user.id,
+        exam_id=exam.id,
+    ).first()
+    if existing_submission is not None:
+        return redirect(url_for("exam_result", exam_id=exam.id))
 
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
@@ -1333,15 +1578,23 @@ def exam_page(exam_id):
     if exam is None:
         abort(404)
 
+    close_expired_exams()
+
     registration = ExamRegistration.query.filter_by(
         user_id=current_user.id,
         exam_id=exam.id,
-        status="registered",
     ).first()
 
-    if registration is None:
-        flash("You must have an active registration to access this exam.", "error")
+    if registration is None or registration.status not in ("registered", "completed"):
+        flash("You do not have an active registration for this exam.", "error")
         return redirect(url_for("dashboard"))
+
+    existing_submission = ExamSubmission.query.filter_by(
+        user_id=current_user.id,
+        exam_id=exam.id,
+    ).first()
+    if existing_submission is not None:
+        return redirect(url_for("exam_result", exam_id=exam.id))
 
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
@@ -1357,16 +1610,278 @@ def exam_page(exam_id):
     ):
         return redirect(url_for("exam_entry", exam_id=exam.id))
 
-    return render_template("exam_page.html", exam=exam)
+    # Load only the saved questions for this exam's question paper.
+    # Never display correct_option to the student.
+    paper = ExamQuestionPaper.query.filter_by(
+        exam_id=exam.id
+    ).first()
+    questions = paper.questions if paper is not None else []
+
+    return render_template(
+        "exam_page.html",
+        exam=exam,
+        questions=questions,
+    )
+
+
+
+@app.route("/exams/<int:exam_id>/submit", methods=["POST"])
+@student_required
+def submit_exam(exam_id):
+    exam = db.session.get(DemoExam, exam_id)
+    if exam is None:
+        abort(404)
+
+    close_expired_exams()
+
+    registration = ExamRegistration.query.filter_by(
+        user_id=current_user.id,
+        exam_id=exam.id,
+        status="registered",
+    ).first()
+    if registration is None:
+        flash("You must be registered to submit this exam.", "error")
+        return redirect(url_for("dashboard"))
+
+    existing = ExamSubmission.query.filter_by(
+        user_id=current_user.id, exam_id=exam.id
+    ).first()
+    if existing is not None:
+        return redirect(url_for("exam_result", exam_id=exam.id))
+
+    now_ist = datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
+    scholarship = db.session.get(Scholarship, exam.scholarship_id)
+    if (
+        not exam.is_active
+        or scholarship is None
+        or not scholarship.is_active
+        or now_ist < exam.start_at
+        or now_ist >= exam.end_at
+    ):
+        flash("The exam is not currently accepting submissions.", "error")
+        return redirect(url_for("exam_entry", exam_id=exam.id))
+
+    paper = ExamQuestionPaper.query.filter_by(exam_id=exam.id).first()
+    questions = paper.questions if paper is not None else []
+    if not questions:
+        flash("This exam has no questions to submit.", "error")
+        return redirect(url_for("exam_page", exam_id=exam.id))
+
+    total_marks = sum(max(int(question.marks or 0), 0) for question in questions)
+    score = 0
+    answer_rows = []
+
+    for question in questions:
+        selected = request.form.get(f"question_{question.id}", "").strip().upper()
+        if selected not in {"A", "B", "C", "D"}:
+            selected = None
+
+        correct = selected is not None and selected == question.correct_option
+        awarded = max(int(question.marks or 0), 0) if correct else 0
+        score += awarded
+        answer_rows.append(
+            ExamAnswer(
+                question_id=question.id,
+                selected_option=selected,
+                is_correct=bool(correct),
+                awarded_marks=awarded,
+            )
+        )
+
+    percentage = (score / total_marks * 100.0) if total_marks > 0 else 0.0
+    threshold = float(scholarship.passing_threshold or 0)
+
+    submission = ExamSubmission(
+        user_id=current_user.id,
+        exam_id=exam.id,
+        submitted_at=now_ist,
+        score=score,
+        total_marks=total_marks,
+        percentage=percentage,
+        passing_threshold=threshold,
+        passed=percentage >= threshold,
+        answers=answer_rows,
+    )
+    db.session.add(submission)
+    registration.status = "completed"
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        # A second request may have submitted at nearly the same time.
+        existing = ExamSubmission.query.filter_by(
+            user_id=current_user.id, exam_id=exam.id
+        ).first()
+        if existing is not None:
+            return redirect(url_for("exam_result", exam_id=exam.id))
+        raise
+
+    flash("Your exam has been submitted successfully.", "success")
+    return redirect(url_for("exam_result", exam_id=exam.id))
+
+
+@app.route("/exams/<int:exam_id>/result")
+@student_required
+def exam_result(exam_id):
+    exam = db.session.get(DemoExam, exam_id)
+    if exam is None:
+        abort(404)
+
+    close_expired_exams()
+
+    registration = ExamRegistration.query.filter_by(
+        user_id=current_user.id,
+        exam_id=exam.id,
+    ).first()
+    if registration is None or registration.status not in ("registered", "completed"):
+        flash("You do not have access to this exam result.", "error")
+        return redirect(url_for("dashboard"))
+
+    submission = ExamSubmission.query.filter_by(
+        user_id=current_user.id,
+        exam_id=exam.id,
+    ).first()
+    if submission is None:
+        flash("You have not submitted this exam yet.", "error")
+        return redirect(url_for("exam_entry", exam_id=exam.id))
+
+    answer_review = []
+    for answer in submission.answers:
+        question = answer.question
+        selected = answer.selected_option
+        correct = question.correct_option
+
+        selected_text = (
+            getattr(question, f"option_{selected.lower()}")
+            if selected else "Not answered"
+        )
+        correct_text = getattr(question, f"option_{correct.lower()}")
+
+        answer_review.append({
+            "question_text": question.question_text,
+            "selected_option": selected,
+            "selected_text": selected_text,
+            "correct_option": correct,
+            "correct_text": correct_text,
+            "is_correct": answer.is_correct,
+            "awarded_marks": answer.awarded_marks,
+            "marks": max(int(question.marks or 0), 0),
+        })
+
+    return render_template(
+        "exam_result.html",
+        exam=exam,
+        submission=submission,
+        answer_review=answer_review,
+    )
+
+
+@app.route("/exams/<int:exam_id>/review")
+@student_required
+def exam_review(exam_id):
+    exam = db.session.get(DemoExam, exam_id)
+    if exam is None:
+        abort(404)
+
+    close_expired_exams()
+
+    registration = ExamRegistration.query.filter_by(
+        user_id=current_user.id,
+        exam_id=exam.id,
+    ).first()
+
+    submission = ExamSubmission.query.filter_by(
+        user_id=current_user.id,
+        exam_id=exam.id,
+    ).first()
+
+    # Only the student with a recorded submission can review answers.
+    if registration is None or submission is None:
+        flash("Exam review is available only for your submitted exams.", "error")
+        return redirect(url_for("dashboard"))
+
+    answer_review = []
+    for answer in submission.answers:
+        question = answer.question
+        selected = answer.selected_option
+        correct = question.correct_option
+
+        selected_text = (
+            getattr(question, f"option_{selected.lower()}")
+            if selected else "Not answered"
+        )
+        correct_text = getattr(question, f"option_{correct.lower()}")
+
+        answer_review.append({
+            "question_text": question.question_text,
+            "selected_option": selected,
+            "selected_text": selected_text,
+            "correct_option": correct,
+            "correct_text": correct_text,
+            "is_correct": answer.is_correct,
+            "awarded_marks": answer.awarded_marks,
+            "marks": max(int(question.marks or 0), 0),
+        })
+
+    return render_template(
+        "exam_review.html",
+        exam=exam,
+        submission=submission,
+        answer_review=answer_review,
+    )
+
+
+@app.route("/settings", methods=["GET", "POST"])
+@student_required
+def settings():
+    account_form = SettingsForm()
+    password_form = ChangePasswordForm()
+
+    if request.method == "GET":
+        account_form.full_name.data = current_user.full_name
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "update_account":
+            if account_form.validate_on_submit():
+                current_user.full_name = account_form.full_name.data.strip()
+                db.session.commit()
+                flash("Your personal information has been updated.", "success")
+                return redirect(url_for("settings"))
+
+        elif action == "change_password":
+            if password_form.validate_on_submit():
+                if not current_user.check_password(
+                    password_form.current_password.data
+                ):
+                    flash("Your current password is incorrect.", "error")
+                else:
+                    current_user.set_password(password_form.new_password.data)
+                    db.session.commit()
+                    flash("Your password has been updated.", "success")
+                    return redirect(url_for("settings"))
+
+    return render_template(
+        "settings.html",
+        account_form=account_form,
+        password_form=password_form,
+    )
+
 
 @app.route("/dashboard")
 @student_required
 def dashboard():
+    close_expired_exams()
     profile = StudentProfile.query.filter_by(
         user_id=current_user.id
     ).first()
 
-    query = Scholarship.query.filter_by(is_active=True)
+    query = Scholarship.query.filter_by(
+        is_active=True,
+        lifecycle_status="active",
+    )
 
     if profile:
         query = query.filter(
@@ -1393,7 +1908,7 @@ def dashboard():
         .join(Scholarship, DemoExam.scholarship_id == Scholarship.id)
         .filter(
             DemoExam.is_active.is_(True),
-            DemoExam.end_at > now_ist,
+            DemoExam.start_at > now_ist,
             Scholarship.is_active.is_(True),
             Scholarship.category == "exam",
         )
@@ -1448,6 +1963,27 @@ def dashboard():
         if scholarship.category == "exam"
     )
 
+    registrations = (
+        ExamRegistration.query
+        .filter_by(user_id=current_user.id)
+        .join(DemoExam, ExamRegistration.exam_id == DemoExam.id)
+        .order_by(DemoExam.start_at.desc())
+        .all()
+    )
+
+    exam_history = []
+    for registration in registrations:
+        exam = registration.exam
+        submission = ExamSubmission.query.filter_by(
+            user_id=current_user.id,
+            exam_id=exam.id,
+        ).first()
+        exam_history.append({
+            "registration": registration,
+            "exam": exam,
+            "submission": submission,
+        })
+
     return render_template(
         "dashboard.html",
         scholarships=scholarships,
@@ -1456,6 +1992,11 @@ def dashboard():
         registered_exam=registered_exam,
         registered_exam_start_iso=registered_exam_start_iso,
         registered_exam_end_iso=registered_exam_end_iso,
+        registered_exam_start_url=(
+            url_for("exam_entry", exam_id=registered_exam.id)
+            if registered_exam else None
+        ),
+        exam_history=exam_history,
     )
 
 @app.route("/profile", methods=["GET", "POST"])
@@ -1832,6 +2373,51 @@ def admin_scholarships():
     )
 
 
+
+
+@app.route("/admin/scholarship-history")
+@admin_required
+def admin_scholarship_history():
+    search = request.args.get("q", "").strip()
+    status_filter = request.args.get("status", "").strip()
+    category_filter = request.args.get("category", "").strip()
+
+    query = Scholarship.query.filter(
+        Scholarship.lifecycle_status.in_(("completed", "expired"))
+    )
+
+    if search:
+        query = query.filter(Scholarship.title.ilike(f"%{search}%"))
+
+    if status_filter in ("completed", "expired"):
+        query = query.filter_by(lifecycle_status=status_filter)
+    else:
+        status_filter = ""
+
+    if category_filter in ("grade", "exam"):
+        query = query.filter_by(category=category_filter)
+    else:
+        category_filter = ""
+
+    scholarships = query.order_by(Scholarship.id.desc()).all()
+
+    history_rows = []
+    for scholarship in scholarships:
+        exam = None
+        if scholarship.category == "exam":
+            exam = DemoExam.query.filter_by(
+                scholarship_id=scholarship.id
+            ).order_by(DemoExam.end_at.desc()).first()
+        history_rows.append((scholarship, exam))
+
+    return render_template(
+        "admin/scholarship_history.html",
+        history_rows=history_rows,
+        search=search,
+        status_filter=status_filter,
+        category_filter=category_filter,
+    )
+
 @app.route("/admin/scholarships/new", methods=["GET", "POST"])
 @app.route("/admin/scholarships/<int:scholarship_id>/edit", methods=["GET", "POST"])
 @admin_required
@@ -1948,6 +2534,21 @@ def admin_toggle_scholarship(scholarship_id):
     if scholarship is None:
         abort(404)
 
+    if scholarship.category == "exam":
+        now_ist = datetime.now(
+            ZoneInfo("Asia/Kolkata")
+        ).replace(tzinfo=None)
+        started_exam = DemoExam.query.filter(
+            DemoExam.scholarship_id == scholarship.id,
+            DemoExam.start_at <= now_ist,
+        ).first()
+        if started_exam is not None:
+            flash(
+                "This exam has started. Its status cannot be changed.",
+                "error",
+            )
+            return redirect(url_for("admin_exams"))
+
     # Refresh this opportunity before deciding whether it can be toggled.
     refresh_one_opportunity(scholarship)
 
@@ -2010,6 +2611,18 @@ def admin_exam_questions(exam_id):
         abort(404)
 
     paper = ExamQuestionPaper.query.filter_by(exam_id=exam.id).first()
+
+    now_ist = datetime.now(
+        ZoneInfo("Asia/Kolkata")
+    ).replace(tzinfo=None)
+    exam_locked = now_ist >= exam.start_at
+
+    if request.method == "POST" and exam_locked:
+        flash(
+            "This exam has started. Its question paper is locked.",
+            "error",
+        )
+        return redirect(url_for("admin_exam_questions", exam_id=exam.id))
 
     if request.method == "POST":
         question_id_text = request.form.get("question_id", "").strip()
@@ -2122,6 +2735,7 @@ def admin_exam_questions(exam_id):
         exam=exam,
         scholarship=scholarship,
         paper=paper,
+        exam_locked=exam_locked,
     )
 
 @app.route(
@@ -2139,6 +2753,13 @@ def admin_exam_question_delete(exam_id, question_id):
 
     if scholarship is None or scholarship.category != "exam":
         abort(404)
+
+    now_ist = datetime.now(
+        ZoneInfo("Asia/Kolkata")
+    ).replace(tzinfo=None)
+    if now_ist >= exam.start_at:
+        flash("This exam has started. Its question paper is locked.", "error")
+        return redirect(url_for("admin_exam_questions", exam_id=exam.id))
 
     paper = ExamQuestionPaper.query.filter_by(exam_id=exam.id).first()
 
@@ -2190,9 +2811,14 @@ def admin_exams():
         else:
             exam_rows.append((scholarship, None))
 
+    now_ist = datetime.now(
+        ZoneInfo("Asia/Kolkata")
+    ).replace(tzinfo=None)
+
     return render_template(
         "admin/exams.html",
         exam_rows=exam_rows,
+        now_ist=now_ist,
     )
 
 
@@ -2250,6 +2876,19 @@ def admin_exam_form(exam_id=None, scholarship_id=None):
                 url_for("admin_exam_form", exam_id=exam.id)
             )
 
+    # The scheduled start time is the permanent admin-edit lock.
+    if exam is not None:
+        now_ist = datetime.now(
+            ZoneInfo("Asia/Kolkata")
+        ).replace(tzinfo=None)
+        if now_ist >= exam.start_at:
+            flash(
+                "This exam is locked because its scheduled start time "
+                "has been reached. Its details cannot be changed.",
+                "error",
+            )
+            return redirect(url_for("admin_exams"))
+
     if request.method == "POST":
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
@@ -2276,6 +2915,15 @@ def admin_exam_form(exam_id=None, scholarship_id=None):
         except (ValueError, TypeError):
             amount = None
             errors.append("Reward amount must be a whole number of at least ₹2,000.")
+
+        threshold_text = request.form.get("passing_threshold", "80").strip()
+        try:
+            passing_threshold = float(threshold_text)
+            if not 0 <= passing_threshold <= 100:
+                raise ValueError
+        except (ValueError, TypeError):
+            passing_threshold = 80.0
+            errors.append("Passing threshold must be a number from 0 to 100.")
 
         registration_opens_at = None
         start_at = None
@@ -2314,7 +2962,17 @@ def admin_exam_form(exam_id=None, scholarship_id=None):
         india_tz = ZoneInfo("Asia/Kolkata")
         now_ist = datetime.now(india_tz).replace(tzinfo=None)
 
-        if registration_opens_at and registration_opens_at < now_ist:
+        # An existing exam may retain its already-open registration time.
+        # A newly selected or changed registration time must not be in the past.
+        saved_registration_time_unchanged = (
+            exam is not None
+            and exam.registration_opens_at == registration_opens_at
+        )
+        if (
+            registration_opens_at
+            and registration_opens_at < now_ist
+            and not saved_registration_time_unchanged
+        ):
             errors.append(
                 "Registration opening must be the current date/time or a future time."
             )
@@ -2325,29 +2983,48 @@ def admin_exam_form(exam_id=None, scholarship_id=None):
                     "Registration must open at least 24 hours before the exam starts."
                 )
 
-        if registration_opens_at:
-            latest_other_end = (
-                db.session.query(db.func.max(DemoExam.end_at))
-                .filter(
-                    DemoExam.start_at.isnot(None),
-                    DemoExam.end_at.isnot(None),
-                    *(
-                        [DemoExam.id != exam.id]
-                        if exam is not None else []
-                    ),
-                )
-                .scalar()
-            )
+        # Do not revalidate the other-exam scheduling rule when the saved
+        # schedule is unchanged (for example, when only the pass threshold
+        # or scholarship description is being edited).
+        schedule_unchanged = (
+            exam is not None
+            and exam.registration_opens_at == registration_opens_at
+            and exam.start_at == start_at
+            and exam.end_at == end_at
+        )
 
-            if (
-                latest_other_end is not None
-                and registration_opens_at <= latest_other_end
-            ):
-                errors.append(
-                    "Registration must open after the end of every other "
-                    "scheduled exam. The latest existing exam ends at "
-                    f"{latest_other_end.strftime('%d %b %Y, %I:%M %p')} IST."
-                )
+        if registration_opens_at and not schedule_unchanged:
+            # Reject only overlapping exam windows. The window starts
+            # when registration opens and ends when the exam finishes.
+            other_exams = DemoExam.query.filter(
+                DemoExam.start_at.isnot(None),
+                DemoExam.end_at.isnot(None),
+                *(
+                    [DemoExam.id != exam.id]
+                    if exam is not None else []
+                ),
+            ).all()
+
+            if registration_opens_at is not None and end_at is not None:
+                for other_exam in other_exams:
+                    other_window_start = (
+                        other_exam.registration_opens_at
+                        or other_exam.start_at
+                    )
+
+                    windows_overlap = (
+                        registration_opens_at < other_exam.end_at
+                        and other_window_start < end_at
+                    )
+
+                    if windows_overlap:
+                        errors.append(
+                            "This exam's registration-to-end window overlaps "
+                            "another scheduled exam: "
+                            f"{other_exam.title} "
+                            f"(ends {other_exam.end_at.strftime('%d %b %Y, %I:%M %p')} IST)."
+                        )
+                        break
 
         if errors:
             for error in errors:
@@ -2363,6 +3040,7 @@ def admin_exam_form(exam_id=None, scholarship_id=None):
                 scholarship.education_category = None
                 scholarship.description = description
                 scholarship.award_amount = amount
+                scholarship.passing_threshold = passing_threshold
                 scholarship.eligibility_description = eligibility
                 scholarship.eligible_education_levels = (
                     "school_8_10,school_11_12,undergraduate_1_4"
@@ -2581,6 +3259,17 @@ with app.app_context():
                     ELSE 'inactive'
                 END
             """)
+        )
+        db.session.commit()
+
+    # Safely add the exam passing threshold to existing SQLite databases.
+    if "passing_threshold" not in scholarship_columns:
+        db.session.execute(
+            text(
+                "ALTER TABLE scholarship "
+                "ADD COLUMN passing_threshold FLOAT "
+                "NOT NULL DEFAULT 80.0"
+            )
         )
         db.session.commit()
 

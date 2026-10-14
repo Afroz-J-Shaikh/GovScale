@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Exam Result | GovScale{% endblock %}
+
+{% block content %}
+<section class="dashboard-section">
+    <div class="dashboard-card exam-lobby-card">
+        <span class="section-kicker">EXAM RESULT</span>
+        <h1>{{ exam.scholarship.title if exam.scholarship else exam.title }}</h1>
+        <p>Your submission has been recorded. Your score and result are shown below. You can review individual answers later from your exam history.</p>
+
+        <p><strong>Score:</strong> {{ submission.score }} / {{ submission.total_marks }}</p>
+        <p><strong>Percentage:</strong> {{ "%.2f"|format(submission.percentage) }}%</p>
+        <p><strong>Passing threshold:</strong> {{ "%.2f"|format(submission.passing_threshold) }}%</p>
+        <p><strong>Status:</strong> {{ "Passed" if submission.passed else "Not passed" }}</p>
+        <p><strong>Submitted at:</strong> {{ submission.submitted_at.strftime("%d %b %Y, %I:%M:%S %p") }}</p>
+    </div>
+
+    <a href="{{ url_for('dashboard') }}" class="exam-action">← Back to dashboard</a>
+</section>
+{% endblock %}

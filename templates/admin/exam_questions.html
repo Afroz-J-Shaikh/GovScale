@@ -22,6 +22,12 @@
 </section>
 
 <section class="management-section scholarship-form-section">
+    {% if exam_locked %}
+    <div class="empty-state" role="status">
+        <strong>Question paper locked</strong>
+        <p>The scheduled exam start time has been reached. Questions can be viewed but not changed.</p>
+    </div>
+    {% endif %}
     <div class="scholarship-form-heading">
         <h2>Paper summary</h2>
         <p>
@@ -38,6 +44,8 @@
               action="{{ url_for('admin_exam_questions', exam_id=exam.id) }}"
               class="scholarship-admin-form"
               style="margin-bottom: 24px;">
+            <fieldset {% if exam_locked %}disabled{% endif %}>
+
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="question_id" value="{{ question.id }}">
 
@@ -98,17 +106,23 @@
                     Save Question
                 </button>
             </div>
-        </form>
+
+            </fieldset>
+</form>
 
         <form method="POST"
               action="{{ url_for('admin_exam_question_delete', exam_id=exam.id, question_id=question.id) }}"
               onsubmit="return confirm('Delete this question permanently?');"
               style="margin-top: -16px; margin-bottom: 32px;">
+            <fieldset {% if exam_locked %}disabled{% endif %}>
+
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="review-button review-reject" type="submit">
                 Delete Question {{ loop.index }}
             </button>
-        </form>
+
+            </fieldset>
+</form>
         {% endfor %}
     {% else %}
         <div class="empty-state">
@@ -120,6 +134,8 @@
     <form method="POST"
           action="{{ url_for('admin_exam_questions', exam_id=exam.id) }}"
           class="scholarship-admin-form">
+            <fieldset {% if exam_locked %}disabled{% endif %}>
+
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="scholarship-form-heading">
@@ -181,6 +197,8 @@
                 Add Question
             </button>
         </div>
-    </form>
+
+            </fieldset>
+</form>
 </section>
 {% endblock %}
