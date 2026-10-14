@@ -41,6 +41,14 @@
                        placeholder="25000">
             </label>
 
+            <label class="admin-form-field">
+                <span>Passing threshold (%) *</span>
+                <input type="number" name="passing_threshold"
+                       min="0" max="100" step="0.1" required
+                       value="{{ request.form.get('passing_threshold', scholarship.passing_threshold if scholarship else 80) }}">
+                <small>Students pass when their score percentage meets or exceeds this value. Default: 80%.</small>
+            </label>
+
             <label class="admin-form-field field-full">
                 <span>Description *</span>
                 <textarea name="description" rows="3" required

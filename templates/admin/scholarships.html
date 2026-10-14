@@ -88,11 +88,16 @@
                     </td>
                     <td>
                         <div class="scholarship-row-actions">
+                            {% if lifecycle in ('completed', 'expired') %}
+                            <span class="review-button review-disabled" aria-disabled="true"
+                                  title="This scholarship is completed or expired. Changes are disabled.">LOCKED</span>
+                            <button class="review-button review-disabled" type="button" disabled
+                                    title="This scholarship is completed or expired. Activation is disabled.">LOCKED</button>
+                            {% else %}
                             <a class="review-button review-approve"
                                href="{{ url_for('admin_scholarship_form', scholarship_id=scholarship.id) }}">
                                 Edit
                             </a>
-                            {% if lifecycle not in ('completed', 'expired') %}
                             <form method="POST"
                                   action="{{ url_for('admin_toggle_scholarship', scholarship_id=scholarship.id) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

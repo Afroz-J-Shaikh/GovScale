@@ -34,6 +34,7 @@
                 <tr>
                     <th>OPPORTUNITY</th>
                     <th>AWARD</th>
+                    <th>PASS THRESHOLD</th>
                     <th>REGISTRATION OPENS</th>
                     <th>EXAM SCHEDULE</th>
                     <th>STATUS</th>
@@ -48,6 +49,9 @@
                         <div class="application-student-email">ID #{{ scholarship.id }}</div>
                     </td>
                     <td class="amount-cell">₹{{ "{:,}".format(scholarship.award_amount) }}</td>
+                    <td class="amount-cell">
+                        {{ "%.1f"|format(scholarship.passing_threshold if scholarship.passing_threshold is not none else 80) }}%
+                    </td>
                     <td>
                         {% if exam and exam.registration_opens_at %}
                             {{ exam.registration_opens_at.strftime('%d %b %Y, %I:%M %p') }}
@@ -73,7 +77,15 @@
                     </td>
                     <td>
                         <div class="scholarship-row-actions">
-                            {% if exam %}
+                            {% set exam_locked = exam and now_ist >= exam.start_at %}
+                            {% set terminal = lifecycle in ('completed', 'expired') %}
+                            {% if exam_locked %}
+                            <span class="review-button review-disabled" aria-disabled="true"
+                                  title="{{ 'Exam has ended. Schedule changes are disabled.' if now_ist >= exam.end_at else 'Exam is ongoing. Schedule changes are disabled.' }}">LOCKED</span>
+                            {% elif terminal %}
+                            <span class="review-button review-disabled" aria-disabled="true"
+                                  title="This scholarship is completed or expired. Changes are disabled.">LOCKED</span>
+                            {% elif exam %}
                             <a class="review-button review-approve"
                                href="{{ url_for('admin_exam_form', exam_id=exam.id) }}">Edit</a>
                             {% else %}
@@ -81,7 +93,9 @@
                                href="{{ url_for('admin_exam_form', scholarship_id=scholarship.id) }}">Add schedule</a>
                             {% endif %}
 
-                            {% if lifecycle not in ('completed', 'expired') %}
+                            {% if exam_locked or terminal %}
+                            {# One LOCKED label is already shown beside Edit. #}
+                            {% else %}
                             <form method="POST"
                                   action="{{ url_for('admin_toggle_scholarship', scholarship_id=scholarship.id) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -96,7 +110,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6">
+                    <td colspan="7">
                         <div class="empty-state">
                             <strong>No exam-based scholarships yet</strong>
                             <p>Create an exam opportunity to add its scholarship details and schedule together.</p>

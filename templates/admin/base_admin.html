@@ -72,8 +72,8 @@
                 </details>
 
                 <details class="admin-nav-group"
-                         {% if request.endpoint == 'admin_applications' %}open{% endif %}>
-                    <summary class="admin-nav-link {% if request.endpoint == 'admin_applications' %}active{% endif %}">
+                         {% if request.endpoint in ('admin_applications', 'admin_exam_applications') %}open{% endif %}>
+                    <summary class="admin-nav-link {% if request.endpoint in ('admin_applications', 'admin_exam_applications') %}active{% endif %}">
                         <span class="nav-icon" aria-hidden="true">📂</span>
                         <span>Applications</span>
                         <span class="nav-group-chevron">⌄</span>
@@ -90,23 +90,11 @@
                     </div>
                 </details>
 
-                <details class="admin-nav-group">
-                    <summary class="admin-nav-link">
-                        <span class="nav-icon" aria-hidden="true">🕘</span>
-                        <span>Application History</span>
-                        <span class="nav-group-chevron">⌄</span>
-                    </summary>
-                    <div class="admin-subnav">
-                        <a class="admin-subnav-link {% if request.endpoint == 'admin_applications' %}active{% endif %}"
-                           href="{{ url_for('admin_applications') }}">
-                            📚 Grade-based
-                        </a>
-                        <a class="admin-subnav-link {% if request.endpoint == 'admin_exam_applications' %}active{% endif %}"
-                           href="{{ url_for('admin_exam_applications') }}">
-                            📝 Exam-based
-                        </a>
-                    </div>
-                </details>
+                <a class="admin-nav-link {% if request.endpoint == 'admin_scholarship_history' %}active{% endif %}"
+                href="{{ url_for('admin_scholarship_history') }}">
+                    <span class="nav-icon" aria-hidden="true">🗂️</span>
+                    <span>Scholarship History</span>
+                </a>
 
                 <a class="admin-nav-link {% if request.endpoint in ('admin_question_papers', 'admin_exam_questions') %}active{% endif %}"
                    href="{{ url_for('admin_question_papers') }}">

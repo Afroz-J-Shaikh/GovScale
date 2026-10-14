@@ -71,6 +71,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const startIso = {{ exam_start_iso | tojson }};
     const endIso = {{ exam_end_iso | tojson }};
+    const startUrl = {{ url_for("exam_entry", exam_id=exam.id) | tojson }};
 
     const startTime = new Date(startIso).getTime();
     const endTime = new Date(endIso).getTime();
@@ -95,10 +96,9 @@ document.addEventListener("DOMContentLoaded", function () {
             message.textContent =
                 "Your exam will start soon. Please return when the countdown reaches zero.";
         } else if (now < endTime) {
-            countdown.hidden = true;
             heading.textContent = "EXAM WINDOW OPEN";
-            message.textContent =
-                "The scheduled exam window is open. The exam-taking feature will be connected in a later step.";
+            message.textContent = "Opening your exam now...";
+            window.location.replace(startUrl);
             return;
         } else {
             countdown.hidden = true;
