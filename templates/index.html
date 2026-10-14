@@ -127,11 +127,25 @@
                 </span>
             </div>
 
-            <a href="{{ url_for('exam_entry', exam_id=upcoming_exam.id) }}"
-               class="exam-action">
-                Go to Exam
-                <span aria-hidden="true">→</span>
-            </a>
+            {% if current_user.is_authenticated and upcoming_exam_registration and upcoming_exam_registration.status in ('registered', 'completed') %}
+                <a href="{{ url_for('exam_entry', exam_id=upcoming_exam.id) }}"
+                   class="exam-action">
+                    Go to Exam
+                    <span aria-hidden="true">→</span>
+                </a>
+            {% elif current_user.is_authenticated %}
+                <a href="{{ url_for('scholarship_detail', scholarship_id=upcoming_exam.scholarship_id) }}"
+                   class="exam-action">
+                    Register Now
+                    <span aria-hidden="true">→</span>
+                </a>
+            {% else %}
+                <a href="{{ url_for('login', next=url_for('scholarship_detail', scholarship_id=upcoming_exam.scholarship_id)) }}"
+                   class="exam-action">
+                    Register Now
+                    <span aria-hidden="true">→</span>
+                </a>
+            {% endif %}
 
         {% else %}
             <h2>No upcoming exam announced yet</h2>

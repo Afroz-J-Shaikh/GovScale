@@ -3,19 +3,39 @@
 {% block title %}Exam Result | GovScale{% endblock %}
 
 {% block content %}
-<section class="dashboard-section">
-    <div class="dashboard-card exam-lobby-card">
-        <span class="section-kicker">EXAM RESULT</span>
-        <h1>{{ exam.scholarship.title if exam.scholarship else exam.title }}</h1>
-        <p>Your submission has been recorded. Your score and result are shown below. You can review individual answers later from your exam history.</p>
+<section class="dashboard-section exam-result-section">
+    <div class="dashboard-card exam-lobby-card exam-result-card {{ 'result-passed' if submission.passed else 'result-failed' }}">
+        <div class="exam-result-heading">
+            <span class="section-kicker">EXAM RESULT</span>
 
-        <p><strong>Score:</strong> {{ submission.score }} / {{ submission.total_marks }}</p>
-        <p><strong>Percentage:</strong> {{ "%.2f"|format(submission.percentage) }}%</p>
-        <p><strong>Passing threshold:</strong> {{ "%.2f"|format(submission.passing_threshold) }}%</p>
-        <p><strong>Status:</strong> {{ "Passed" if submission.passed else "Not passed" }}</p>
-        <p><strong>Submitted at:</strong> {{ submission.submitted_at.strftime("%d %b %Y, %I:%M:%S %p") }}</p>
+            {% if submission.passed %}
+            <div class="result-celebration" aria-hidden="true">
+                <span class="result-firework firework-one">✦</span>
+                <span class="result-firework firework-two">✧</span>
+                <span class="result-firework firework-three">✦</span>
+                <span class="result-sparkle sparkle-one">✧</span>
+                <span class="result-sparkle sparkle-two">✦</span>
+            </div>
+            <h1 class="exam-result-status">PASSED</h1>
+            {% else %}
+            <h1 class="exam-result-status">FAILED</h1>
+            {% endif %}
+
+            <h2>{{ exam.scholarship.title if exam.scholarship else exam.title }}</h2>
+        </div>
+
+        <div class="exam-result-details">
+            <p><strong>Score:</strong> {{ submission.score }} / {{ submission.total_marks }}</p>
+            <p><strong>Percentage:</strong> {{ "%.2f"|format(submission.percentage) }}%</p>
+            <p><strong>Passing threshold:</strong> {{ "%.2f"|format(submission.passing_threshold) }}%</p>
+            <p><strong>Submitted at:</strong> {{ submission.submitted_at.strftime("%d %b %Y, %I:%M:%S %p") }}</p>
+        </div>
+
+        <div class="exam-result-footer">
+            <a href="{{ url_for('my_history') }}" class="student-back-dashboard exam-result-back">
+                <span aria-hidden="true">←</span> Back to History
+            </a>
+        </div>
     </div>
-
-    <a href="{{ url_for('dashboard') }}" class="exam-action">← Back to dashboard</a>
 </section>
 {% endblock %}

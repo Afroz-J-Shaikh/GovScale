@@ -3,9 +3,15 @@
 
 {% block content %}
 <section class="scholarship-detail-section">
+    {% if request.args.get('source') == 'history' %}
+    <a href="{{ url_for('my_history') }}" class="detail-apply-button">
+        <span aria-hidden="true">←</span> Back to History
+    </a>
+    {% else %}
     <a href="{{ url_for('home') }}#scholarships" class="detail-back-link">
         <span aria-hidden="true">←</span> Back to scholarships
     </a>
+    {% endif %}
 
     <article class="scholarship-detail-card">
         <div class="detail-category-row">
@@ -191,10 +197,12 @@
                                 {% endif %}
                             </p>
                         </div>
+                        {% if request.args.get('source') != 'history' %}
                         <a class="detail-secondary-link"
                         href="{{ url_for('my_applications') }}">
                             View my applications →
                         </a>
+                        {% endif %}
                     {% elif eligible %}
                         <form method="POST"
                             action="{{ url_for('apply_for_scholarship', scholarship_id=scholarship.id) }}">
