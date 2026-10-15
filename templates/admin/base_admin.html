@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#244E3B">
     <title>{% block title %}Admin | GovScale{% endblock %}</title>
     <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/admin.css') }}">
+          href="{{ url_for('static', filename='css/admin.css') }}?v=student-detail-20261016">
     {% block head %}{% endblock %}
 </head>
 <body class="admin-body">
@@ -29,7 +29,6 @@
                     <small>ADMINISTRATION</small>
                 </span>
             </a>
-
 
 
             <nav class="admin-nav" aria-label="Admin navigation">
@@ -71,6 +70,12 @@
                     </div>
                 </details>
 
+                <a class="admin-nav-link {% if request.endpoint in ('admin_question_papers', 'admin_exam_questions') %}active{% endif %}"
+                   href="{{ url_for('admin_question_papers') }}">
+                    <span class="nav-icon" aria-hidden="true">📑</span>
+                    <span>Exam Management</span>
+                </a>
+
                 <details class="admin-nav-group"
                          {% if request.endpoint in ('admin_applications', 'admin_exam_applications') %}open{% endif %}>
                     <summary class="admin-nav-link {% if request.endpoint in ('admin_applications', 'admin_exam_applications') %}active{% endif %}">
@@ -90,16 +95,16 @@
                     </div>
                 </details>
 
+                <a class="admin-nav-link {% if request.endpoint in ('admin_rewards', 'admin_initiate_reward_payout', 'admin_resolve_reward_payout') %}active{% endif %}"
+                   href="{{ url_for('admin_rewards') }}">
+                    <span class="nav-icon" aria-hidden="true">🏆</span>
+                    <span>Rewards &amp; Payouts</span>
+                </a>
+
                 <a class="admin-nav-link {% if request.endpoint == 'admin_scholarship_history' %}active{% endif %}"
                 href="{{ url_for('admin_scholarship_history') }}">
                     <span class="nav-icon" aria-hidden="true">🗂️</span>
                     <span>Scholarship History</span>
-                </a>
-
-                <a class="admin-nav-link {% if request.endpoint in ('admin_question_papers', 'admin_exam_questions') %}active{% endif %}"
-                   href="{{ url_for('admin_question_papers') }}">
-                    <span class="nav-icon" aria-hidden="true">📑</span>
-                    <span>Exam Management</span>
                 </a>
 
                 <details class="admin-nav-group admin-notification-group">

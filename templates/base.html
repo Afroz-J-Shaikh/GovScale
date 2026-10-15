@@ -67,6 +67,7 @@
                 {% endif %}
             </div>
 
+
             <div class="nav-actions">
                 {% if current_user.is_authenticated %}
 
@@ -115,6 +116,31 @@
                                     <span>Admin Dashboard</span>
                                 </a>
                             {% else %}
+                                <a class="profile-menu-item"
+                                href="{{ url_for('dashboard') }}">
+                                    <span class="profile-menu-icon" aria-hidden="true">⌂</span>
+                                    <span>Dashboard</span>
+                                </a>
+                                <a class="profile-menu-item"
+                                href="{{ url_for('my_applications') }}">
+                                    <span class="profile-menu-icon" aria-hidden="true">📄</span>
+                                    <span>My Applications</span>
+                                </a>
+                                <a class="profile-menu-item"
+                                href="{{ url_for('my_history') }}">
+                                    <span class="profile-menu-icon" aria-hidden="true">↻</span>
+                                    <span>My History</span>
+                                </a>
+                                <a class="profile-menu-item"
+                                href="{{ url_for('student_profile') }}">
+                                    <span class="profile-menu-icon" aria-hidden="true">👤</span>
+                                    <span>Profile</span>
+                                </a>
+                                <a class="profile-menu-item"
+                                href="{{ url_for('payment_details') }}">
+                                    <span class="profile-menu-icon" aria-hidden="true">₹</span>
+                                    <span>Payment Details</span>
+                                </a>
                                 <a class="profile-menu-item"
                                 href="{{ url_for('settings') }}">
                                     <span class="profile-menu-icon" aria-hidden="true">⚙</span>

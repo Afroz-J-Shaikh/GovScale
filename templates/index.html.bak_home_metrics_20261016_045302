@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+{% block title %}GovScale | Scholarships for Students in India{% endblock %}
+
+{% block content %}
+<section class="hero hero-redesign">
+    <div class="hero-content">
+        <span class="hero-label">
+            <span class="hero-flag" aria-hidden="true">🇮🇳</span>
+            FOR STUDENTS ACROSS INDIA
+        </span>
+
+        <h1>Your goals deserve<br>
+            <span>a chance to grow.</span>
+        </h1>
+
+        <p class="hero-description">
+            Explore scholarships, check eligibility and discover opportunities
+            that can support your education and ambitions.
+        </p>
+
+        <div class="hero-actions">
+            <a href="#scholarships" class="button button-primary">
+                Explore scholarships <span aria-hidden="true">→</span>
+            </a>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('dashboard') }}" class="button button-secondary">
+                    My dashboard
+                </a>
+            {% else %}
+                <a href="{{ url_for('signup') }}" class="button button-secondary">
+                    Create an account
+                </a>
+            {% endif %}
+        </div>
+
+        <p class="audience-note">
+            For Indian citizens studying at school, college or university
+        </p>
+    </div>
+
+    <div class="hero-image-placeholder"
+         role="img"
+         aria-label="Student photograph will be added here">
+    </div>
+</section>
+
+<section class="impact-stats-section" aria-label="GovScale portal statistics">
+    <div class="impact-stats-heading">
+        <span class="section-kicker">GOVSCALE AT A GLANCE</span>
+        <h2>Every opportunity counts.</h2>
+        <p>Real-time statistics from our scholarship demonstration portal.</p>
+    </div>
+    <div class="impact-stats-grid">
+        <!-- First row: headline metrics -->
+        <article class="impact-stat-card">
+            <strong>{{ impact_scholarships_awarded }}</strong>
+            <h3>Scholarships awarded</h3>
+            <p>Approved scholarship applications recorded in the portal.</p>
+        </article>
+
+        <article class="impact-stat-card">
+            <strong>{{ impact_students_count }}</strong>
+            <h3>Registered students</h3>
+            <p>Student accounts registered on GovScale.</p>
+        </article>
+
+        <article class="impact-stat-card">
+            <strong>{{ impact_exam_participants }}</strong>
+            <h3>Exam participants</h3>
+            <p>Students registered for upcoming demonstration exams.</p>
+        </article>
+
+        <article class="impact-stat-card">
+            <strong>{{ impact_applications_count }}</strong>
+            <h3>Applications received</h3>
+            <p>Total scholarship applications recorded in the portal.</p>
+        </article>
+
+        <!-- Second row: scholarship catalogue -->
+        <article class="impact-stat-card">
+            <strong>{{ impact_active_count }}</strong>
+            <h3>Active scholarships</h3>
+            <p>Currently active opportunities in the database.</p>
+        </article>
+
+        <article class="impact-stat-card">
+            <strong>{{ impact_grade_count }}</strong>
+            <h3>Grade-based scholarships</h3>
+            <p>Active opportunities based on academic performance.</p>
+        </article>
+
+        <article class="impact-stat-card">
+            <strong>{{ impact_exam_count }}</strong>
+            <h3>Exam-based scholarships</h3>
+            <p>Active opportunities connected to examinations.</p>
+        </article>
+    </div>
+    <p class="impact-stats-note">
+        All figures reflect demonstration-portal data. Approved applications
+        do not necessarily mean payments have been made.
+    </p>
+</section>
+
+<section class="exam-section" id="upcoming-exam">
+    <div class="exam-copy">
+        <span class="section-kicker">MARK YOUR CALENDAR</span>
+
+        {% if upcoming_exam %}
+            <h2>{{ upcoming_exam.scholarship.title if upcoming_exam.scholarship else 'Upcoming Scholarship Exam' }}</h2>
+            <p>
+                {{ upcoming_exam.description or
+                   "Get ready for the upcoming GovScale demonstration exam." }}
+                All times are in Indian Standard Time (IST).
+            </p>
+
+            <div class="exam-date">
+                <span class="exam-calendar-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="5" width="18" height="16" rx="2"/>
+                        <path d="M16 3v4M8 3v4M3 10h18"/>
+                        <path d="m9 15 2 2 4-4"/>
+                    </svg>
+                </span>
+                <span>
+                    <strong>
+                        {{ upcoming_exam.start_at.strftime("%d %B %Y") }}
+                    </strong>
+                    <small>
+                        {{ upcoming_exam.start_at.strftime("%I:%M %p") }} IST
+                        · Ends at
+                        {{ upcoming_exam.end_at.strftime("%I:%M %p") }} IST
+                    </small>
+                </span>
+            </div>
+
+            {% if current_user.is_authenticated and upcoming_exam_registration and upcoming_exam_registration.status in ('registered', 'completed') %}
+                <a href="{{ url_for('exam_entry', exam_id=upcoming_exam.id) }}"
+                   class="exam-action">
+                    Go to Exam
+                    <span aria-hidden="true">→</span>
+                </a>
+            {% elif current_user.is_authenticated %}
+                <a href="{{ url_for('scholarship_detail', scholarship_id=upcoming_exam.scholarship_id) }}"
+                   class="exam-action">
+                    Register Now
+                    <span aria-hidden="true">→</span>
+                </a>
+            {% else %}
+                <a href="{{ url_for('login', next=url_for('scholarship_detail', scholarship_id=upcoming_exam.scholarship_id)) }}"
+                   class="exam-action">
+                    Register Now
+                    <span aria-hidden="true">→</span>
+                </a>
+            {% endif %}
+
+        {% else %}
+            <h2>No upcoming exam announced yet</h2>
+            <p>
+                Keep an eye out for our next announcement!
+            </p>
+        {% endif %}
+    </div>
+
+    {% if upcoming_exam %}
+        <div class="countdown-panel">
+            <span class="countdown-heading">COUNTDOWN TO THE DEMO EXAM</span>
+
+            <div class="countdown-grid" aria-live="off">
+                <div class="countdown-unit">
+                    <strong id="countdown-days">--</strong>
+                    <span>Days</span>
+                </div>
+                <div class="countdown-unit">
+                    <strong id="countdown-hours">--</strong>
+                    <span>Hours</span>
+                </div>
+                <div class="countdown-unit">
+                    <strong id="countdown-minutes">--</strong>
+                    <span>Minutes</span>
+                </div>
+                <div class="countdown-unit">
+                    <strong id="countdown-seconds">--</strong>
+                    <span>Seconds</span>
+                </div>
+            </div>
+
+            <p id="countdown-message" class="countdown-message">
+                Every second brings you closer to the opportunity.
+            </p>
+        </div>
+    {% endif %}
+</section>
+
+<section class="catalog-section" id="scholarships">
+    <div class="section-heading">
+        <div>
+            <span class="section-kicker">FIND YOUR OPPORTUNITY</span>
+            <h2>Scholarships for your next step</h2>
+            <p>Explore the two scholarship categories in our demonstration portal.</p>
+        </div>
+        <span class="demo-label">DEMO CONTENT</span>
+    </div>
+
+    <div class="search-panel search-panel-redesign">
+        <div class="search-field">
+            <label for="scholarship-search">Search scholarships</label>
+            <input id="scholarship-search" type="search"
+                   placeholder="Try a scholarship name or keyword">
+        </div>
+
+        <div class="search-field">
+            <label for="scholarship-type">Scholarship category</label>
+            <select id="scholarship-type">
+                <option value="all">All scholarships</option>
+                <option value="grade">Grade-based</option>
+                <option value="exam">Exam-based</option>
+            </select>
+        </div>
+
+        <p id="search-status" class="search-status" aria-live="polite"></p>
+    </div>
+
+    <div class="scholarship-grid scholarship-grid-redesign">
+        {% for scholarship in scholarships %}
+        <article class="scholarship-card scholarship-card-redesign"
+                 data-search="{{ (scholarship.title ~ ' ' ~ scholarship.description ~ ' ' ~ scholarship.category)|lower|e }}"
+                 data-type="{{ scholarship.category }}">
+            <div class="card-top-row">
+                {% if scholarship.category == "exam" %}
+                <span class="student-scholarship-category-icon student-icon-exam"
+                      aria-hidden="true">📝</span>
+                {% else %}
+                <span class="student-scholarship-category-icon student-icon-grade"
+                      aria-hidden="true">📚</span>
+                {% endif %}
+                <h3>{{ scholarship.title }}</h3>
+            </div>
+            <p>{{ scholarship.description }}</p>
+            <div class="scholarship-meta">
+                <span>Illustrative award</span>
+                <strong>₹{{ "{:,}".format(scholarship.award_amount) }}</strong>
+            </div>
+            <p class="catalogue-deadline">
+                Deadline:
+                <strong>
+                    {{ scholarship.deadline.strftime('%d %b %Y') if scholarship.deadline else 'To be announced' }}
+                </strong>
+            </p>
+            <a href="{{ url_for('scholarship_detail', scholarship_id=scholarship.id) }}"
+               class="text-link">
+                View details <span aria-hidden="true">→</span>
+            </a>
+        </article>
+        {% else %}
+        <p>No scholarships are currently available. Please check again later.</p>
+        {% endfor %}
+    </div>
+
+    <p id="no-results" class="no-results" hidden>
+        No scholarships match your search. Try another keyword or category.
+    </p>
+    <p class="demo-disclaimer">
+        These scholarship names, award amounts and the exam event are fictional
+        demonstration content, not official funding offers or government schemes.
+    </p>
+</section>
+
+<section class="how-section how-section-redesign" id="how-it-works">
+    <div class="how-heading">
+        <span class="section-kicker">A SIMPLE JOURNEY</span>
+        <h2>From discovery to application</h2>
+        <p>A straightforward way for students to explore opportunities.</p>
+    </div>
+
+    <div class="steps-grid steps-grid-redesign">
+        <div class="step">
+            <span class="step-number">01</span>
+            <h3>Discover</h3>
+            <p>Explore scholarships that interest you.</p>
+        </div>
+        <div class="step">
+            <span class="step-number">02</span>
+            <h3>Check eligibility</h3>
+            <p>Review the academic and other requirements.</p>
+        </div>
+        <div class="step">
+            <span class="step-number">03</span>
+            <h3>Apply</h3>
+            <p>Create a student account to access application features.</p>
+        </div>
+        <div class="step">
+            <span class="step-number">04</span>
+            <h3>Track progress</h3>
+            <p>Follow your application through your student dashboard.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const searchInput = document.getElementById("scholarship-search");
+    const typeSelect = document.getElementById("scholarship-type");
+    const cards = [...document.querySelectorAll(".scholarship-card")];
+    const noResults = document.getElementById("no-results");
+    const searchStatus = document.getElementById("search-status");
+
+    function filterScholarships() {
+        const query = searchInput.value.trim().toLowerCase();
+        const selectedType = typeSelect.value;
+        let visible = 0;
+
+        cards.forEach((card) => {
+            const matchesText = card.dataset.search.includes(query);
+            const matchesType =
+                selectedType === "all" || card.dataset.type === selectedType;
+            const show = matchesText && matchesType;
+
+            card.hidden = !show;
+            if (show) visible++;
+        });
+
+        noResults.hidden = visible !== 0;
+        searchStatus.textContent =
+            `${visible} scholarship${visible === 1 ? "" : "s"} shown`;
+    }
+
+    searchInput.addEventListener("input", filterScholarships);
+    typeSelect.addEventListener("change", filterScholarships);
+    filterScholarships();
+
+    const examStartIso = {{ upcoming_exam_start_iso | tojson }};
+    const examDate = examStartIso
+    ? new Date(examStartIso).getTime()
+    : null;
+    const fields = {
+        days: document.getElementById("countdown-days"),
+        hours: document.getElementById("countdown-hours"),
+        minutes: document.getElementById("countdown-minutes"),
+        seconds: document.getElementById("countdown-seconds")
+    };
+    const message = document.getElementById("countdown-message");
+
+    function updateCountdown() {
+        if (examDate === null) return;
+
+        const remaining = examDate - Date.now();
+
+        if (remaining <= 0) {
+            Object.values(fields).forEach((field) => field.textContent = "00");
+            message.textContent =
+                "The scheduled demo time has arrived. This is a demonstration event.";
+            return;
+        }
+
+        fields.days.textContent = String(
+            Math.floor(remaining / (1000 * 60 * 60 * 24))
+        ).padStart(2, "0");
+
+        fields.hours.textContent = String(
+            Math.floor((remaining / (1000 * 60 * 60)) % 24)
+        ).padStart(2, "0");
+
+        fields.minutes.textContent = String(
+            Math.floor((remaining / (1000 * 60)) % 60)
+        ).padStart(2, "0");
+
+        fields.seconds.textContent = String(
+            Math.floor((remaining / 1000) % 60)
+        ).padStart(2, "0");
+    }
+
+    updateCountdown();
+    window.setInterval(updateCountdown, 1000);
+})();
+</script>
+{% endblock %}

@@ -175,7 +175,9 @@
                     {% if existing_application %}
                         <div class="eligibility-message eligibility-success">
                             <span class="eligibility-status status-eligible">
-                                {% if existing_application.status == 'approved' %}
+                                {% if existing_application.status == 'approved' and received_reward and request.args.get('source') == 'history' %}
+                                    ✓ Scholarship reward received
+                                {% elif existing_application.status == 'approved' %}
                                     ✓ Application approved
                                 {% elif existing_application.status == 'pending' %}
                                     ◷ Application pending
@@ -186,7 +188,9 @@
                                 {% endif %}
                             </span>
                             <p>
-                                {% if existing_application.status == 'approved' %}
+                                {% if existing_application.status == 'approved' and received_reward and request.args.get('source') == 'history' %}
+                                    Your scholarship application was approved, and the illustrative reward payout has been completed.
+                                {% elif existing_application.status == 'approved' %}
                                     Your application has been approved.
                                 {% elif existing_application.status == 'pending' %}
                                     Your application is awaiting review.
