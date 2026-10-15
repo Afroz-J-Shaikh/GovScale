@@ -57,17 +57,6 @@
             at {{ registered_exam.start_at.strftime("%I:%M %p") }} IST.
         </p>
 
-        <div class="countdown-panel" id="exam-countdown-panel">
-            <span class="countdown-heading" id="exam-countdown-heading">COUNTDOWN TO THE EXAM</span>
-            <div id="exam-countdown" class="countdown-grid" aria-live="off">
-                <div class="countdown-unit"><strong id="exam-days">00</strong><span>Days</span></div>
-                <div class="countdown-unit"><strong id="exam-hours">00</strong><span>Hours</span></div>
-                <div class="countdown-unit"><strong id="exam-minutes">00</strong><span>Minutes</span></div>
-                <div class="countdown-unit"><strong id="exam-seconds">00</strong><span>Seconds</span></div>
-            </div>
-            <p id="exam-countdown-message" class="countdown-message">Your exam will start soon.</p>
-        </div>
-
         <a href="{{ url_for('exam_entry', exam_id=registered_exam.id) }}"
         class="exam-action">
             Start Exam <span aria-hidden="true">→</span>
@@ -115,64 +104,6 @@
         </article>
     </div>
 </section>
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const countdown = document.getElementById("exam-countdown");
-    if (!countdown) return;
-
-    const startIso = {{ registered_exam_start_iso | tojson }};
-    const endIso = {{ registered_exam_end_iso | tojson }};
-    const startUrl = {{ registered_exam_start_url | tojson }};
-
-    if (!startIso || !endIso || !startUrl) return;
-
-    const startTime = new Date(startIso).getTime();
-    const endTime = new Date(endIso).getTime();
-
-    const fields = {
-        days: document.getElementById("exam-days"),
-        hours: document.getElementById("exam-hours"),
-        minutes: document.getElementById("exam-minutes"),
-        seconds: document.getElementById("exam-seconds")
-    };
-
-    const heading = document.getElementById("exam-countdown-heading");
-    const message = document.getElementById("exam-countdown-message");
-
-    function updateCountdown() {
-        const now = Date.now();
-        let remaining;
-
-        if (now < startTime) {
-            remaining = startTime - now;
-            heading.textContent = "COUNTDOWN TO THE EXAM";
-            message.textContent = "Your exam will start soon. Open the exam page for details.";
-        } else if (now < endTime) {
-            heading.textContent = "EXAM WINDOW OPEN";
-            message.textContent = "Your exam is available. Click Start Exam when you're ready.";
-            fields.days.textContent = "00";
-            fields.hours.textContent = "00";
-            fields.minutes.textContent = "00";
-            fields.seconds.textContent = "00";
-            return;
-        } else {
-            countdown.textContent = "Exam concluded";
-            heading.textContent = "EXAM COMPLETED";
-            message.textContent = "This exam has concluded.";
-            return;
-        }
-
-        fields.days.textContent = String(Math.floor(remaining / 86400000)).padStart(2, "0");
-        fields.hours.textContent = String(Math.floor((remaining % 86400000) / 3600000)).padStart(2, "0");
-        fields.minutes.textContent = String(Math.floor((remaining % 3600000) / 60000)).padStart(2, "0");
-        fields.seconds.textContent = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
-    }
-
-    updateCountdown();
-    window.setInterval(updateCountdown, 1000);
-});
-</script>
 
 
 {% endblock %}

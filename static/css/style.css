@@ -5566,25 +5566,30 @@ body {
 .exam-action {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 12px;
     margin-top: 24px;
     padding: 12px 20px;
-    border: 1px solid #e8c778;
+    border: 1px solid var(--gs-green, #244E3B);
     border-radius: 8px;
-    background: #fffdf8;
-    color: var(--gs-green);
+    background: var(--gs-green, #244E3B);
+    color: #ffffff;
     font-weight: 700;
     text-decoration: none;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: background 0.2s ease, transform 0.2s ease,
+                box-shadow 0.2s ease;
 }
 
 .exam-action:hover {
+    background: var(--gs-green-dark, #193A2B);
+    border-color: var(--gs-green-dark, #193A2B);
+    color: #ffffff;
     transform: translateY(-2px);
-    box-shadow: 4px 3px 0 rgba(190, 155, 75, 0.25);
+    box-shadow: 0 4px 10px rgba(25, 58, 43, 0.2);
 }
 
 .exam-action:focus-visible {
-    outline: 3px solid #e8c778;
+    outline: 3px solid var(--gs-green-dark, #193A2B);
     outline-offset: 4px;
 }
 
