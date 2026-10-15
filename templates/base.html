@@ -70,6 +70,8 @@
             <div class="nav-actions">
                 {% if current_user.is_authenticated %}
 
+                    
+
                     <div class="profile-dropdown">
                         <button type="button"
                                 class="profile-dropdown-toggle"
@@ -136,6 +138,41 @@
                             </form>
                         </div>
                     </div>
+
+<div class="notification-dropdown">
+                        <button type="button"
+                                class="notification-toggle"
+                                id="notification-menu-toggle"
+                                aria-expanded="false"
+                                aria-controls="notification-menu">
+                            <span aria-hidden="true">🔔</span>
+                            
+                            {% if notification_unread_count %}
+                            <span class="notification-badge">{{ notification_unread_count }}</span>
+                            {% endif %}
+                        </button>
+                        <div class="notification-menu" id="notification-menu" hidden>
+                            {% if notification_preview %}
+                                {% for notification in notification_preview %}
+                                <div class="notification-preview-item {% if not notification.is_read %}is-unread{% endif %}">
+                                    <a href="{{ url_for('open_notification', notification_id=notification.id) }}">
+                                        <strong>{{ notification.title }}</strong>
+                                        <span>{{ notification.message }}</span>
+                                    </a>
+                                    <form method="POST" action="{{ url_for('close_notification', notification_id=notification.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="notification-close" aria-label="Close notification" title="Close">×</button>
+                                    </form>
+                                </div>
+                                {% endfor %}
+                                <a class="notification-view-all" href="{{ url_for('notification_inbox') }}">View all notifications</a>
+                            {% else %}
+                                <p class="notification-empty">No new notifications.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+
 
                 {% else %}
                     <a class="nav-login" href="{{ url_for('login') }}">
@@ -207,6 +244,24 @@
 
     <script>
     document.addEventListener("DOMContentLoaded", function () {
+        // Notification dropdown
+        const notificationToggle = document.getElementById("notification-menu-toggle");
+        const notificationMenu = document.getElementById("notification-menu");
+        if (notificationToggle && notificationMenu) {
+            notificationToggle.addEventListener("click", function (event) {
+                event.stopPropagation();
+                const isOpen = notificationToggle.getAttribute("aria-expanded") === "true";
+                notificationMenu.hidden = isOpen;
+                notificationToggle.setAttribute("aria-expanded", String(!isOpen));
+            });
+            document.addEventListener("click", function (event) {
+                if (!event.target.closest(".notification-dropdown")) {
+                    notificationMenu.hidden = true;
+                    notificationToggle.setAttribute("aria-expanded", "false");
+                }
+            });
+        }
+
         // Profile dropdown
         const toggle = document.getElementById("profile-menu-toggle");
         const menu = document.getElementById("profile-menu");

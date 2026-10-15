@@ -6638,3 +6638,368 @@ body {
         font-size: 0.9rem;
     }
 }
+
+
+/* Persistent notification menu */
+.notification-dropdown { position: relative; display: inline-flex; align-items: center; margin-right: 10px; }
+.notification-toggle { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #d7e0d9; border-radius: 9px; background: #fff; color: #244e3b; padding: 9px 11px; font: inherit; cursor: pointer; }
+.notification-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: #c62828; color: #fff; font-size: 11px; font-weight: 800; line-height: 1; }
+.notification-menu { position: absolute; z-index: 1200; top: calc(100% + 9px); right: 0; width: min(360px, 88vw); max-height: 420px; overflow-y: auto; border: 1px solid #dce5de; border-radius: 12px; background: #fff; box-shadow: 0 14px 36px rgba(20,45,31,.18); padding: 8px; color: #24352b; }
+.notification-menu[hidden] { display: none; }
+.notification-preview-item, .admin-notification-preview { display: flex; align-items: flex-start; gap: 8px; border-bottom: 1px solid #edf1ee; padding: 10px 7px; }
+.notification-preview-item a, .admin-notification-preview a { display: grid; gap: 4px; flex: 1; color: inherit; text-decoration: none; font-size: 13px; }
+.notification-preview-item a span, .admin-notification-preview a span { color: #617067; line-height: 1.4; }
+.notification-preview-item.is-unread, .admin-notification-preview.is-unread, .notification-inbox-item.is-unread { background: #fff5f5; border-left: 3px solid #c62828; }
+.notification-close { border: 0; background: transparent; color: #6b756e; font-size: 20px; line-height: 1; cursor: pointer; }
+.notification-empty, .admin-notification-empty { display: block; padding: 14px 10px; color: #68756d; font-size: 13px; }
+.notification-view-all { display: block; padding: 11px 8px; color: #244e3b; font-weight: 700; text-decoration: none; }
+.notification-inbox-list { display: grid; gap: 12px; margin-top: 20px; }
+.notification-inbox-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border: 1px solid #dce5de; border-radius: 12px; padding: 16px; background: #fff; }
+.notification-inbox-item h2 { margin: 0 0 7px; font-size: 17px; }
+.notification-inbox-item p { margin: 5px 0; }
+.notification-inbox-item small { color: #68756d; }
+.notification-close-button { border: 1px solid #cbd7ce; border-radius: 7px; background: #fff; padding: 7px 10px; cursor: pointer; }
+.notification-view-all:hover, .notification-preview-item a:hover, .admin-notification-preview a:hover { text-decoration: underline; }
+@media (max-width: 760px) {
+    .notification-dropdown { margin: 6px 0; }
+    .notification-menu { right: -50px; }
+    .notification-inbox-item { flex-direction: column; }
+}
+
+
+/* Compact student notification icon */
+.nav-actions {
+    gap: 10px;
+}
+
+.notification-dropdown {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+.notification-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    padding: 0;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    font-size: 19px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.notification-toggle .notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #e53935;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+}
+
+@media (max-width: 640px) {
+    .nav-actions {
+        gap: 6px;
+    }
+
+    .notification-toggle {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        font-size: 17px;
+    }
+}
+
+
+/* Student dashboard + scholarship catalogue: compact colorful icons */
+.dashboard-section .dashboard-card .dashboard-icon {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    margin: 0;
+    border-radius: 10px;
+}
+
+.dashboard-section .dashboard-card .dashboard-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.dashboard-section .dashboard-card .dashboard-icon-grade {
+    color: #A66A08;
+    background: #FFF0C7;
+}
+
+.dashboard-section .dashboard-card .dashboard-icon-exam {
+    color: #2563A6;
+    background: #E2F0FF;
+}
+
+.dashboard-section .dashboard-card .dashboard-icon-profile {
+    color: #27805D;
+    background: #E0F4E8;
+}
+
+.dashboard-section .dashboard-card .dashboard-icon-applications {
+    color: #7651A8;
+    background: #F0E7FF;
+}
+
+.dashboard-section .dashboard-card .dashboard-icon-history {
+    color: #B45A37;
+    background: #FFE9DE;
+}
+
+/* Compact, consistent scholarship cards on the category and catalogue pages */
+.scholarship-grid-redesign {
+    gap: 22px;
+}
+
+.scholarship-card-redesign {
+    padding: 20px;
+}
+
+.scholarship-card-redesign .card-top-row {
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 12px;
+}
+
+.scholarship-card-redesign .card-top-row .scholarship-symbol {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+}
+
+.scholarship-card-redesign .card-top-row .scholarship-symbol svg {
+    width: 19px;
+    height: 19px;
+}
+
+.scholarship-card-redesign .card-top-row .symbol-gold {
+    color: #A66A08;
+    background: #FFF0C7;
+}
+
+.scholarship-card-redesign .card-top-row .symbol-green {
+    color: #2563A6;
+    background: #E2F0FF;
+}
+
+.scholarship-card-redesign .type-label {
+    font-size: 11px;
+    letter-spacing: 0.55px;
+}
+
+.scholarship-card-redesign h3 {
+    margin-top: 0;
+    margin-bottom: 9px;
+    font-size: 19px;
+    line-height: 1.35;
+}
+
+.scholarship-card-redesign > p:not(.catalogue-deadline) {
+    margin-top: 0;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.scholarship-card-redesign .scholarship-meta {
+    gap: 3px;
+    padding: 11px 13px;
+    border-radius: 10px;
+}
+
+.scholarship-card-redesign .scholarship-meta span {
+    font-size: 12px;
+}
+
+.scholarship-card-redesign .scholarship-meta strong {
+    font-size: 23px;
+}
+
+.scholarship-card-redesign .catalogue-deadline {
+    padding: 8px 10px !important;
+    margin: 10px 0 14px !important;
+    font-size: 13px;
+}
+
+.scholarship-card-redesign > .text-link {
+    padding: 10px 13px;
+    font-size: 14px;
+}
+
+/* Proper SVG calendar in the homepage exam-date panel */
+.exam-calendar-icon {
+    flex: 0 0 48px;
+}
+
+.exam-calendar-icon svg {
+    display: block;
+    width: 25px;
+    height: 25px;
+}
+
+@media (max-width: 760px) {
+    .scholarship-card-redesign {
+        padding: 18px;
+    }
+
+    .scholarship-card-redesign .scholarship-meta strong {
+        font-size: 21px;
+    }
+}
+
+
+/* FINAL COMPACT CARDS AND ADMIN CATEGORY ICONS */
+.scholarship-grid-redesign {
+    gap: 16px;
+}
+
+.scholarship-card-redesign {
+    padding: 15px 16px;
+    border-radius: 14px;
+}
+
+.scholarship-card-redesign .card-top-row {
+    gap: 7px;
+    margin-bottom: 8px;
+}
+
+.scholarship-card-redesign .card-top-row .scholarship-symbol {
+    flex-basis: 29px;
+    width: 29px;
+    height: 29px;
+    border-radius: 8px;
+}
+
+.scholarship-card-redesign .card-top-row .scholarship-symbol svg {
+    width: 17px;
+    height: 17px;
+}
+
+.scholarship-card-redesign .type-label {
+    font-size: 10px;
+    letter-spacing: 0.4px;
+}
+
+.scholarship-card-redesign h3 {
+    margin-bottom: 6px;
+    font-size: 17px;
+    line-height: 1.3;
+}
+
+.scholarship-card-redesign > p:not(.catalogue-deadline) {
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.scholarship-card-redesign .scholarship-meta {
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: 8px;
+}
+
+.scholarship-card-redesign .scholarship-meta span {
+    font-size: 11px;
+}
+
+.scholarship-card-redesign .scholarship-meta strong {
+    font-size: 20px;
+}
+
+.scholarship-card-redesign .catalogue-deadline {
+    padding: 6px 8px !important;
+    margin: 8px 0 10px !important;
+    font-size: 12px;
+}
+
+.scholarship-card-redesign > .text-link {
+    padding: 8px 11px;
+    font-size: 13px;
+}
+
+@media (max-width: 760px) {
+    .scholarship-grid-redesign {
+        gap: 14px;
+    }
+
+    .scholarship-card-redesign {
+        padding: 14px;
+    }
+}
+
+
+/* STUDENT SCHOLARSHIP CARD ICON AND READABILITY FIX */
+.scholarship-card-redesign .card-top-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.scholarship-card-redesign .student-scholarship-category-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 21px;
+    line-height: 1;
+}
+
+.scholarship-card-redesign .student-icon-grade {
+    background: #FFF3D6;
+}
+
+.scholarship-card-redesign .student-icon-exam {
+    background: #E2F0FF;
+}
+
+.scholarship-card-redesign .card-top-row h3 {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.scholarship-card-redesign .catalogue-deadline {
+    padding: 9px 11px !important;
+    margin: 9px 0 12px !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+}
+
+.scholarship-card-redesign > .text-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 11px 14px !important;
+    font-size: 15px !important;
+    line-height: 1.3;
+}

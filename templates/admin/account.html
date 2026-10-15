@@ -1,0 +1,47 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Account | GovScale Admin{% endblock %}
+
+{% block admin_content %}
+<section class="dashboard-overview" aria-label="Administrator account">
+    <div>
+        <span class="dashboard-overview-kicker">GOVSCALE ADMINISTRATION</span>
+        <h1>Account</h1>
+        <p>View the account currently used to administer GovScale.</p>
+    </div>
+    <span class="dashboard-overview-mark" aria-hidden="true">♙</span>
+</section>
+
+<section class="management-section admin-account-section">
+    <div class="section-heading table-heading admin-account-heading">
+        <div>
+            <span class="eyebrow"><span class="eyebrow-line"></span> ACCOUNT DETAILS</span>
+            <h2>Administrator information</h2>
+        </div>
+    </div>
+
+    <div class="table-wrap admin-account-table-wrap">
+        <table class="scholarship-table admin-account-table">
+            <tbody>
+                <tr>
+                    <th scope="row">Full name</th>
+                    <td>{{ current_user.full_name }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Email address</th>
+                    <td>{{ current_user.email }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Role</th>
+                    <td>Administrator</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-account-actions-row">
+        <a class="filter-button" href="{{ url_for('admin_profile') }}">Edit profile</a>
+        <a class="filter-button" href="{{ url_for('admin_settings') }}">Account settings</a>
+    </div>
+</section>
+{% endblock %}

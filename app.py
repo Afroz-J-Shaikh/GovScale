@@ -91,6 +91,25 @@ class User(UserMixin, db.Model):
 
 
 
+class UserNotification(db.Model):
+    __tablename__ = "user_notification"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    title = db.Column(db.String(160), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    link = db.Column(db.String(500), nullable=True)
+    is_read = db.Column(db.Boolean, nullable=False, default=False)
+    is_closed = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(
+        db.DateTime, nullable=False, server_default=db.func.current_timestamp()
+    )
+
+    user = db.relationship(
+        "User", backref=db.backref("notifications", lazy=True)
+    )
+
+
 class Scholarship(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(160), nullable=False)
@@ -2166,6 +2185,46 @@ def student_profile():
         institutions=institution_data,
     )
 
+@app.route("/admin/account")
+@admin_required
+def admin_account():
+    return render_template("admin/account.html")
+
+
+@app.route("/admin/profile", methods=["GET", "POST"])
+@admin_required
+def admin_profile():
+    form = SettingsForm()
+
+    if request.method == "GET":
+        form.full_name.data = current_user.full_name
+
+    if form.validate_on_submit():
+        current_user.full_name = form.full_name.data.strip()
+        db.session.commit()
+        flash("Your administrator profile has been updated.", "success")
+        return redirect(url_for("admin_profile"))
+
+    return render_template("admin/profile.html", form=form)
+
+
+@app.route("/admin/settings", methods=["GET", "POST"])
+@admin_required
+def admin_settings():
+    form = ChangePasswordForm()
+
+    if form.validate_on_submit():
+        if not current_user.check_password(form.current_password.data):
+            flash("Your current password is incorrect.", "error")
+        else:
+            current_user.set_password(form.new_password.data)
+            db.session.commit()
+            flash("Your password has been updated.", "success")
+            return redirect(url_for("admin_settings"))
+
+    return render_template("admin/settings.html", form=form)
+
+
 @app.route("/admin/students")
 @admin_required
 def admin_students():
@@ -3237,6 +3296,67 @@ def refresh_one_opportunity(scholarship, now_ist=None):
     # Keep the existing Boolean consistent with the lifecycle status.
     scholarship.is_active = status == "active"
     return False
+
+
+@app.route("/notifications")
+@login_required
+def notification_inbox():
+    notifications = (
+        UserNotification.query
+        .filter_by(user_id=current_user.id, is_closed=False)
+        .order_by(UserNotification.created_at.desc(), UserNotification.id.desc())
+        .all()
+    )
+    for notification in notifications:
+        notification.is_read = True
+    db.session.commit()
+    return render_template("notifications.html", notifications=notifications)
+
+
+@app.route("/notifications/<int:notification_id>/open")
+@login_required
+def open_notification(notification_id):
+    notification = db.session.get(UserNotification, notification_id)
+    if notification is None or notification.user_id != current_user.id:
+        abort(404)
+    notification.is_read = True
+    db.session.commit()
+    if notification.link and notification.link.startswith("/"):
+        return redirect(notification.link)
+    return redirect(url_for("notification_inbox"))
+
+
+@app.route("/notifications/<int:notification_id>/close", methods=["POST"])
+@login_required
+def close_notification(notification_id):
+    notification = db.session.get(UserNotification, notification_id)
+    if notification is None or notification.user_id != current_user.id:
+        abort(404)
+    notification.is_read = True
+    notification.is_closed = True
+    db.session.commit()
+    flash("Notification closed.", "success")
+    return redirect(request.referrer or url_for("notification_inbox"))
+
+
+@app.context_processor
+def inject_notification_summary():
+    if not current_user.is_authenticated:
+        return {"notification_unread_count": 0, "notification_preview": []}
+    unread_count = UserNotification.query.filter_by(
+        user_id=current_user.id, is_read=False, is_closed=False
+    ).count()
+    preview = (
+        UserNotification.query
+        .filter_by(user_id=current_user.id, is_closed=False)
+        .order_by(UserNotification.created_at.desc(), UserNotification.id.desc())
+        .limit(5)
+        .all()
+    )
+    return {
+        "notification_unread_count": unread_count,
+        "notification_preview": preview,
+    }
 
 
 @app.before_request

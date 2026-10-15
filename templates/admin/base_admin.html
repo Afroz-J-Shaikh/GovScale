@@ -101,6 +101,35 @@
                     <span class="nav-icon" aria-hidden="true">📑</span>
                     <span>Exam Management</span>
                 </a>
+
+                <details class="admin-nav-group admin-notification-group">
+                    <summary class="admin-nav-link {% if request.endpoint in ('notification_inbox', 'open_notification') %}active{% endif %}">
+                        <span class="nav-icon" aria-hidden="true">🔔</span>
+                        <span>Notifications</span>
+                        {% if notification_unread_count %}
+                        <span class="notification-badge">{{ notification_unread_count }}</span>
+                        {% endif %}
+                    </summary>
+                    <div class="admin-subnav admin-notification-subnav">
+                        {% if notification_preview %}
+                            {% for notification in notification_preview %}
+                            <div class="admin-notification-preview {% if not notification.is_read %}is-unread{% endif %}">
+                                <a href="{{ url_for('open_notification', notification_id=notification.id) }}">
+                                    <strong>{{ notification.title }}</strong>
+                                    <span>{{ notification.message }}</span>
+                                </a>
+                                <form method="POST" action="{{ url_for('close_notification', notification_id=notification.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="notification-close" aria-label="Close notification" title="Close">×</button>
+                                </form>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <span class="admin-notification-empty">No new notifications.</span>
+                        {% endif %}
+                        <a class="admin-subnav-link" href="{{ url_for('notification_inbox') }}">View all notifications</a>
+                    </div>
+                </details>
             </nav>
 
             <div class="sidebar-bottom">
@@ -115,12 +144,18 @@
                     </summary>
                     <div class="account-dropdown">
                         <div class="account-dropdown-heading">Account</div>
-                        <span class="account-menu-item account-menu-muted">
-                            <span aria-hidden="true">🪪</span> Profile
-                        </span>
-                        <span class="account-menu-item account-menu-muted">
+                        <a class="account-menu-item"
+                           href="{{ url_for('admin_account') }}">
+                            <span aria-hidden="true">🪪</span> Account
+                        </a>
+                        <a class="account-menu-item"
+                           href="{{ url_for('admin_profile') }}">
+                            <span aria-hidden="true">👤</span> Profile
+                        </a>
+                        <a class="account-menu-item"
+                           href="{{ url_for('admin_settings') }}">
                             <span aria-hidden="true">⚙️</span> Settings
-                        </span>
+                        </a>
                         <form action="{{ url_for('logout') }}" method="POST">
                             <input type="hidden" name="csrf_token"
                                    value="{{ csrf_token() }}">

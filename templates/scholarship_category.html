@@ -26,32 +26,14 @@
                  data-type="{{ scholarship.category }}">
             <div class="card-top-row">
                 {% if scholarship.category == "exam" %}
-                <span class="scholarship-symbol symbol-green" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="1.8"
-                         stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="5" y="3" width="14" height="18" rx="2"/>
-                        <path d="M9 7h6M9 11h2l1.5 1.5L15 10"/>
-                        <path d="M9 16h6"/>
-                    </svg>
-                </span>
-                <span class="type-label">EXAM-BASED</span>
+                <span class="student-scholarship-category-icon student-icon-exam"
+                      aria-hidden="true">📝</span>
                 {% else %}
-                <span class="scholarship-symbol symbol-gold" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="1.8"
-                         stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 7h18l-2 5H5L3 7Z"/>
-                        <path d="M5 12v5h14v-5"/>
-                        <path d="M7 17v3h10v-3"/>
-                        <path d="M7 4h10"/>
-                    </svg>
-                </span>
-                <span class="type-label">GRADE-BASED</span>
+                <span class="student-scholarship-category-icon student-icon-grade"
+                      aria-hidden="true">📚</span>
                 {% endif %}
+                <h3>{{ scholarship.title }}</h3>
             </div>
-
-            <h3>{{ scholarship.title }}</h3>
             <p>{{ scholarship.description }}</p>
 
             <div class="scholarship-meta">
