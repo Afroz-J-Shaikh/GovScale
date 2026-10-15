@@ -1,0 +1,354 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}GovScale | Scale your ambition{% endblock %}</title>
+
+    <meta name="description"
+          content="GovScale helps students explore scholarship opportunities and plan their educational future.">
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    <header class="site-header">
+        <nav class="navbar" aria-label="Main navigation">
+
+            <a href="{{ url_for('home') }}" class="brand"
+               aria-label="GovScale home">
+                <span class="brand-emblem" aria-hidden="true">
+                    <svg viewBox="0 0 48 48"
+                         xmlns="http://www.w3.org/2000/svg" fill="none">
+                        <circle cx="24" cy="24" r="22"
+                                stroke="currentColor" stroke-width="2"/>
+                        <path d="M9 19.5L24 12L39 19.5L24 27L9 19.5Z"
+                              fill="currentColor"/>
+                        <path d="M15 23V30C20 34 28 34 33 30V23"
+                              stroke="currentColor" stroke-width="2"
+                              stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M39 20V29" stroke="currentColor"
+                              stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="39" cy="31" r="2" fill="currentColor"/>
+                    </svg>
+                </span>
+
+                <span class="brand-copy">
+                    <span class="brand-name">GovScale</span>
+                    <span class="brand-tagline">
+                        Scale your ambition. Shape your future.
+                    </span>
+                </span>
+            </a>
+
+            <button class="mobile-nav-toggle"
+                    type="button"
+                    aria-label="Open navigation"
+                    aria-expanded="false"
+                    aria-controls="primary-navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <div class="nav-links" id="primary-navigation">
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                    <a href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+                {% else %}
+                    <a href="{{ url_for('home') }}#scholarships">Scholarships</a>
+                    <a href="{{ url_for('home') }}#how-it-works">How it works</a>
+                    <a href="{{ url_for('home') }}#about">About</a>
+                    <a href="{{ url_for('home') }}#contact">Contact us</a>
+                {% endif %}
+            </div>
+
+            <div class="nav-actions">
+                {% if current_user.is_authenticated %}
+
+                    
+
+                    <div class="profile-dropdown">
+                        <button type="button"
+                                class="profile-dropdown-toggle"
+                                id="profile-menu-toggle"
+                                aria-expanded="false"
+                                aria-controls="profile-menu">
+                            <span class="profile-avatar" aria-hidden="true">
+                                {{ current_user.full_name[:1]|upper }}
+                            </span>
+                            <span class="profile-toggle-name">
+                                {{ current_user.full_name.split()[0] }}
+                            </span>
+                            <svg class="profile-chevron"
+                                 viewBox="0 0 20 20"
+                                 aria-hidden="true">
+                                <path d="m5 7 5 5 5-5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      stroke-width="1.8"
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+
+                        <div class="profile-dropdown-menu" id="profile-menu" hidden>
+                            <div class="profile-menu-header">
+                                <a class="profile-menu-name"
+                                href="{{ url_for('admin_dashboard') if current_user.is_admin else url_for('dashboard') }}">
+                                    {{ current_user.full_name }}
+                                </a>
+                                <span class="profile-menu-email">
+                                    {{ current_user.email }}
+                                </span>
+                            </div>
+
+                            <div class="profile-menu-divider"></div>
+
+                            {% if current_user.is_admin %}
+                                <a class="profile-menu-item"
+                                href="{{ url_for('admin_dashboard') }}">
+                                    <span>Admin Dashboard</span>
+                                </a>
+                            {% else %}
+                                <a class="profile-menu-item"
+                                href="{{ url_for('settings') }}">
+                                    <span class="profile-menu-icon" aria-hidden="true">⚙</span>
+                                    <span>Settings</span>
+                                </a>
+                            {% endif %}
+
+                            <div class="profile-menu-divider"></div>
+
+                            <form action="{{ url_for('logout') }}"
+                                method="POST"
+                                class="profile-logout-form">
+                                <input type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token() }}">
+                                <button type="submit"
+                                        class="profile-menu-item profile-logout">
+                                    <span class="profile-menu-icon" aria-hidden="true">↪</span>
+                                    <span>Log out</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+<div class="notification-dropdown">
+                        <button type="button"
+                                class="notification-toggle"
+                                id="notification-menu-toggle"
+                                aria-expanded="false"
+                                aria-controls="notification-menu">
+                            <span aria-hidden="true">🔔</span>
+                            
+                            {% if notification_unread_count %}
+                            <span class="notification-badge">{{ notification_unread_count }}</span>
+                            {% endif %}
+                        </button>
+                        <div class="notification-menu" id="notification-menu" hidden>
+                            {% if notification_preview %}
+                                {% for notification in notification_preview %}
+                                <div class="notification-preview-item {% if not notification.is_read %}is-unread{% endif %}">
+                                    <a href="{{ url_for('open_notification', notification_id=notification.id) }}">
+                                        <strong>{{ notification.title }}</strong>
+                                        <span>{{ notification.message }}</span>
+                                    </a>
+                                    <form method="POST" action="{{ url_for('close_notification', notification_id=notification.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="notification-close" aria-label="Close notification" title="Close">×</button>
+                                    </form>
+                                </div>
+                                {% endfor %}
+                                <a class="notification-view-all" href="{{ url_for('notification_inbox') }}">View all notifications</a>
+                            {% else %}
+                                <p class="notification-empty">No new notifications.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+
+
+                {% else %}
+                    <a class="nav-login" href="{{ url_for('login') }}">
+                        Log in
+                    </a>
+                    <a class="nav-signup" href="{{ url_for('signup') }}">
+                        Create account
+                    </a>
+                {% endif %}
+            </div>
+        </nav>
+    </header>
+
+    <main>       
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container" aria-live="polite">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}" role="status">
+                            <span class="flash-message-text">{{ message }}</span>
+                            <button type="button"
+                                    class="flash-close"
+                                    aria-label="Dismiss notification"
+                                    title="Dismiss">&times;</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <a href="{{ url_for('home') }}" class="footer-brand">
+                <span class="footer-brand-emblem" aria-hidden="true">
+                    <svg viewBox="0 0 48 48"
+                         xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="24" cy="24" r="22" fill="none"
+                                stroke="currentColor" stroke-width="2"/>
+                        <path d="M9 19.5L24 12L39 19.5L24 27L9 19.5Z"
+                              fill="currentColor"/>
+                        <path d="M15 23V30C20 34 28 34 33 30V23"
+                              fill="none" stroke="currentColor"
+                              stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <span>GovScale</span>
+            </a>
+
+            <p class="footer-tagline">
+                Scale your ambition. Shape your future.
+            </p>
+
+            <p class="footer-disclaimer">
+                A student-focused scholarship and examination platform demonstration.
+                Not an official government portal. Sample opportunities are fictional.
+            </p>
+
+            <p class="footer-copyright">
+                &copy; 2026 GovScale Demo
+            </p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"
+            defer></script>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Notification dropdown
+        const notificationToggle = document.getElementById("notification-menu-toggle");
+        const notificationMenu = document.getElementById("notification-menu");
+        if (notificationToggle && notificationMenu) {
+            notificationToggle.addEventListener("click", function (event) {
+                event.stopPropagation();
+                const isOpen = notificationToggle.getAttribute("aria-expanded") === "true";
+                notificationMenu.hidden = isOpen;
+                notificationToggle.setAttribute("aria-expanded", String(!isOpen));
+            });
+            document.addEventListener("click", function (event) {
+                if (!event.target.closest(".notification-dropdown")) {
+                    notificationMenu.hidden = true;
+                    notificationToggle.setAttribute("aria-expanded", "false");
+                }
+            });
+        }
+
+        // Profile dropdown
+        const toggle = document.getElementById("profile-menu-toggle");
+        const menu = document.getElementById("profile-menu");
+
+        if (toggle && menu) {
+            function closeMenu() {
+                menu.hidden = true;
+                toggle.setAttribute("aria-expanded", "false");
+            }
+
+            toggle.addEventListener("click", function (event) {
+                event.stopPropagation();
+
+                const isOpen =
+                    toggle.getAttribute("aria-expanded") === "true";
+
+                menu.hidden = isOpen;
+                toggle.setAttribute("aria-expanded", String(!isOpen));
+            });
+
+            document.addEventListener("click", function (event) {
+                if (!event.target.closest(".profile-dropdown")) {
+                    closeMenu();
+                }
+            });
+
+            document.addEventListener("keydown", function (event) {
+                if (event.key === "Escape") {
+                    closeMenu();
+                    toggle.focus();
+                }
+            });
+        }
+
+        // Mobile navigation
+        const mobileToggle = document.querySelector(".mobile-nav-toggle");
+        const navLinks = document.getElementById("primary-navigation");
+
+        if (mobileToggle && navLinks) {
+            mobileToggle.addEventListener("click", function () {
+                const isOpen =
+                    mobileToggle.getAttribute("aria-expanded") === "true";
+
+                mobileToggle.setAttribute("aria-expanded", String(!isOpen));
+                mobileToggle.setAttribute(
+                    "aria-label",
+                    isOpen ? "Open navigation" : "Close navigation"
+                );
+
+                navLinks.classList.toggle("mobile-nav-open", !isOpen);
+            });
+        }
+
+        // Flash notifications: close manually or dismiss after 5 seconds
+        document.querySelectorAll(".flash-message").forEach(function (notice) {
+            let dismissed = false;
+
+            function dismissNotice() {
+                if (dismissed) return;
+
+                dismissed = true;
+                notice.classList.add("is-dismissing");
+
+                window.setTimeout(function () {
+                    notice.remove();
+                }, 300);
+            }
+
+            const closeButton = notice.querySelector(".flash-close");
+
+            if (closeButton) {
+                closeButton.addEventListener("click", dismissNotice);
+            }
+
+            // Keep error notifications visible until manually closed.
+            // Success and informational notices retain their auto-dismiss timer.
+            if (
+                !notice.classList.contains("flash-error") &&
+                !notice.classList.contains("flash-danger")
+            ) {
+                window.setTimeout(dismissNotice, 5000);
+            }
+        });
+    });
+    </script>
+
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

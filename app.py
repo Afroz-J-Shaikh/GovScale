@@ -110,6 +110,58 @@ class UserNotification(db.Model):
     )
 
 
+def notify_user(user_id, title, message, link=None):
+    """Queue a persistent notification in the current database transaction."""
+    db.session.add(
+        UserNotification(
+            user_id=user_id,
+            title=title,
+            message=message,
+            link=link,
+        )
+    )
+
+
+class NotificationDispatch(db.Model):
+    """Records a scheduled/lifecycle notification already sent to a recipient."""
+    __tablename__ = "notification_dispatch"
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_key = db.Column(db.String(255), nullable=False, unique=True, index=True)
+    created_at = db.Column(
+        db.DateTime, nullable=False, server_default=db.func.current_timestamp()
+    )
+
+
+def dispatch_notification(user_id, event_key, title, message, link=None):
+    """Queue a notification once per event and recipient, safely handling races."""
+    if NotificationDispatch.query.filter_by(event_key=event_key).first():
+        return False
+
+    try:
+        # The unique event_key constraint is the final protection against two
+        # concurrent requests dispatching the same event to the same user.
+        with db.session.begin_nested():
+            db.session.add(NotificationDispatch(event_key=event_key))
+            db.session.flush()
+            notify_user(user_id, title, message, link)
+        return True
+    except IntegrityError:
+        # Another transaction claimed this event key first. The savepoint
+        # rolls back only this dispatch attempt, preserving the outer session.
+        return False
+
+
+@app.template_filter("ist_datetime")
+def ist_datetime(value, fmt="%d %b %Y, %I:%M %p"):
+    """Render SQLite's UTC timestamps as India Standard Time."""
+    if value is None:
+        return ""
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=ZoneInfo("UTC"))
+    return value.astimezone(ZoneInfo("Asia/Kolkata")).strftime(fmt)
+
+
 class Scholarship(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(160), nullable=False)
@@ -1043,6 +1095,12 @@ def register_for_exam(exam_id):
     )
 
     db.session.add(registration)
+    notify_user(
+        current_user.id,
+        "Exam registration confirmed",
+        f'You have successfully registered for "{exam.title}".',
+        url_for("scholarship_detail", scholarship_id=scholarship.id),
+    )
 
     try:
         db.session.commit()
@@ -1120,6 +1178,12 @@ def apply_for_scholarship(scholarship_id):
     )
 
     db.session.add(application)
+    notify_user(
+        current_user.id,
+        "Scholarship application submitted",
+        f'Your application for "{scholarship.title}" has been submitted.',
+        url_for("my_applications"),
+    )
 
     try:
         db.session.commit()
@@ -1747,6 +1811,17 @@ def submit_exam(exam_id):
     )
     db.session.add(submission)
     registration.status = "completed"
+
+    result_outcome = "passed" if submission.passed else "did not pass"
+    notify_user(
+        current_user.id,
+        "Exam result available",
+        f'Your result for "{exam.title}" is ready. '
+        f'You {result_outcome} the required threshold '
+        f'({submission.percentage:.1f}% scored; '
+        f'{submission.passing_threshold:.1f}% required).',
+        url_for("exam_result", exam_id=exam.id),
+    )
 
     try:
         db.session.commit()
@@ -2421,6 +2496,17 @@ def admin_review_application(application_id):
     application.status = requested_status
     if requested_status == "approved":
         application.approved_at = datetime.now()
+
+    notify_user(
+        application.user_id,
+        f"Scholarship application {requested_status}",
+        f'Your application for "{application.scholarship.title}" '
+        f'has been {requested_status}.',
+        url_for(
+            "scholarship_detail",
+            scholarship_id=application.scholarship_id,
+        ),
+    )
     db.session.commit()
 
     flash(
@@ -3298,6 +3384,71 @@ def refresh_one_opportunity(scholarship, now_ist=None):
     return False
 
 
+def notify_lifecycle_transition(scholarship, old_status, new_status):
+    """Notify admins and affected students only for a real terminal transition."""
+    if new_status not in ("completed", "expired") or old_status == new_status:
+        return
+
+    recipients = {
+        user.id for user in User.query.filter_by(is_admin=True).all()
+    }
+
+    # Grade awards affect applicants. Exam awards affect applicants and anyone
+    # registered for a linked exam.
+    recipients.update(
+        row[0] for row in db.session.query(ScholarshipApplication.user_id)
+        .filter_by(scholarship_id=scholarship.id).distinct().all()
+    )
+
+    if scholarship.category == "exam":
+        exam_ids = [
+            row[0] for row in db.session.query(DemoExam.id)
+            .filter_by(scholarship_id=scholarship.id).all()
+        ]
+        if exam_ids:
+            recipients.update(
+                row[0] for row in db.session.query(ExamRegistration.user_id)
+                .filter(ExamRegistration.exam_id.in_(exam_ids))
+                .distinct().all()
+            )
+
+    for user_id in recipients:
+        dispatch_notification(
+            user_id,
+            f"scholarship-lifecycle:{scholarship.id}:{new_status}:user:{user_id}",
+            f'Scholarship {new_status}',
+            f'"{scholarship.title}" has been marked {new_status}.',
+        )
+
+
+def process_lifecycle_transitions(now_ist=None):
+    """Refresh scholarship lifecycle statuses and notify on actual transitions."""
+    if now_ist is None:
+        now_ist = datetime.now(
+            ZoneInfo("Asia/Kolkata")
+        ).replace(tzinfo=None)
+
+    changed = False
+    for scholarship in Scholarship.query.all():
+        old_status = scholarship.lifecycle_status or (
+            "active" if scholarship.is_active else "inactive"
+        )
+        refresh_one_opportunity(scholarship, now_ist)
+        new_status = scholarship.lifecycle_status or (
+            "active" if scholarship.is_active else "inactive"
+        )
+
+        if old_status != new_status:
+            notify_lifecycle_transition(scholarship, old_status, new_status)
+            changed = True
+        elif new_status in ("completed", "expired"):
+            # Preserve synchronization of legacy Boolean flags.
+            changed = True
+
+    if changed or db.session.new:
+        db.session.commit()
+
+
 @app.route("/notifications")
 @login_required
 def notification_inbox():
@@ -3361,25 +3512,19 @@ def inject_notification_summary():
 
 @app.before_request
 def update_opportunity_lifecycles():
-    """Persist lifecycle transitions without a separate background worker."""
-    now_ist = datetime.now(
-        ZoneInfo("Asia/Kolkata")
-    ).replace(tzinfo=None)
-
-    changed = False
-    for opportunity in Scholarship.query.all():
-        if refresh_one_opportunity(opportunity, now_ist):
-            changed = True
-        elif opportunity.lifecycle_status in ("completed", "expired"):
-            # Keep legacy Boolean flags synchronized for terminal records.
-            changed = True
-
-    if changed:
-        db.session.commit()
+    """Persist lifecycle transitions and queue their notifications."""
+    process_lifecycle_transitions()
 
 
 with app.app_context():
     db.create_all()
+
+    # Migrate legacy scholarship categories to the supported grade category.
+    # This deliberately preserves all other scholarship fields.
+    db.session.execute(
+        text("UPDATE scholarship SET category = 'grade' WHERE category = 'merit'")
+    )
+    db.session.commit()
 
     # Safely add persistent lifecycle tracking to existing SQLite databases.
     scholarship_columns = {
@@ -3531,7 +3676,7 @@ with app.app_context():
             ),
             Scholarship(
                 title="Future Learners Grant",
-                category="merit",
+                category="grade",
                 description=(
                     "A fictional education grant recognising academic "
                     "performance and consistent grades."
@@ -3547,7 +3692,7 @@ with app.app_context():
             ),
             Scholarship(
                 title="Digital Skills Award",
-                category="merit",
+                category="grade",
                 description=(
                     "A fictional award recognising academic achievement "
                     "and interest in digital skills."
