@@ -6660,6 +6660,16 @@ body {
 .notification-inbox-item small { color: #68756d; }
 .notification-close-button { border: 1px solid #cbd7ce; border-radius: 7px; background: #fff; padding: 7px 10px; cursor: pointer; }
 .notification-view-all:hover, .notification-preview-item a:hover, .admin-notification-preview a:hover { text-decoration: underline; }
+
+/* Ensure the notification dropdown's View all link is readable before hover. */
+.notification-menu a.notification-view-all {
+    color: #244e3b !important;
+}
+
+.notification-menu a.notification-view-all:hover {
+    color: #b8860b !important;
+}
+
 @media (max-width: 760px) {
     .notification-dropdown { margin: 6px 0; }
     .notification-menu { right: -50px; }
@@ -7001,5 +7011,73 @@ body {
     gap: 7px;
     padding: 11px 14px !important;
     font-size: 15px !important;
+    line-height: 1.3;
+}
+
+
+/* Notification inbox: keep each timestamp aligned at the top-right. */
+.notification-inbox-item {
+    position: relative;
+}
+
+.notification-inbox-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-inbox-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    flex-shrink: 0;
+    text-align: right;
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    .notification-inbox-meta {
+        align-items: flex-start;
+        text-align: left;
+        white-space: normal;
+    }
+}
+
+
+/* Ensure notification preview links and dates remain readable. */
+.notification-menu .notification-preview-item > a,
+.notification-menu .notification-preview-item > a:visited,
+.admin-notification-subnav .admin-notification-preview > a,
+.admin-notification-subnav .admin-notification-preview > a:visited {
+    color: #244e3b !important;
+}
+
+.notification-menu .notification-preview-item > a strong,
+.admin-notification-subnav .admin-notification-preview > a strong {
+    color: #183d2c !important;
+}
+
+.notification-menu .notification-preview-item > a span,
+.admin-notification-subnav .admin-notification-preview > a span {
+    color: #526258 !important;
+}
+
+.notification-menu a.notification-view-all,
+.notification-menu a.notification-view-all:visited,
+.admin-notification-subnav > a.admin-subnav-link {
+    color: #244e3b !important;
+}
+
+.notification-menu .notification-preview-item > a:hover,
+.admin-notification-subnav .admin-notification-preview > a:hover,
+.notification-menu a.notification-view-all:hover,
+.admin-notification-subnav > a.admin-subnav-link:hover {
+    color: #b8860b !important;
+}
+
+.notification-preview-date {
+    display: block;
+    color: #68756d !important;
+    font-size: 11px;
     line-height: 1.3;
 }

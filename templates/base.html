@@ -156,8 +156,8 @@
                                 {% for notification in notification_preview %}
                                 <div class="notification-preview-item {% if not notification.is_read %}is-unread{% endif %}">
                                     <a href="{{ url_for('open_notification', notification_id=notification.id) }}">
-                                        <strong>{{ notification.title }}</strong>
-                                        <span>{{ notification.message }}</span>
+                                                                                <span>{{ notification.message }}</span>
+                                        <small class="notification-preview-date">{{ notification.created_at|ist_datetime("%d %b") }}</small>
                                     </a>
                                     <form method="POST" action="{{ url_for('close_notification', notification_id=notification.id) }}">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
