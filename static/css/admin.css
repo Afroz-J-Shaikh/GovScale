@@ -1586,3 +1586,245 @@ button, a, select { -webkit-tap-highlight-color: transparent; }
     filter: grayscale(0.35);
     text-decoration: none;
 }
+
+
+/* Consistent layout for administrator Profile and Settings forms */
+.admin-account-section {
+    padding: 26px 28px 30px;
+}
+
+.admin-account-section .admin-account-form {
+    width: min(100%, 620px);
+    padding: 8px 2px 0;
+    gap: 20px;
+}
+
+.admin-account-section .admin-account-heading {
+    margin: 0 0 20px;
+    padding: 4px 2px 0;
+}
+
+.admin-account-section .admin-account-heading h2 {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.admin-account-section .admin-account-heading p {
+    margin-top: 8px;
+}
+
+.admin-account-section .admin-account-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.admin-account-section .admin-account-actions .filter-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    text-decoration: none;
+}
+
+@media (max-width: 640px) {
+    .admin-account-section {
+        padding: 20px 14px 24px;
+    }
+
+    .admin-account-section .admin-account-form {
+        padding: 8px 2px 0;
+    }
+}
+
+/* Administrator account pages */
+.admin-account-form {
+    width: min(100%, 620px);
+    display: grid;
+    gap: 18px;
+    padding: 22px 0;
+}
+
+.admin-account-form .admin-form-field {
+    display: grid;
+    gap: 8px;
+}
+
+.admin-account-form .admin-form-field input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.admin-account-form .admin-form-field small {
+    display: block;
+}
+
+.admin-account-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.admin-account-actions .filter-button,
+.management-section > p .filter-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+/* Account page spacing and balanced typography */
+.admin-account-table-wrap {
+    margin: 22px 0 26px;
+    padding: 8px 18px;
+    border-radius: 12px;
+    overflow-x: auto;
+}
+
+.admin-account-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.admin-account-table th,
+.admin-account-table td {
+    padding: 16px 18px;
+    font-size: 14px;
+    line-height: 1.55;
+    vertical-align: middle;
+}
+
+.admin-account-table th {
+    width: 34%;
+    text-align: left;
+    font-weight: 600;
+    white-space: normal;
+}
+
+.admin-account-table td {
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+
+/* Make the account heading and action row feel less cramped */
+.management-section > .section-heading {
+    margin-bottom: 18px;
+}
+
+.management-section > p {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin: 24px 0 8px;
+    padding-left: 18px;
+}
+
+@media (max-width: 640px) {
+    .admin-account-table-wrap {
+        padding: 4px 8px;
+    }
+
+    .admin-account-table th,
+    .admin-account-table td {
+        padding: 13px 10px;
+        font-size: 13px;
+    }
+
+    .admin-account-table th {
+        width: 42%;
+    }
+
+    .management-section > p {
+        padding-left: 8px;
+    }
+}
+
+/* Final account page alignment and spacing */
+.admin-account-section {
+    padding: 26px 28px 30px;
+}
+
+.admin-account-heading {
+    padding: 4px 2px 0;
+    margin: 0 0 20px;
+}
+
+.admin-account-heading .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.admin-account-heading h2 {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.admin-account-table-wrap {
+    margin: 0 0 24px;
+}
+
+.admin-account-actions-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 0;
+    padding: 0 18px;
+}
+
+@media (max-width: 640px) {
+    .admin-account-section {
+        padding: 20px 14px 24px;
+    }
+
+    .admin-account-heading {
+        padding-left: 2px;
+    }
+
+    .admin-account-actions-row {
+        padding: 0 8px;
+    }
+}
+
+.admin-account-actions-row {
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-account-actions-row {
+    align-items: center;
+    gap: 12px;
+}
+
+/* Center text inside Account page action buttons */
+.admin-account-actions-row .filter-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    text-decoration: none;
+}
+
+
+
+/* Persistent admin notification dropdown */
+.admin-notification-group .admin-nav-link { display: flex; align-items: center; gap: 9px; }
+.admin-notification-group .notification-badge { margin-left: auto; }
+.admin-notification-subnav { max-height: 360px; overflow-y: auto; }
+.admin-notification-preview { margin: 4px 0; padding: 9px 7px; border-radius: 6px; color: var(--admin-sidebar-muted); }
+.admin-notification-preview a { min-width: 0; overflow-wrap: anywhere; }
+.admin-notification-preview a strong { color: #fff; font-size: 12px; }
+.admin-notification-preview a span { color: var(--admin-sidebar-muted); font-size: 11px; }
+.admin-notification-preview.is-unread { background: rgba(198,40,40,.18); border-left: 3px solid #ef5350; }
+.admin-notification-empty { color: var(--admin-sidebar-muted); }
+.admin-notification-subnav .notification-close { color: #fff; }
