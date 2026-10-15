@@ -183,6 +183,124 @@ class Scholarship(db.Model):
     )
 
 
+
+class StudentPaymentDetails(db.Model):
+    """Current simulated recipient details; never store real financial credentials."""
+    __tablename__ = "student_payment_details"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=False, unique=True
+    )
+    recipient_name = db.Column(db.String(100), nullable=False)
+    payment_method = db.Column(db.String(30), nullable=False)
+    recipient_reference = db.Column(db.String(120), nullable=False)
+    updated_at = db.Column(
+        db.DateTime, nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp(),
+    )
+
+    user = db.relationship(
+        "User", backref=db.backref("payment_details", uselist=False)
+    )
+
+
+class ScholarshipReward(db.Model):
+    """One simulated reward per approved scholarship application."""
+    __tablename__ = "scholarship_reward"
+
+    id = db.Column(db.Integer, primary_key=True)
+    application_id = db.Column(
+        db.Integer, db.ForeignKey("scholarship_application.id"),
+        nullable=False, unique=True, index=True,
+    )
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=False, index=True
+    )
+    scholarship_id = db.Column(
+        db.Integer, db.ForeignKey("scholarship.id"), nullable=False, index=True
+    )
+    exam_submission_id = db.Column(
+        db.Integer, db.ForeignKey("exam_submission.id"), nullable=True
+    )
+    amount = db.Column(db.Integer, nullable=False)
+    status = db.Column(
+        db.String(20), nullable=False, default="eligible", index=True
+    )  # eligible, pending, failed, completed
+    completed_at = db.Column(db.DateTime, nullable=True)
+    completed_by_admin_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=True
+    )
+    created_at = db.Column(
+        db.DateTime, nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+    updated_at = db.Column(
+        db.DateTime, nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp(),
+    )
+
+    application = db.relationship("ScholarshipApplication")
+    user = db.relationship("User", foreign_keys=[user_id])
+    scholarship = db.relationship("Scholarship")
+    exam_submission = db.relationship("ExamSubmission")
+    completed_by_admin = db.relationship("User", foreign_keys=[completed_by_admin_id])
+    attempts = db.relationship(
+        "ScholarshipPayoutAttempt",
+        back_populates="reward",
+        order_by="ScholarshipPayoutAttempt.attempt_number",
+        lazy=True,
+    )
+
+
+class ScholarshipPayoutAttempt(db.Model):
+    """Immutable recipient snapshot and resolution audit for one payout attempt."""
+    __tablename__ = "scholarship_payout_attempt"
+
+    id = db.Column(db.Integer, primary_key=True)
+    reward_id = db.Column(
+        db.Integer, db.ForeignKey("scholarship_reward.id"),
+        nullable=False, index=True,
+    )
+    attempt_number = db.Column(db.Integer, nullable=False)
+    status = db.Column(
+        db.String(20), nullable=False, default="pending", index=True
+    )  # pending, failed, completed
+    amount = db.Column(db.Integer, nullable=False)
+    recipient_name_snapshot = db.Column(db.String(100), nullable=False)
+    payment_method_snapshot = db.Column(db.String(30), nullable=False)
+    recipient_reference_snapshot = db.Column(db.String(120), nullable=False)
+    initiated_by_admin_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=False
+    )
+    initiated_at = db.Column(
+        db.DateTime, nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+    resolved_by_admin_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=True
+    )
+    resolved_at = db.Column(db.DateTime, nullable=True)
+    failure_reason = db.Column(db.String(500), nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "reward_id", "attempt_number",
+            name="uq_reward_payout_attempt_number",
+        ),
+    )
+
+    reward = db.relationship("ScholarshipReward", back_populates="attempts")
+    initiated_by_admin = db.relationship(
+        "User", foreign_keys=[initiated_by_admin_id]
+    )
+    resolved_by_admin = db.relationship(
+        "User", foreign_keys=[resolved_by_admin_id]
+    )
+
+
 class StudentProfile(db.Model):
     __tablename__ = "student_profile"
 
@@ -663,6 +781,55 @@ class ChangePasswordForm(FlaskForm):
     submit = SubmitField("Update password")
 
 
+
+def evaluate_scholarship_reward_eligibility(application):
+    """Return (eligible, reason, exam_submission) for a reward review."""
+    if application is None:
+        return False, "Scholarship application not found.", None
+
+    if application.status != "approved":
+        return False, "The scholarship application has not been approved.", None
+
+    scholarship = application.scholarship
+    user = application.user
+
+    eligible, reasons = check_scholarship_eligibility(user, scholarship)
+    if not eligible:
+        return False, " ".join(reasons), None
+
+    if scholarship.category == "grade":
+        return True, None, None
+
+    if scholarship.category != "exam":
+        return False, "This scholarship category is not supported for rewards.", None
+
+    # Only accept a passing submission for an exam linked to this scholarship.
+    linked_exam_ids = (
+        db.session.query(DemoExam.id)
+        .filter(DemoExam.scholarship_id == scholarship.id)
+        .subquery()
+    )
+    submission = (
+        ExamSubmission.query
+        .filter(
+            ExamSubmission.user_id == user.id,
+            ExamSubmission.exam_id.in_(linked_exam_ids),
+            ExamSubmission.passed.is_(True),
+        )
+        .order_by(ExamSubmission.submitted_at.desc(), ExamSubmission.id.desc())
+        .first()
+    )
+
+    if submission is None:
+        return (
+            False,
+            "A passing result for an exam linked to this scholarship is required.",
+            None,
+        )
+
+    return True, None, submission
+
+
 def check_scholarship_eligibility(user, scholarship):
     """Return (eligible, reasons) using GovScale's existing rules."""
     reasons = []
@@ -798,34 +965,81 @@ def home():
         or scholarship.id in visible_exam_scholarship_ids
     ]
 
-    # Homepage impact metrics use global database totals,
-    # not the personalized scholarship list shown to a logged-in student.
-    impact_active_count = Scholarship.query.filter_by(
-        is_active=True
+    # Homepage metrics use global database totals, independent of
+    # the personalized scholarship list shown to a logged-in student.
+    active_scholarship_filter = (
+        Scholarship.is_active.is_(True),
+        Scholarship.lifecycle_status == "active",
+    )
+
+    impact_active_count = Scholarship.query.filter(
+        *active_scholarship_filter
     ).count()
 
-    impact_applications_count = ScholarshipApplication.query.filter_by(
-        status="submitted"
+    impact_applications_count = ScholarshipApplication.query.count()
+
+    # Exclude administrator accounts from student reach.
+    impact_students_count = User.query.filter(
+        User.is_admin.is_(False)
     ).count()
 
-    impact_students_count = User.query.count()
-
-    impact_grade_count = Scholarship.query.filter_by(
-        is_active=True,
-        category="grade",
+    impact_grade_count = Scholarship.query.filter(
+        *active_scholarship_filter,
+        Scholarship.category == "grade",
     ).count()
 
-    impact_exam_count = Scholarship.query.filter_by(
-        is_active=True,
-        category="exam",
+    impact_exam_count = Scholarship.query.filter(
+        *active_scholarship_filter,
+        Scholarship.category == "exam",
     ).count()
 
-    impact_scholarships_awarded = ScholarshipApplication.query.filter_by(
-        status="approved"
-    ).count()
+    # Only administrator-confirmed completed payouts count as paid.
+    confirmed_rewards = ScholarshipReward.query.filter(
+        ScholarshipReward.status == "completed",
+        ScholarshipReward.completed_at.isnot(None),
+        ScholarshipReward.completed_by_admin_id.isnot(None),
+    )
 
-    # TODO: Replace with a real count when exam registration is implemented.
-    impact_exam_participants = 0
+    impact_scholarships_awarded = confirmed_rewards.count()
+
+    impact_total_rewards_paid = (
+        db.session.query(
+            db.func.coalesce(db.func.sum(ScholarshipReward.amount), 0)
+        )
+        .filter(
+            ScholarshipReward.status == "completed",
+            ScholarshipReward.completed_at.isnot(None),
+            ScholarshipReward.completed_by_admin_id.isnot(None),
+        )
+        .scalar()
+        or 0
+    )
+
+    impact_students_awarded = (
+        db.session.query(
+            db.func.count(db.func.distinct(ScholarshipReward.user_id))
+        )
+        .filter(
+            ScholarshipReward.status == "completed",
+            ScholarshipReward.completed_at.isnot(None),
+            ScholarshipReward.completed_by_admin_id.isnot(None),
+        )
+        .scalar()
+        or 0
+    )
+
+    # Count registered students for active exams that have not ended.
+    # This includes an active exam whose scheduled start time is upcoming.
+    impact_exam_participants = (
+        ExamRegistration.query
+        .join(DemoExam, ExamRegistration.exam_id == DemoExam.id)
+        .filter(
+            DemoExam.is_active.is_(True),
+            DemoExam.end_at > now_ist,
+            ExamRegistration.status == "registered",
+        )
+        .count()
+    )
 
     return render_template(
         "index.html",
@@ -836,6 +1050,8 @@ def home():
         impact_grade_count=impact_grade_count,
         impact_exam_count=impact_exam_count,
         impact_scholarships_awarded=impact_scholarships_awarded,
+        impact_total_rewards_paid=impact_total_rewards_paid,
+        impact_students_awarded=impact_students_awarded,
         impact_exam_participants=impact_exam_participants,
         upcoming_exam=upcoming_exam,
         upcoming_exam_start_iso=upcoming_exam_start_iso,
@@ -956,9 +1172,21 @@ def scholarship_detail(scholarship_id):
             scholarship_id=scholarship.id,
         ).first()
 
+    received_reward = False
+    if current_user.is_authenticated and existing_application:
+        received_reward = ScholarshipReward.query.filter(
+            ScholarshipReward.application_id == existing_application.id,
+            ScholarshipReward.user_id == current_user.id,
+            ScholarshipReward.scholarship_id == scholarship.id,
+            ScholarshipReward.status == "completed",
+            ScholarshipReward.completed_at.isnot(None),
+            ScholarshipReward.completed_by_admin_id.isnot(None),
+        ).first() is not None
+
     return render_template(
         "scholarship_detail.html",
         scholarship=scholarship,
+        received_reward=received_reward,
         eligible=eligible,
         ineligible_reasons=ineligible_reasons,
         existing_application=existing_application,
@@ -1286,12 +1514,35 @@ def cancel_exam_registration(registration_id):
 @app.route("/my-applications")
 @student_required
 def my_applications():
+    # Keep applications visible while they are under review or awaiting reward.
+    completed_application_ids = {
+        row[0]
+        for row in db.session.query(ScholarshipReward.application_id)
+        .filter_by(user_id=current_user.id, status="completed")
+        .all()
+    }
+
     applications = (
         ScholarshipApplication.query
-        .filter_by(user_id=current_user.id, status="submitted")
+        .filter(
+            ScholarshipApplication.user_id == current_user.id,
+            ScholarshipApplication.status.in_(("submitted", "pending", "approved")),
+        )
         .order_by(ScholarshipApplication.submitted_at.desc())
         .all()
     )
+    applications = [
+        application for application in applications
+        if application.id not in completed_application_ids
+    ]
+
+    reward_by_application = {
+        reward.application_id: reward
+        for reward in ScholarshipReward.query.filter_by(
+            user_id=current_user.id
+        ).all()
+        if reward.application_id not in completed_application_ids
+    }
 
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
@@ -1314,6 +1565,7 @@ def my_applications():
     return render_template(
         "my_applications.html",
         applications=applications,
+        reward_by_application=reward_by_application,
         exam_registrations=exam_registrations,
         now_ist=now_ist,
     )
@@ -1324,43 +1576,33 @@ def my_applications():
 def my_history():
     close_expired_exams()
 
-    grade_applications = (
+    # Only admin-confirmed payouts belong in received-reward history.
+    completed_rewards = (
+        ScholarshipReward.query
+        .filter_by(user_id=current_user.id, status="completed")
+        .filter(
+            ScholarshipReward.completed_at.isnot(None),
+            ScholarshipReward.completed_by_admin_id.isnot(None),
+        )
+        .order_by(ScholarshipReward.completed_at.desc(), ScholarshipReward.id.desc())
+        .all()
+    )
+
+    # Rejections and withdrawals are decision history, not received rewards.
+    application_decisions = (
         ScholarshipApplication.query
-        .join(Scholarship, ScholarshipApplication.scholarship_id == Scholarship.id)
         .filter(
             ScholarshipApplication.user_id == current_user.id,
-            Scholarship.category == "grade",
-            ScholarshipApplication.status != "submitted",
+            ScholarshipApplication.status.in_(("rejected", "withdrawn")),
         )
         .order_by(ScholarshipApplication.submitted_at.desc())
         .all()
     )
 
-    registrations = (
-        ExamRegistration.query
-        .filter_by(user_id=current_user.id)
-        .join(DemoExam, ExamRegistration.exam_id == DemoExam.id)
-        .order_by(DemoExam.start_at.desc())
-        .all()
-    )
-
-    exam_history = []
-    for registration in registrations:
-        exam = registration.exam
-        submission = ExamSubmission.query.filter_by(
-            user_id=current_user.id,
-            exam_id=exam.id,
-        ).first()
-        exam_history.append({
-            "registration": registration,
-            "exam": exam,
-            "submission": submission,
-        })
-
     return render_template(
         "my_history.html",
-        grade_applications=grade_applications,
-        exam_history=exam_history,
+        completed_rewards=completed_rewards,
+        application_decisions=application_decisions,
     )
 
 
@@ -1950,6 +2192,173 @@ def exam_review(exam_id):
     )
 
 
+@app.route("/payment-details", methods=["GET", "POST"])
+@student_required
+def payment_details():
+    """Manage simulated recipient details, never real financial credentials."""
+    details = StudentPaymentDetails.query.filter_by(
+        user_id=current_user.id
+    ).first()
+
+    pending_payout = (
+        ScholarshipPayoutAttempt.query
+        .join(ScholarshipReward, ScholarshipPayoutAttempt.reward_id == ScholarshipReward.id)
+        .filter(
+            ScholarshipReward.user_id == current_user.id,
+            ScholarshipPayoutAttempt.status == "pending",
+        )
+        .first()
+    )
+
+    if request.method == "POST":
+        action = request.form.get("action", "save").strip().lower()
+
+        if pending_payout:
+            flash(
+                "Payment details are locked while a payout is awaiting resolution.",
+                "error",
+            )
+            return redirect(url_for("payment_details"))
+
+        if action == "delete":
+            if details is None:
+                flash("You do not have saved payment details to remove.", "error")
+            else:
+                db.session.delete(details)
+                db.session.commit()
+                flash("Your simulated payment details have been removed.", "success")
+            return redirect(url_for("payment_details"))
+
+        recipient_name = request.form.get("recipient_name", "").strip()
+        payment_method = request.form.get("payment_method", "").strip()
+        recipient_reference = request.form.get("recipient_reference", "").strip()
+        allowed_methods = {
+            "upi_simulated",
+            "bank_simulated",
+            "wallet_simulated",
+        }
+
+        field_errors = {}
+        form_values = {
+            "recipient_name": recipient_name,
+            "payment_method": payment_method,
+            "recipient_reference": recipient_reference,
+        }
+
+        if not recipient_name or len(recipient_name) > 100:
+            field_errors["recipient_name"] = (
+                "Recipient name is required and must be 100 characters or fewer."
+            )
+
+        if payment_method not in allowed_methods:
+            field_errors["payment_method"] = (
+                "Choose one of the available simulated payment methods."
+            )
+
+        if not recipient_reference or len(recipient_reference) > 120:
+            field_errors["recipient_reference"] = (
+                "Enter a reference of 1 to 120 characters."
+            )
+        elif payment_method == "upi_simulated":
+            if not re.fullmatch(
+                r"[A-Za-z0-9._-]{2,}@[A-Za-z][A-Za-z0-9.-]{1,}",
+                recipient_reference,
+            ):
+                field_errors["recipient_reference"] = (
+                    "Enter a UPI ID in the format name@handle."
+                )
+        elif payment_method == "bank_simulated":
+            compact_account = re.sub(r"[ -]", "", recipient_reference)
+            if (
+                not re.fullmatch(r"[0-9][0-9 -]*", recipient_reference)
+                or not 9 <= len(compact_account) <= 18
+                or not compact_account.isdigit()
+            ):
+                field_errors["recipient_reference"] = (
+                    "Enter a bank account number using 9–18 digits; "
+                    "spaces or hyphens are allowed."
+                )
+        elif payment_method == "wallet_simulated":
+            wallet_value = recipient_reference.strip()
+            mobile_value = re.sub(r"[ ()-]", "", wallet_value)
+            is_mobile = bool(
+                re.fullmatch(r"(?:\+91)?[0-9]{10}", mobile_value)
+            )
+            is_wallet_id = bool(
+                re.fullmatch(r"(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9][A-Za-z0-9._@-]{4,49}", wallet_value)
+            )
+            if not (is_mobile or is_wallet_id):
+                field_errors["recipient_reference"] = (
+                    "Enter a wallet ID or a mobile-style number "
+                    "(10 digits, optionally with +91)."
+                )
+
+        if field_errors:
+            return render_template(
+                "payment_details.html",
+                details=details,
+                pending_payout=bool(pending_payout),
+                field_errors=field_errors,
+                form_values=form_values,
+            )
+
+        if details is None:
+            details = StudentPaymentDetails(user_id=current_user.id)
+            db.session.add(details)
+
+        details.recipient_name = recipient_name
+        details.payment_method = payment_method
+        details.recipient_reference = recipient_reference
+        db.session.commit()
+        flash("Your simulated payment details have been saved.", "success")
+        return redirect(url_for("payment_details"))
+
+    return render_template(
+        "payment_details.html",
+        details=details,
+        pending_payout=bool(pending_payout),
+        field_errors={},
+        form_values={},
+    )
+
+
+@app.route("/admin/rewards/<int:application_id>/request-payment-details", methods=["POST"])
+@admin_required
+def admin_request_payment_details(application_id):
+    """Ask an approved applicant to add simulated payout details."""
+    application = db.session.get(ScholarshipApplication, application_id)
+    if application is None:
+        abort(404)
+
+    if application.status != "approved":
+        flash("Only approved applications can receive a payment-details reminder.", "error")
+        return redirect(url_for("admin_rewards"))
+
+    details = StudentPaymentDetails.query.filter_by(
+        user_id=application.user_id
+    ).first()
+    if details is not None:
+        flash("The student has already provided payment details.", "error")
+        return redirect(url_for("admin_rewards"))
+
+    sent = dispatch_notification(
+        application.user_id,
+        f"reward-payment-details-needed:{application.id}",
+        "Add simulated payment details",
+        f"Your application for {application.scholarship.title} is approved. "
+        "Please add simulated recipient details in Payment Details so an "
+        "administrator can review reward payout eligibility.",
+        url_for("payment_details"),
+    )
+    db.session.commit()
+
+    if sent:
+        flash("Payment-details reminder sent to the student.", "success")
+    else:
+        flash("A reminder has already been sent for this application.", "info")
+    return redirect(url_for("admin_rewards"))
+
+
 @app.route("/settings", methods=["GET", "POST"])
 @student_required
 def settings():
@@ -2102,6 +2511,64 @@ def dashboard():
             "submission": submission,
         })
 
+    # Personal application statistics.
+    submitted_count = ScholarshipApplication.query.filter_by(
+        user_id=current_user.id
+    ).count()
+
+    active_statuses = ("submitted", "pending", "approved")
+
+    confirmed_reward_query = (
+        ScholarshipReward.query
+        .filter_by(user_id=current_user.id, status="completed")
+        .filter(
+            ScholarshipReward.completed_at.isnot(None),
+            ScholarshipReward.completed_by_admin_id.isnot(None),
+        )
+    )
+
+    completed_application_ids = {
+        row[0]
+        for row in confirmed_reward_query.with_entities(
+            ScholarshipReward.application_id
+        ).filter(ScholarshipReward.application_id.isnot(None)).all()
+    }
+
+    active_query = ScholarshipApplication.query.filter(
+        ScholarshipApplication.user_id == current_user.id,
+        ScholarshipApplication.status.in_(active_statuses),
+    )
+    active_count = (
+        active_query.filter(
+            ~ScholarshipApplication.id.in_(completed_application_ids)
+        ).count()
+        if completed_application_ids
+        else active_query.count()
+    )
+
+    withdrawn_count = ScholarshipApplication.query.filter_by(
+        user_id=current_user.id, status="withdrawn"
+    ).count()
+
+    rejected_count = ScholarshipApplication.query.filter_by(
+        user_id=current_user.id, status="rejected"
+    ).count()
+
+    received_count = confirmed_reward_query.count()
+
+    received_amount = (
+        db.session.query(
+            db.func.coalesce(db.func.sum(ScholarshipReward.amount), 0)
+        )
+        .filter_by(user_id=current_user.id, status="completed")
+        .filter(
+            ScholarshipReward.completed_at.isnot(None),
+            ScholarshipReward.completed_by_admin_id.isnot(None),
+        )
+        .scalar()
+        or 0
+    )
+
     return render_template(
         "dashboard.html",
         scholarships=scholarships,
@@ -2115,6 +2582,12 @@ def dashboard():
             if registered_exam else None
         ),
         exam_history=exam_history,
+        submitted_count=submitted_count,
+        active_count=active_count,
+        withdrawn_count=withdrawn_count,
+        rejected_count=rejected_count,
+        received_count=received_count,
+        received_amount=received_amount,
     )
 
 @app.route("/profile", methods=["GET", "POST"])
@@ -2384,6 +2857,280 @@ def admin_students():
     )
 
 
+
+@app.route("/admin/students/<int:student_id>")
+@admin_required
+def admin_student_detail(student_id):
+    """Read-only student profile, saved payment details, and confirmed payouts."""
+    student = db.session.get(User, student_id)
+    if student is None or student.is_admin:
+        abort(404)
+
+    profile = StudentProfile.query.filter_by(user_id=student.id).first()
+    payment_details = StudentPaymentDetails.query.filter_by(
+        user_id=student.id
+    ).first()
+
+    # Count and sum only payouts explicitly completed by an administrator.
+    completed_rewards = ScholarshipReward.query.filter(
+        ScholarshipReward.user_id == student.id,
+        ScholarshipReward.status == "completed",
+        ScholarshipReward.completed_at.isnot(None),
+        ScholarshipReward.completed_by_admin_id.isnot(None),
+    )
+
+    received_scholarship_count = completed_rewards.count()
+    total_payout = (
+        db.session.query(db.func.coalesce(db.func.sum(ScholarshipReward.amount), 0))
+        .filter(
+            ScholarshipReward.user_id == student.id,
+            ScholarshipReward.status == "completed",
+            ScholarshipReward.completed_at.isnot(None),
+            ScholarshipReward.completed_by_admin_id.isnot(None),
+        )
+        .scalar()
+        or 0
+    )
+
+    return render_template(
+        "admin/student_detail.html",
+        student=student,
+        profile=profile,
+        payment_details=payment_details,
+        received_scholarship_count=received_scholarship_count,
+        total_payout=total_payout,
+    )
+
+
+@app.route("/admin/rewards")
+@admin_required
+def admin_rewards():
+    """Review approved applications and their simulated reward status."""
+    applications = (
+        ScholarshipApplication.query
+        .filter(ScholarshipApplication.status == "approved")
+        .join(Scholarship, ScholarshipApplication.scholarship_id == Scholarship.id)
+        .join(User, ScholarshipApplication.user_id == User.id)
+        .order_by(ScholarshipApplication.approved_at.desc(),
+                  ScholarshipApplication.submitted_at.desc())
+        .all()
+    )
+
+    rows = []
+    for application in applications:
+        eligible, reason, submission = (
+            evaluate_scholarship_reward_eligibility(application)
+        )
+        reward = ScholarshipReward.query.filter_by(
+            application_id=application.id
+        ).first()
+        payment_details = StudentPaymentDetails.query.filter_by(
+            user_id=application.user_id
+        ).first()
+        pending_attempt = None
+        if reward:
+            pending_attempt = ScholarshipPayoutAttempt.query.filter_by(
+                reward_id=reward.id, status="pending"
+            ).first()
+
+        block_reason = reason
+        if eligible and application.scholarship.award_amount <= 0:
+            eligible = False
+            block_reason = "The scholarship award amount must be greater than zero."
+        if eligible and payment_details is None:
+            block_reason = "Student payment details have not been added."
+
+        rows.append({
+            "application": application,
+            "eligible": eligible,
+            "reason": block_reason,
+            "submission": submission,
+            "reward": reward,
+            "payment_details": payment_details,
+            "pending_attempt": pending_attempt,
+        })
+
+    return render_template("admin/rewards.html", rows=rows)
+
+
+@app.route(
+    "/admin/rewards/<int:application_id>/initiate",
+    methods=["POST"],
+)
+@admin_required
+def admin_initiate_reward_payout(application_id):
+    """Create a simulated payout attempt; never mark it completed here."""
+    application = db.session.get(ScholarshipApplication, application_id)
+    if application is None:
+        abort(404)
+
+    eligible, reason, submission = (
+        evaluate_scholarship_reward_eligibility(application)
+    )
+    if not eligible:
+        flash(reason or "This application is not eligible for a reward.", "error")
+        return redirect(url_for("admin_rewards"))
+
+    amount = application.scholarship.award_amount
+    if amount <= 0:
+        flash("Payout cannot start because the award amount must be positive.", "error")
+        return redirect(url_for("admin_rewards"))
+
+    details = StudentPaymentDetails.query.filter_by(
+        user_id=application.user_id
+    ).first()
+    if details is None:
+        flash("The student must add simulated payment details before payout.", "error")
+        return redirect(url_for("admin_rewards"))
+
+    reward = ScholarshipReward.query.filter_by(
+        application_id=application.id
+    ).first()
+    if reward and reward.status == "completed":
+        flash("This reward has already been confirmed as received.", "error")
+        return redirect(url_for("admin_rewards"))
+
+    if reward:
+        pending = ScholarshipPayoutAttempt.query.filter_by(
+            reward_id=reward.id, status="pending"
+        ).first()
+        if pending:
+            flash("A payout attempt is already awaiting resolution.", "error")
+            return redirect(url_for("admin_rewards"))
+    else:
+        reward = ScholarshipReward(
+            application_id=application.id,
+            user_id=application.user_id,
+            scholarship_id=application.scholarship_id,
+            exam_submission_id=submission.id if submission else None,
+            amount=amount,
+            status="eligible",
+        )
+        db.session.add(reward)
+        try:
+            db.session.flush()
+        except IntegrityError:
+            db.session.rollback()
+            flash("The reward was created by another request. Refresh and review it.", "error")
+            return redirect(url_for("admin_rewards"))
+
+    # Preserve the current recipient details as an immutable attempt snapshot.
+    last_attempt_number = db.session.query(
+        db.func.max(ScholarshipPayoutAttempt.attempt_number)
+    ).filter_by(reward_id=reward.id).scalar() or 0
+
+    attempt = ScholarshipPayoutAttempt(
+        reward_id=reward.id,
+        attempt_number=last_attempt_number + 1,
+        status="pending",
+        amount=amount,
+        recipient_name_snapshot=details.recipient_name,
+        payment_method_snapshot=details.payment_method,
+        recipient_reference_snapshot=details.recipient_reference,
+        initiated_by_admin_id=current_user.id,
+    )
+    db.session.add(attempt)
+    reward.amount = amount
+    reward.exam_submission_id = submission.id if submission else None
+    reward.status = "pending"
+    reward.completed_at = None
+    reward.completed_by_admin_id = None
+
+    try:
+        db.session.flush()
+        dispatch_notification(
+            application.user_id,
+            f"reward-payout-initiated:{attempt.id}",
+            "Scholarship payout initiated",
+            f"A simulated payout of ₹{amount:,} for "
+            f"{application.scholarship.title} has been initiated and is awaiting "
+            "administrator confirmation. This is not yet marked as received.",
+            url_for("my_applications"),
+        )
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash("The payout could not be initiated safely. Refresh and try again.", "error")
+        return redirect(url_for("admin_rewards"))
+
+    flash("Payout initiated. Confirm success or record failure after reviewing the outcome.", "success")
+    return redirect(url_for("admin_rewards"))
+
+
+@app.route(
+    "/admin/payout-attempts/<int:attempt_id>/resolve",
+    methods=["POST"],
+)
+@admin_required
+def admin_resolve_reward_payout(attempt_id):
+    """Record an administrator's explicit payout outcome."""
+    attempt = db.session.get(ScholarshipPayoutAttempt, attempt_id)
+    if attempt is None:
+        abort(404)
+
+    if attempt.status != "pending" or attempt.reward.status != "pending":
+        flash("This payout attempt has already been resolved or is no longer pending.", "error")
+        return redirect(url_for("admin_rewards"))
+
+    outcome = request.form.get("outcome", "").strip().lower()
+    if outcome not in {"completed", "failed"}:
+        flash("Choose a valid payout outcome.", "error")
+        return redirect(url_for("admin_rewards"))
+
+    reason = request.form.get("failure_reason", "").strip()
+    if outcome == "failed" and not reason:
+        flash("Enter a brief reason when recording a failed payout.", "error")
+        return redirect(url_for("admin_rewards"))
+    if len(reason) > 500:
+        flash("The failure reason must be 500 characters or fewer.", "error")
+        return redirect(url_for("admin_rewards"))
+
+    reward = attempt.reward
+    application = reward.application
+    attempt.status = outcome
+    attempt.resolved_by_admin_id = current_user.id
+    attempt.resolved_at = datetime.utcnow()
+
+    if outcome == "completed":
+        attempt.failure_reason = None
+        reward.status = "completed"
+        reward.completed_at = attempt.resolved_at
+        reward.completed_by_admin_id = current_user.id
+        dispatch_notification(
+            reward.user_id,
+            f"reward-completed:{reward.id}",
+            "Scholarship reward confirmed",
+            f"Your scholarship reward of ₹{attempt.amount:,} for "
+            f"{reward.scholarship.title} has been confirmed as received.",
+            url_for("my_history"),
+        )
+    else:
+        attempt.failure_reason = reason
+        reward.status = "failed"
+        dispatch_notification(
+            reward.user_id,
+            f"reward-payout-failed:{attempt.id}",
+            "Scholarship payout needs attention",
+            f"The simulated payout for {reward.scholarship.title} could not be "
+            f"confirmed. Reason: {reason}. An administrator may review and retry it.",
+            url_for("my_applications"),
+        )
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash("The payout outcome could not be saved. Refresh and review the attempt.", "error")
+        return redirect(url_for("admin_rewards"))
+
+    if outcome == "completed":
+        flash("Reward marked as received after explicit confirmation.", "success")
+    else:
+        flash("Payout failure recorded. The attempt remains in the audit history.", "success")
+
+    return redirect(url_for("admin_rewards"))
+
+
 @app.route("/admin/applications")
 @admin_required
 def admin_applications():
@@ -2587,6 +3334,27 @@ def admin_scholarship_history():
         search=search,
         status_filter=status_filter,
         category_filter=category_filter,
+    )
+
+
+@app.route("/admin/scholarship-history/<int:scholarship_id>")
+@admin_required
+def admin_scholarship_history_detail(scholarship_id):
+    scholarship = db.session.get(Scholarship, scholarship_id)
+
+    if scholarship is None or scholarship.lifecycle_status not in ("completed", "expired"):
+        abort(404)
+
+    exam = None
+    if scholarship.category == "exam":
+        exam = DemoExam.query.filter_by(
+            scholarship_id=scholarship.id
+        ).order_by(DemoExam.end_at.desc()).first()
+
+    return render_template(
+        "admin/scholarship_history_detail.html",
+        scholarship=scholarship,
+        exam=exam,
     )
 
 @app.route("/admin/scholarships/new", methods=["GET", "POST"])

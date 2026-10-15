@@ -1,0 +1,116 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Student Details | GovScale Admin{% endblock %}
+
+{% block admin_content %}
+<section class="dashboard-overview" aria-label="Student details overview">
+    <div>
+        <span class="dashboard-overview-kicker">GOVSCALE ADMINISTRATION</span>
+        <h1>Student Details</h1>
+        <p>Read-only account, payment, and confirmed scholarship payout summary.</p>
+    </div>
+    <span class="dashboard-overview-mark" aria-hidden="true">♙</span>
+</section>
+
+<p>
+    <a class="student-back-dashboard" href="{{ url_for('admin_students') }}">
+        ← Back to Students
+    </a>
+</p>
+
+<section class="management-section">
+    <div class="section-heading table-heading">
+        <div>
+            <span class="eyebrow"><span class="eyebrow-line"></span> STUDENT PROFILE</span>
+            <h2>{{ student.full_name }}</h2>
+            <p>{{ student.email }} · Student ID #{{ student.id }}</p>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table class="scholarship-table">
+            <tbody>
+                <tr>
+                    <th scope="row">Education Level</th>
+                    <td>{{ student.education_level|replace('_', ' ')|title }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Institution</th>
+                    <td>{{ profile.institution_name if profile and profile.institution_name else '—' }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Study Level</th>
+                    <td>{{ profile.study_level|replace('_', ' ')|title if profile and profile.study_level else '—' }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Academic Score</th>
+                    <td>
+                        {% if profile and profile.academic_score is not none %}
+                            {{ profile.academic_score }}{% if profile.grading_system %} ({{ profile.grading_system|upper }}){% endif %}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Indian Citizen</th>
+                    <td>{{ 'Yes' if student.indian_citizen_declared else 'No' }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="management-section">
+    <div class="section-heading">
+        <div>
+            <span class="eyebrow"><span class="eyebrow-line"></span> PAYMENT &amp; REWARDS</span>
+            <h2>Payment and scholarship summary</h2>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table class="scholarship-table">
+            <tbody>
+                <tr>
+                    <th scope="row">Payment Information</th>
+                    <td>
+                        {% if payment_details %}
+                            <strong>Recipient:</strong> {{ payment_details.recipient_name }}<br>
+                            <strong>Payment Method:</strong>
+                            {% if payment_details.payment_method == 'upi_simulated' %}
+                                UPI
+                            {% elif payment_details.payment_method == 'bank_simulated' %}
+                                Bank Transfer
+                            {% elif payment_details.payment_method == 'wallet_simulated' %}
+                                Wallet
+                            {% else %}
+                                {{ payment_details.payment_method|replace('_', ' ')|title }}
+                            {% endif %}
+                            <br>
+                            <strong>Recipient Reference:</strong>
+                            {{ payment_details.recipient_reference }}
+                            <br>
+                            <span class="muted-cell">Currently saved destination; not proof of payout.</span>
+                        {% else %}
+                            <span class="muted-cell">No payment information saved.</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Received Scholarship Count</th>
+                    <td>{{ received_scholarship_count }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Total Payout</th>
+                    <td class="amount-cell">₹{{ "{:,}".format(total_payout|int) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="table-footer">
+        <span>Only admin-confirmed successful payouts are included.</span>
+        <span>Read-only student record</span>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}{{ scholarship.title }} | GovScale{% endblock %}
+
+{% block content %}
+<section class="scholarship-detail-section">
+    {% if request.args.get('source') == 'history' %}
+    <a href="{{ url_for('my_history') }}" class="detail-apply-button">
+        <span aria-hidden="true">←</span> Back to History
+    </a>
+    {% else %}
+    <a href="{{ url_for('home') }}#scholarships" class="detail-back-link">
+        <span aria-hidden="true">←</span> Back to scholarships
+    </a>
+    {% endif %}
+
+    <article class="scholarship-detail-card">
+        <div class="detail-category-row">
+            <div class="detail-category-identity">
+                <span class="detail-category-icon" aria-hidden="true">
+                    {{ '📝' if scholarship.category == 'exam' else '🎓' }}
+                </span>
+                <span class="type-label">
+                    {{ 'EXAM-BASED' if scholarship.category == 'exam' else 'GRADE-BASED' }}
+                </span>
+            </div>
+            <span class="detail-demo-label">Demonstration opportunity</span>
+        </div>
+
+        <h1>{{ scholarship.title }}</h1>
+        <p class="detail-description">{{ scholarship.description }}</p>
+
+        <div class="detail-award">
+            <div>
+                <span class="detail-info-label">Illustrative award amount</span>
+                <p class="detail-award-note">Shown for demonstration purposes</p>
+            </div>
+            <strong>₹{{ "{:,}".format(scholarship.award_amount) }}</strong>
+        </div>
+
+        <div class="detail-information-grid">
+            <div class="detail-information-item">
+                <span class="detail-info-label">Application deadline</span>
+                <strong class="detail-deadline-value">
+                    {{ scholarship.deadline.strftime('%d %B %Y')
+                       if scholarship.deadline else 'To be announced' }}
+                </strong>
+            </div>
+
+            <div class="detail-information-item">
+                <span class="detail-info-label">Eligible education levels</span>
+                <div class="education-level-chips">
+                    {% for level in scholarship.eligible_education_levels.split(',') %}
+                    {% set level = level.strip() %}
+                    <span>{{ {
+                        'school_8_10': 'School 8–10',
+                        'school_11_12': 'College 11–12',
+                        'undergraduate_1_4': 'Undergraduate'
+                    }.get(level, level|replace('_', ' ')|title) }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% if scholarship.category == 'exam' and linked_exam %}
+        <section class="detail-exam-panel">
+            <span class="detail-info-label">EXAM SCHEDULE</span>
+            <h2>{{ scholarship.title }}</h2>
+
+            {% if linked_exam.description %}
+            <p>{{ linked_exam.description }}</p>
+            {% endif %}
+
+            <div class="detail-exam-datetime">
+                <div>
+                    <span class="detail-info-label">Date</span>
+                    <strong>{{ linked_exam.start_at.strftime('%d %B %Y') }}</strong>
+                </div>
+                <div>
+                    <span class="detail-info-label">Time</span>
+                    <strong>
+                        {{ linked_exam.start_at.strftime('%I:%M %p') }}
+                        – {{ linked_exam.end_at.strftime('%I:%M %p') }}
+                    </strong>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <section class="detail-requirements">
+            <h2>Eligibility requirements</h2>
+            <p>{{ scholarship.eligibility_description }}</p>
+        </section>
+
+        {% if scholarship.category == 'exam'
+            and exam_registration
+            and exam_registration.status == 'registered' %}
+            <div class="eligibility-message eligibility-success">
+                <span class="eligibility-status status-eligible">
+                    ✓ You are registered for this exam.
+                </span>
+                <p>Your registration is confirmed. Check the exam schedule for details.</p>
+
+                {% if linked_exam and now_ist < linked_exam.start_at %}
+                    <a class="detail-apply-button"
+                       href="{{ url_for('exam_lobby', exam_id=linked_exam.id) }}">
+                        View Countdown →
+                    </a>
+                {% elif linked_exam and now_ist >= linked_exam.start_at
+                    and now_ist < linked_exam.end_at %}
+                    <a class="detail-apply-button"
+                       href="{{ url_for('exam_entry', exam_id=linked_exam.id) }}">
+                        Start Exam →
+                    </a>
+                {% endif %}
+            </div>
+        {% elif not existing_application and eligible is not none
+            and not (scholarship.category == 'exam'
+                and exam_registration
+                and exam_registration.status == 'cancelled') %}
+            {% if eligible %}
+                <div class="eligibility-message eligibility-success">
+                    <span class="eligibility-status status-eligible">
+                        ✓ Eligible
+                    </span>
+                    <p>You are eligible for this scholarship.</p>
+                </div>
+                {% if scholarship.category == 'exam' %}
+                    {% if exam_registration %}
+                        <p class="eligibility-status status-eligible">
+                            ✓ You are registered for this exam.
+                        </p>
+                    {% elif registration_status == 'open' %}
+                        <form method="POST"
+                            action="{{ url_for('register_for_exam', exam_id=linked_exam.id) }}">
+                            <input type="hidden"
+                                name="csrf_token"
+                                value="{{ csrf_token() }}">
+                            <button type="submit" class="detail-apply-button">
+                                Register for exam →
+                            </button>
+                        </form>
+                    {% elif registration_status == 'upcoming' %}
+                        <p>Registration has not opened yet.</p>
+                    {% elif registration_status == 'closed' %}
+                        <p>Registration is closed for this exam.</p>
+                    {% elif registration_status == 'finished' %}
+                        <p>This exam has ended.</p>
+                    {% endif %}
+                {% endif %}
+            {% else %}
+                <div class="eligibility-message eligibility-warning">
+                    <span class="eligibility-status status-ineligible">
+                        ✕ Not eligible
+                    </span>
+
+                    <ul>
+                        {% for reason in ineligible_reasons %}
+                            <li>{{ reason }}</li>
+                        {% endfor %}
+                    </ul>
+
+                    <a class="text-link"
+                       href="{{ url_for('student_profile') }}">
+                        Review my profile →
+                    </a>
+                </div>
+            {% endif %}
+        {% endif %}
+
+        <div class="detail-application-area">
+            {% if scholarship.category == 'exam' %}
+                {# Exam registration is handled only in the EXAM REGISTRATION panel above. #}
+            {% else %}
+                {% if current_user.is_authenticated %}
+                    {% if existing_application %}
+                        <div class="eligibility-message eligibility-success">
+                            <span class="eligibility-status status-eligible">
+                                {% if existing_application.status == 'approved' %}
+                                    ✓ Application approved
+                                {% elif existing_application.status == 'pending' %}
+                                    ◷ Application pending
+                                {% elif existing_application.status == 'withdrawn' %}
+                                    Application withdrawn
+                                {% else %}
+                                    ✓ Application submitted
+                                {% endif %}
+                            </span>
+                            <p>
+                                {% if existing_application.status == 'approved' %}
+                                    Your application has been approved.
+                                {% elif existing_application.status == 'pending' %}
+                                    Your application is awaiting review.
+                                {% elif existing_application.status == 'withdrawn' %}
+                                    You withdrew this application and cannot apply again.
+                                {% else %}
+                                    You have already applied for this scholarship.
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% if request.args.get('source') != 'history' %}
+                        <a class="detail-secondary-link"
+                        href="{{ url_for('my_applications') }}">
+                            View my applications →
+                        </a>
+                        {% endif %}
+                    {% elif eligible %}
+                        <form method="POST"
+                            action="{{ url_for('apply_for_scholarship', scholarship_id=scholarship.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="detail-apply-button">
+                                Apply for this scholarship →
+                            </button>
+                        </form>
+                    {% else %}
+                        <p class="detail-apply-hint">
+                            Complete the requirements above before applying.
+                        </p>
+                    {% endif %}
+                {% else %}
+                    <a class="detail-apply-button"
+                    href="{{ url_for('login', next=url_for('scholarship_detail', scholarship_id=scholarship.id)) }}">
+                        Log in to check eligibility and apply →
+                    </a>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <p class="demo-disclaimer">
+            Fictional demonstration opportunity. This is not a real scholarship
+            offer, government scheme, or payment commitment.
+        </p>
+    </article>
+</section>
+{% endblock %}

@@ -7,7 +7,7 @@
     <div>
         <span class="dashboard-overview-kicker">GOVSCALE ADMINISTRATION</span>
         <h1>Scholarship History</h1>
-        <p>Read-only records of completed and expired scholarship opportunities, including their eligibility and relevant dates.</p>
+        <p>Read-only archive of completed and expired grade-based and exam-based scholarships.</p>
     </div>
 </section>
 
@@ -16,7 +16,7 @@
         <div>
             <span class="eyebrow"><span class="eyebrow-line"></span> ARCHIVE</span>
             <h2>Completed and expired scholarships</h2>
-            <p>All details are displayed here. Historical records cannot be edited from this page.</p>
+            <p>Select a scholarship name to view its full historical record.</p>
         </div>
         <div class="table-heading-actions">
             <div class="table-total">
@@ -55,15 +55,14 @@
     </form>
 
     <div class="table-wrap history-table-wrap">
+        <div class="admin-table-scroll">
         <table class="scholarship-table history-table">
             <thead>
                 <tr>
                     <th>SCHOLARSHIP</th>
                     <th>CATEGORY</th>
-                    <th>AWARD AMOUNT</th>
-                    <th>DESCRIPTION</th>
+                    <th>REWARD</th>
                     <th>EDUCATION</th>
-                    <th>DEADLINE / EXAM SCHEDULE</th>
                     <th>FINAL STATUS</th>
                 </tr>
             </thead>
@@ -71,7 +70,10 @@
                 {% for scholarship, exam in history_rows %}
                 <tr>
                     <td class="history-scholarship-cell">
-                        <div class="opportunity-name">{{ scholarship.title }}</div>
+                        <a class="history-scholarship-link"
+                           href="{{ url_for('admin_scholarship_history_detail', scholarship_id=scholarship.id) }}">
+                            {{ scholarship.title }}
+                        </a>
                         <div class="application-student-email">Scholarship ID #{{ scholarship.id }}</div>
                     </td>
                     <td>
@@ -89,43 +91,7 @@
                         </div>
                     </td>
                     <td class="history-detail-cell">
-                        <p>{{ scholarship.description or 'No description recorded.' }}</p>
-                    </td>
-                    <td class="history-detail-cell">
                         <p>{{ (scholarship.eligible_education_levels or scholarship.education_category or 'Not specified')|replace('_', ' ')|replace(',', ', ')|title }}</p>
-                    </td>
-                    <td class="history-detail-cell history-date-cell">
-                        {% if scholarship.category == 'grade' %}
-                            <strong>Application deadline</strong>
-                            <p>
-                                {% if scholarship.deadline %}
-                                    {{ scholarship.deadline.strftime('%d %b %Y') }}
-                                {% else %}
-                                    Not specified
-                                {% endif %}
-                            </p>
-                        {% else %}
-                            {% if exam %}
-                                {% if exam.description %}
-                                    <strong>Exam details</strong>
-                                    <p>{{ exam.description }}</p>
-                                {% endif %}
-                                <strong>Registration opens</strong>
-                                <p>
-                                    {{ exam.registration_opens_at.strftime('%d %b %Y, %I:%M %p') if exam.registration_opens_at else 'Not specified' }}
-                                </p>
-                                <strong>Exam starts</strong>
-                                <p>
-                                    {{ exam.start_at.strftime('%d %b %Y, %I:%M %p') if exam.start_at else 'Not specified' }}
-                                </p>
-                                <strong>Exam ends</strong>
-                                <p>
-                                    {{ exam.end_at.strftime('%d %b %Y, %I:%M %p') if exam.end_at else 'Not specified' }}
-                                </p>
-                            {% else %}
-                                <p>No linked exam schedule recorded.</p>
-                            {% endif %}
-                        {% endif %}
                     </td>
                     <td>
                         <span class="status-pill {% if scholarship.lifecycle_status == 'completed' %}status-approved{% else %}status-rejected{% endif %}">
@@ -135,7 +101,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="7">
+                    <td colspan="5">
                         <div class="empty-state">
                             <div class="empty-state-icon" aria-hidden="true">🗂️</div>
                             <strong>No historical scholarships found</strong>
@@ -146,6 +112,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
 </section>
 {% endblock %}

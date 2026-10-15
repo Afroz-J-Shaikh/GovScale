@@ -1,0 +1,153 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Rewards & Payouts | GovScale Admin{% endblock %}
+
+{% block admin_content %}
+<section class="dashboard-overview">
+    <div>
+        <span class="dashboard-overview-kicker">GOVSCALE ADMINISTRATION</span>
+        <h1>Rewards &amp; Payouts</h1>
+        <p>Review approved applications, initiate simulated payouts, and explicitly record their outcomes.</p>
+    </div>
+</section>
+
+<section class="management-section applications-section">
+    <div class="section-heading table-heading">
+        <div>
+            <span class="eyebrow"><span class="eyebrow-line"></span> REWARD REVIEW</span>
+            <h2>Approved applications</h2>
+            <p>Initiation is not confirmation. Only a confirmed successful outcome marks a reward as received.</p>
+        </div>
+        <div class="table-total">
+            <strong>{{ rows|length }}</strong>
+            <span>approved applications</span>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table class="scholarship-table applications-table">
+            <thead>
+                <tr>
+                    <th>STUDENT / APPLICATION</th>
+                    <th>SCHOLARSHIP</th>
+                    <th>AWARD</th>
+                    <th>ELIGIBILITY</th>
+                    <th>PAYMENT DETAILS</th>
+                    <th>REWARD / ATTEMPT</th>
+                    <th>ACTION</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in rows %}
+                {% set application = row.application %}
+                {% set reward = row.reward %}
+                <tr>
+                    <td>
+                        <div class="opportunity-name">{{ application.user.full_name }}</div>
+                        <div class="application-student-email">{{ application.user.email }}</div>
+                        <span class="muted-cell">Application #{{ application.id }}</span>
+                    </td>
+                    <td>
+                        <div class="opportunity-name">{{ application.scholarship.title }}</div>
+                        <div class="application-student-email">
+                            {{ 'Exam-based' if application.scholarship.category == 'exam' else 'Grade-based' }}
+                        </div>
+                    </td>
+                    <td class="amount-cell">₹{{ "{:,}".format(application.scholarship.award_amount) }}</td>
+                    <td>
+                        {% if row.eligible %}
+                            <span class="status-pill status-approved"><span></span>Eligible</span>
+                            {% if row.submission %}
+                                <div class="application-student-email">
+                                    Exam result: {{ "%.2f"|format(row.submission.percentage or 0) }}%
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <span class="status-pill status-rejected"><span></span>Blocked</span>
+                            <div class="application-student-email">{{ row.reason or 'Eligibility requirements not met.' }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.payment_details %}
+                            <div>{{ row.payment_details.recipient_name }}</div>
+                            <div class="application-student-email">
+                                {% if row.payment_details.payment_method == 'upi_simulated' %}UPI
+                                {% elif row.payment_details.payment_method == 'bank_simulated' %}Bank transfer
+                                {% elif row.payment_details.payment_method == 'wallet_simulated' %}Wallet
+                                {% else %}{{ row.payment_details.payment_method|replace('_', ' ')|title }}
+                                {% endif %}
+                            </div>
+                            <div class="application-student-email">Reference: {{ row.payment_details.recipient_reference }}</div>
+                        {% else %}
+                            <span class="muted-cell">Not provided</span>
+                            <form method="POST" action="{{ url_for('admin_request_payment_details', application_id=application.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="review-button" type="submit">Remind student</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if reward %}
+                            <span class="status-pill {% if reward.status == 'completed' %}status-approved{% elif reward.status == 'failed' %}status-rejected{% else %}status-pending{% endif %}">
+                                <span></span>{{ reward.status|title }}
+                            </span>
+                            {% for attempt in reward.attempts %}
+                                <div class="application-student-email">
+                                    Attempt #{{ attempt.attempt_number }} · {{ attempt.status|title }}
+                                    {% if attempt.initiated_at %}<br>{{ attempt.initiated_at|ist_datetime }}{% endif %}
+                                </div>
+                                {% if attempt.failure_reason %}
+                                    <div class="application-student-email">Reason: {{ attempt.failure_reason }}</div>
+                                {% endif %}
+                                {% if attempt.status == 'pending' %}
+                                    <form method="POST" action="{{ url_for('admin_resolve_reward_payout', attempt_id=attempt.id) }}" class="application-review-actions">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="review-button review-approve" type="submit" name="outcome" value="completed">Confirm success</button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('admin_resolve_reward_payout', attempt_id=attempt.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <label class="application-student-email" for="failure-reason-{{ attempt.id }}">Failure reason</label>
+                                        <input id="failure-reason-{{ attempt.id }}" name="failure_reason" maxlength="500" required placeholder="Explain why it failed">
+                                        <button class="review-button review-reject" type="submit" name="outcome" value="failed">Record failure</button>
+                                    </form>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span class="muted-cell">No reward record yet</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if reward and reward.status == 'completed' %}
+                            <span class="muted-cell">Received</span>
+                        {% elif row.pending_attempt %}
+                            <span class="muted-cell">Resolve pending attempt first</span>
+                        {% elif row.eligible and row.payment_details %}
+                            <form method="POST" action="{{ url_for('admin_initiate_reward_payout', application_id=application.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="review-button review-approve" type="submit">
+                                    {{ 'Retry payout' if reward and reward.status == 'failed' else 'Initiate payout' }}
+                                </button>
+                            </form>
+                        {% elif not row.payment_details %}
+                            <span class="muted-cell">Await student details</span>
+                        {% else %}
+                            <span class="muted-cell">Requirements not met</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <span class="empty-state-icon">₹</span>
+                            <strong>No approved applications yet</strong>
+                            <p>Approved scholarship applications will appear here for reward eligibility review.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

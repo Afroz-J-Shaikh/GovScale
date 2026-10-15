@@ -51,49 +51,51 @@
         <p>Real-time statistics from our scholarship demonstration portal.</p>
     </div>
     <div class="impact-stats-grid">
-        <!-- First row: headline metrics -->
+                <!-- Payout and student outcome metrics -->
         <article class="impact-stat-card">
             <strong>{{ impact_scholarships_awarded }}</strong>
-            <h3>Scholarships awarded</h3>
-            <p>Approved scholarship applications recorded in the portal.</p>
+            <h3>🏆 Scholarships Awarded</h3>
+            <p>Total scholarships successfully paid to students.</p>
+        </article>
+
+        <article class="impact-stat-card">
+            <strong>₹{{ "{:,}".format(impact_total_rewards_paid) }}</strong>
+            <h3>💰 Amount Paid</h3>
+            <p>Total amount successfully paid to students.</p>
         </article>
 
         <article class="impact-stat-card">
             <strong>{{ impact_students_count }}</strong>
-            <h3>Registered students</h3>
-            <p>Student accounts registered on GovScale.</p>
+            <h3>👥 Students Reached</h3>
+            <p>Total student accounts registered on GovScale.</p>
         </article>
 
         <article class="impact-stat-card">
+            <strong>{{ impact_students_awarded }}</strong>
+            <h3>🎓 Students Awarded</h3>
+            <p>Unique students who have received at least one confirmed payout.</p>
+        </article>
+
+        <!-- Exam and application activity -->
+        <article class="impact-stat-card">
             <strong>{{ impact_exam_participants }}</strong>
-            <h3>Exam participants</h3>
-            <p>Students registered for upcoming demonstration exams.</p>
+            <h3>📝 Exam Participants</h3>
+            <p>Students registered for an active exam that has not ended.</p>
         </article>
 
         <article class="impact-stat-card">
             <strong>{{ impact_applications_count }}</strong>
-            <h3>Applications received</h3>
-            <p>Total scholarship applications recorded in the portal.</p>
+            <h3>📄 Applications Received</h3>
+            <p>Total scholarship applications submitted to date.</p>
         </article>
 
-        <!-- Second row: scholarship catalogue -->
+        <!-- Scholarship catalogue -->
         <article class="impact-stat-card">
             <strong>{{ impact_active_count }}</strong>
-            <h3>Active scholarships</h3>
-            <p>Currently active opportunities in the database.</p>
+            <h3>🌟 Active Scholarships</h3>
+            <p>Scholarship opportunities currently open to students.</p>
         </article>
 
-        <article class="impact-stat-card">
-            <strong>{{ impact_grade_count }}</strong>
-            <h3>Grade-based scholarships</h3>
-            <p>Active opportunities based on academic performance.</p>
-        </article>
-
-        <article class="impact-stat-card">
-            <strong>{{ impact_exam_count }}</strong>
-            <h3>Exam-based scholarships</h3>
-            <p>Active opportunities connected to examinations.</p>
-        </article>
     </div>
     <p class="impact-stats-note">
         All figures reflect demonstration-portal data. Approved applications
@@ -198,7 +200,6 @@
             <h2>Scholarships for your next step</h2>
             <p>Explore the two scholarship categories in our demonstration portal.</p>
         </div>
-        <span class="demo-label">DEMO CONTENT</span>
     </div>
 
     <div class="search-panel search-panel-redesign">
