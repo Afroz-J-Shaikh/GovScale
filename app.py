@@ -965,6 +965,29 @@ def home():
         or scholarship.id in visible_exam_scholarship_ids
     ]
 
+    # Exam catalogue deadlines are five minutes before the linked exam.
+    # Grade-based scholarships continue to use Scholarship.deadline.
+    exam_registration_deadline_by_scholarship = {}
+    if any(item.category == "exam" for item in scholarships):
+        linked_exams = (
+            DemoExam.query
+            .join(Scholarship, DemoExam.scholarship_id == Scholarship.id)
+            .filter(
+                DemoExam.is_active.is_(True),
+                DemoExam.start_at > now_ist,
+                DemoExam.end_at > now_ist,
+                Scholarship.is_active.is_(True),
+                Scholarship.category == "exam",
+            )
+            .order_by(DemoExam.start_at.asc())
+            .all()
+        )
+        for exam in linked_exams:
+            exam_registration_deadline_by_scholarship.setdefault(
+                exam.scholarship_id,
+                exam.start_at - timedelta(minutes=5),
+            )
+
     # Homepage metrics use global database totals, independent of
     # the personalized scholarship list shown to a logged-in student.
     active_scholarship_filter = (
@@ -1056,6 +1079,9 @@ def home():
         upcoming_exam=upcoming_exam,
         upcoming_exam_start_iso=upcoming_exam_start_iso,
         upcoming_exam_registration=upcoming_exam_registration,
+        exam_registration_deadline_by_scholarship=(
+            exam_registration_deadline_by_scholarship
+        ),
     )
 
 
@@ -1123,8 +1149,8 @@ def scholarship_detail(scholarship_id):
     registration_closes_at = None
 
     if linked_exam:
-        registration_closes_at = datetime.combine(
-            linked_exam.start_at.date(), time.min
+        registration_closes_at = (
+            linked_exam.start_at - timedelta(minutes=5)
         )
 
         if linked_exam.end_at <= now_ist:
@@ -1140,10 +1166,7 @@ def scholarship_detail(scholarship_id):
             registration_status = "invalid"
         elif now_ist < linked_exam.registration_opens_at:
             registration_status = "upcoming"
-        elif (
-            linked_exam.title != "GovScale Phase 2 Demo Exam"
-            and now_ist >= registration_closes_at
-        ):
+        elif now_ist >= registration_closes_at:
             registration_status = "closed"
         else:
             registration_status = "open"
@@ -1217,10 +1240,8 @@ def register_for_exam(exam_id):
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
 
-    # Registration closes at midnight at the beginning of exam day.
-    registration_closes_at = datetime.combine(
-        exam.start_at.date(), time.min
-    )
+    # Registration closes five minutes before the scheduled start.
+    registration_closes_at = exam.start_at - timedelta(minutes=5)
 
     if exam.registration_opens_at is None:
         flash("Registration is not open yet.", "error")
@@ -1251,7 +1272,7 @@ def register_for_exam(exam_id):
 
     is_demo_fast_start = exam.title == "GovScale Phase 2 Demo Exam"
 
-    if not is_demo_fast_start and now_ist >= registration_closes_at:
+    if now_ist >= registration_closes_at:
         flash("Registration for this exam has closed.", "error")
         return redirect(
             url_for(
@@ -1489,9 +1510,9 @@ def cancel_exam_registration(registration_id):
     india_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(india_tz).replace(tzinfo=None)
 
-    # Registration closes at midnight at the beginning of exam day.
-    registration_closes_at = datetime.combine(
-        registration.exam.start_at.date(), time.min
+    # Cancellation closes five minutes before the scheduled start.
+    registration_closes_at = (
+        registration.exam.start_at - timedelta(minutes=5)
     )
 
     if now_ist >= registration_closes_at:
@@ -1562,11 +1583,19 @@ def my_applications():
         .all()
     )
 
+    registration_deadline_by_exam = {
+        registration.exam_id: (
+            registration.exam.start_at - timedelta(minutes=5)
+        )
+        for registration in exam_registrations
+    }
+
     return render_template(
         "my_applications.html",
         applications=applications,
         reward_by_application=reward_by_application,
         exam_registrations=exam_registrations,
+        registration_deadline_by_exam=registration_deadline_by_exam,
         now_ist=now_ist,
     )
 
@@ -1659,6 +1688,28 @@ def scholarship_category(category):
             if scholarship.id in visible_exam_scholarship_ids
         ]
 
+    exam_registration_deadline_by_scholarship = {}
+    if category == "exam" and scholarships:
+        linked_exams = (
+            DemoExam.query
+            .join(Scholarship, DemoExam.scholarship_id == Scholarship.id)
+            .filter(
+                DemoExam.is_active.is_(True),
+                DemoExam.start_at > now_ist,
+                DemoExam.end_at > now_ist,
+                Scholarship.is_active.is_(True),
+                Scholarship.lifecycle_status == "active",
+                Scholarship.category == "exam",
+            )
+            .order_by(DemoExam.start_at.asc())
+            .all()
+        )
+        for exam in linked_exams:
+            exam_registration_deadline_by_scholarship.setdefault(
+                exam.scholarship_id,
+                exam.start_at - timedelta(minutes=5),
+            )
+
     category_title = (
         "Grade-based Scholarships"
         if category == "grade"
@@ -1670,6 +1721,9 @@ def scholarship_category(category):
         scholarships=scholarships,
         category=category,
         category_title=category_title,
+        exam_registration_deadline_by_scholarship=(
+            exam_registration_deadline_by_scholarship
+        ),
     )
 
 def _safe_next_url(next_url):
@@ -3932,9 +3986,9 @@ def admin_exam_form(exam_id=None, scholarship_id=None):
             and exam.end_at == end_at
         )
 
-        if registration_opens_at and not schedule_unchanged:
-            # Reject only overlapping exam windows. The window starts
-            # when registration opens and ends when the exam finishes.
+        if start_at is not None and end_at is not None and not schedule_unchanged:
+            # Actual exam sessions must not overlap. Registration windows
+            # for different exams are allowed to overlap.
             other_exams = DemoExam.query.filter(
                 DemoExam.start_at.isnot(None),
                 DemoExam.end_at.isnot(None),
@@ -3944,26 +3998,20 @@ def admin_exam_form(exam_id=None, scholarship_id=None):
                 ),
             ).all()
 
-            if registration_opens_at is not None and end_at is not None:
-                for other_exam in other_exams:
-                    other_window_start = (
-                        other_exam.registration_opens_at
-                        or other_exam.start_at
-                    )
+            for other_exam in other_exams:
+                sessions_overlap = (
+                    start_at < other_exam.end_at
+                    and other_exam.start_at < end_at
+                )
 
-                    windows_overlap = (
-                        registration_opens_at < other_exam.end_at
-                        and other_window_start < end_at
+                if sessions_overlap:
+                    errors.append(
+                        "This exam session overlaps another scheduled exam: "
+                        f"{other_exam.title} "
+                        f"({other_exam.start_at.strftime('%d %b %Y, %I:%M %p')} "
+                        f"to {other_exam.end_at.strftime('%d %b %Y, %I:%M %p')} IST)."
                     )
-
-                    if windows_overlap:
-                        errors.append(
-                            "This exam's registration-to-end window overlaps "
-                            "another scheduled exam: "
-                            f"{other_exam.title} "
-                            f"(ends {other_exam.end_at.strftime('%d %b %Y, %I:%M %p')} IST)."
-                        )
-                        break
+                    break
 
         if errors:
             for error in errors:

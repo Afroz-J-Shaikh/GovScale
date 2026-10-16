@@ -39,10 +39,17 @@
 
         <div class="detail-information-grid">
             <div class="detail-information-item">
-                <span class="detail-info-label">Application deadline</span>
+                <span class="detail-info-label">
+                    {{ 'Registration deadline' if scholarship.category == 'exam' else 'Application deadline' }}
+                </span>
                 <strong class="detail-deadline-value">
+                    {% if scholarship.category == 'exam' %}
+                    {{ registration_closes_at.strftime('%d %B %Y, %I:%M %p')
+                       if registration_closes_at else 'To be announced' }}
+                    {% else %}
                     {{ scholarship.deadline.strftime('%d %B %Y')
                        if scholarship.deadline else 'To be announced' }}
+                    {% endif %}
                 </strong>
             </div>
 
@@ -80,6 +87,13 @@
                     <strong>
                         {{ linked_exam.start_at.strftime('%I:%M %p') }}
                         – {{ linked_exam.end_at.strftime('%I:%M %p') }}
+                    </strong>
+                </div>
+                <div>
+                    <span class="detail-info-label">Registration deadline</span>
+                    <strong>
+                        {{ registration_closes_at.strftime('%d %B %Y, %I:%M %p')
+                           if registration_closes_at else 'To be announced' }}
                     </strong>
                 </div>
             </div>

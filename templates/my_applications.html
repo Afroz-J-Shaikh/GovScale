@@ -99,6 +99,11 @@
                     {{ registration.exam.start_at.strftime("%d %B %Y, %I:%M %p") }}
                 </p>
 
+                <p>
+                    Registration deadline:
+                    {{ registration_deadline_by_exam[registration.exam_id].strftime("%d %B %Y, %I:%M %p") }}
+                </p>
+
                 <div class="application-status-block
                     status-{{ registration.status|lower }}">
                     <span class="application-status-label">EXAM REGISTRATION STATUS</span>
@@ -126,9 +131,7 @@
                         </a>
 
                         {% if registration.status == "registered"
-                            and now_ist < registration.exam.start_at.replace(
-                                hour=0, minute=0, second=0, microsecond=0
-                            ) %}
+                            and now_ist < registration_deadline_by_exam[registration.exam_id] %}
                             <form method="POST"
                                 action="{{ url_for('cancel_exam_registration', registration_id=registration.id) }}"
                                 onsubmit="return confirm('Are you sure you want to cancel? You will not be able to register for this exam again.');">
