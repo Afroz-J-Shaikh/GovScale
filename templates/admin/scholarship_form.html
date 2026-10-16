@@ -1,0 +1,98 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}{{ 'Edit' if is_edit else 'Create' }} Scholarship | GovScale Admin
+
+{% endblock %}
+
+{% block admin_content %}
+<section class="dashboard-overview">
+    <div>
+        <span class="dashboard-overview-kicker">OPPORTUNITY MANAGEMENT</span>
+        <h1>{{ 'Edit Scholarship' if is_edit else 'Create Scholarship' }}</h1>
+        <p>Manage grade-based scholarships here. Exam-based scholarships and their schedules are managed separately under Exam Management.</p>
+    </div>
+</section>
+
+<section class="management-section scholarship-form-section">
+    <form method="POST"
+          action="{{ url_for('admin_scholarship_form', scholarship_id=scholarship.id) if is_edit else url_for('admin_scholarship_form') }}"
+          class="scholarship-admin-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="scholarship-form-heading">
+            <h2>Scholarship details</h2>
+            <p>Fields marked * are required.</p>
+        </div>
+
+        <div class="scholarship-form-grid">
+            <label class="admin-form-field field-full">
+                <span>Scholarship title *</span>
+                <input name="title" maxlength="160" required
+                       value="{{ request.form.get('title', scholarship.title if scholarship else '') }}"
+                       placeholder="e.g. National Merit Scholarship">
+            </label>
+
+            <label class="admin-form-field">
+                <span>Award amount (₹) *</span>
+                <input type="number" name="award_amount" min="2000" step="1" required
+                       value="{{ request.form.get('award_amount', scholarship.award_amount if scholarship else '') }}"
+                       placeholder="25000">
+            </label>
+
+            <label class="admin-form-field">
+                <span>Education category *</span>
+                <select name="education_category" id="education-category">
+                    <option value="">Select one category</option>
+                    <option value="school_8_10"
+                        {% if request.form.get('education_category', scholarship.education_category if scholarship else '') == 'school_8_10' %}selected{% endif %}>
+                        Classes 8–10
+                    </option>
+                    <option value="school_11_12"
+                        {% if request.form.get('education_category', scholarship.education_category if scholarship else '') == 'school_11_12' %}selected{% endif %}>
+                        Classes 11–12
+                    </option>
+                    <option value="undergraduate_1_4"
+                        {% if request.form.get('education_category', scholarship.education_category if scholarship else '') == 'undergraduate_1_4' %}selected{% endif %}>
+                        Undergraduate — Years 1–4
+                    </option>
+                </select>
+                <small id="education-category-help">Select the student group eligible for this grade-based scholarship.</small>
+            </label>
+
+            <label class="admin-form-field field-full">
+                <span>Description *</span>
+                <textarea name="description" rows="4" required
+                          placeholder="Explain the scholarship and its purpose">{{ request.form.get('description', scholarship.description if scholarship else '') }}</textarea>
+            </label>
+
+            <label class="admin-form-field field-full">
+                <span>Eligibility requirements *</span>
+                <textarea name="eligibility_description" rows="4" required
+                          placeholder="Explain who can apply">{{ request.form.get('eligibility_description', scholarship.eligibility_description if scholarship else '') }}</textarea>
+            </label>
+
+            <label class="admin-form-field">
+                <span>Application deadline</span>
+                <input type="date" name="deadline"
+                       value="{{ request.form.get('deadline', scholarship.deadline.isoformat() if scholarship and scholarship.deadline else '') }}" required>
+                <small>Choose a date later than today.</small>
+            </label>
+        </div>
+
+        <div class="scholarship-form-actions">
+            <a class="clear-filters" href="{{ url_for('admin_scholarships') }}">Cancel</a>
+            <button class="scholarship-create-button" type="submit">
+                {{ 'Save changes' if is_edit else 'Create Scholarship' }}
+            </button>
+        </div>
+    </form>
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const education = document.getElementById("education-category");
+    if (education) education.required = true;
+});
+</script>
+
+{% endblock %}

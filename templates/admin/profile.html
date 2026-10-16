@@ -1,0 +1,46 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Profile | GovScale Admin{% endblock %}
+
+{% block admin_content %}
+<section class="dashboard-overview" aria-label="Administrator profile">
+    <div>
+        <span class="dashboard-overview-kicker">GOVSCALE ADMINISTRATION</span>
+        <h1>Profile</h1>
+        <p>Update the name displayed in your administrator account.</p>
+    </div>
+    <span class="dashboard-overview-mark" aria-hidden="true">♙</span>
+</section>
+
+<section class="management-section admin-account-section">
+    <div class="section-heading table-heading admin-account-heading">
+        <div>
+            <span class="eyebrow"><span class="eyebrow-line"></span> PERSONAL INFORMATION</span>
+            <h2>Edit profile</h2>
+            <p>Your registered email address cannot be changed here.</p>
+        </div>
+    </div>
+
+    <form method="POST" class="admin-account-form">
+        {{ form.hidden_tag() }}
+
+        <div class="admin-form-field">
+            {{ form.full_name.label }}
+            {{ form.full_name(autocomplete="name", maxlength="100") }}
+            {% for error in form.full_name.errors %}
+                <small>{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="admin-form-field">
+            <span>Registered email</span>
+            <input type="email" value="{{ current_user.email }}" readonly>
+        </div>
+
+        <div class="admin-account-actions">
+            {{ form.submit(class="filter-button") }}
+            <a class="clear-filters" href="{{ url_for('admin_account') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

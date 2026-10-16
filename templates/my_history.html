@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}My History | GovScale{% endblock %}
+{% block content %}
+<section class="dashboard-section">
+    <h1>My History</h1>
+    <p class="dashboard-intro">Confirmed scholarship rewards, application decisions, and exam activity are tracked separately.</p>
+
+    <h2>Scholarship Rewards Received</h2>
+    {% if completed_rewards %}
+        <div class="dashboard-grid dashboard-quick-links history-card-grid">
+            {% for reward in completed_rewards %}
+                <article class="dashboard-card history-card">
+                    <h3>{{ reward.scholarship.title }}</h3>
+                    <p>Reward received: <strong>₹{{ "{:,}".format(reward.amount) }}</strong></p>
+                    {% if reward.completed_at %}
+                        <p>Confirmed on: {{ reward.completed_at|ist_datetime("%d %B %Y, %I:%M %p") }}</p>
+                    {% endif %}
+                    <p>Status: <strong>Received</strong></p>
+                    <a class="text-link" href="{{ url_for('scholarship_detail', scholarship_id=reward.scholarship_id, source='history') }}">View scholarship →</a>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <article class="dashboard-card history-card">
+            <p>No scholarship rewards have been confirmed as received yet.</p>
+            <a class="text-link" href="{{ url_for('my_applications') }}">View my applications →</a>
+        </article>
+    {% endif %}
+
+    <h2>Application Decisions</h2>
+    {% if application_decisions %}
+        <div class="dashboard-grid dashboard-quick-links history-card-grid">
+            {% for application in application_decisions %}
+                <article class="dashboard-card history-card">
+                    <h3>{{ application.scholarship.title }}</h3>
+                    <p>Category: {{ "Exam-based" if application.scholarship.category == "exam" else "Grade-based" }}</p>
+                    <p>Status: <strong>{{ application.status|capitalize }}</strong></p>
+                    <p>Submitted: {{ application.submitted_at.strftime("%d %B %Y") }}</p>
+                    <a class="text-link" href="{{ url_for('scholarship_detail', scholarship_id=application.scholarship_id, source='history') }}">View scholarship →</a>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <article class="dashboard-card history-card">
+            <p>No rejected or withdrawn scholarship applications.</p>
+        </article>
+    {% endif %}
+
+    <div class="student-dashboard-return">
+        <a class="student-back-dashboard" href="{{ url_for('dashboard') }}">
+            <span aria-hidden="true">←</span> Back to Dashboard
+        </a>
+    </div>
+
+</section>
+{% endblock %}

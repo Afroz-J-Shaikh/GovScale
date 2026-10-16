@@ -1,0 +1,204 @@
+
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Manage Questions | GovScale Admin{% endblock %}
+
+{% block admin_content %}
+<section class="dashboard-overview">
+    <div>
+        <span class="dashboard-overview-kicker">QUESTION PAPER EDITOR</span>
+        <h1>{{ exam.title }}</h1>
+        <p>
+            Scholarship: {{ scholarship.title }} ·
+            Exam ID #{{ exam.id }}
+        </p>
+        <p>
+            Status:
+            <strong>{{ scholarship.lifecycle_status|capitalize }}</strong>
+            · Schedule:
+            {{ exam.start_at.strftime('%d %b %Y, %I:%M %p') }}
+        </p>
+    </div>
+</section>
+
+<section class="management-section scholarship-form-section">
+    {% if exam_locked %}
+    <div class="empty-state" role="status">
+        <strong>Question paper locked</strong>
+        <p>The scheduled exam start time has been reached. Questions can be viewed but not changed.</p>
+    </div>
+    {% endif %}
+    <div class="scholarship-form-heading">
+        <h2>Paper summary</h2>
+        <p>
+            Questions:
+            {{ paper.questions|length if paper else 0 }}
+            · Total marks:
+            {{ paper.questions|sum(attribute='marks') if paper else 0 }}
+        </p>
+    </div>
+
+    {% if paper and paper.questions %}
+        {% for question in paper.questions %}
+        <form method="POST"
+              action="{{ url_for('admin_exam_questions', exam_id=exam.id) }}"
+              class="scholarship-admin-form"
+              style="margin-bottom: 24px;">
+            <fieldset {% if exam_locked %}disabled{% endif %}>
+
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="question_id" value="{{ question.id }}">
+
+            <div class="scholarship-form-heading">
+                <h2>Question {{ loop.index }}</h2>
+                <p>Question ID #{{ question.id }}</p>
+            </div>
+
+            <div class="scholarship-form-grid">
+                <label class="admin-form-field field-full">
+                    <span>Question text *</span>
+                    <textarea name="question_text"
+                              rows="3"
+                              maxlength="10000"
+                              required>{{ question.question_text }}</textarea>
+                </label>
+
+                <label class="admin-form-field">
+                    <span>Option A *</span>
+                    <input name="option_a" maxlength="500" required value="{{ question.option_a }}">
+                </label>
+
+                <label class="admin-form-field">
+                    <span>Option B *</span>
+                    <input name="option_b" maxlength="500" required value="{{ question.option_b }}">
+                </label>
+
+                <label class="admin-form-field">
+                    <span>Option C *</span>
+                    <input name="option_c" maxlength="500" required value="{{ question.option_c }}">
+                </label>
+
+                <label class="admin-form-field">
+                    <span>Option D *</span>
+                    <input name="option_d" maxlength="500" required value="{{ question.option_d }}">
+                </label>
+
+                <label class="admin-form-field">
+                    <span>Correct answer *</span>
+                    <select name="correct_option" required>
+                        <option value="A" {% if question.correct_option == 'A' %}selected{% endif %}>Option A</option>
+                        <option value="B" {% if question.correct_option == 'B' %}selected{% endif %}>Option B</option>
+                        <option value="C" {% if question.correct_option == 'C' %}selected{% endif %}>Option C</option>
+                        <option value="D" {% if question.correct_option == 'D' %}selected{% endif %}>Option D</option>
+                    </select>
+                </label>
+
+                <label class="admin-form-field">
+                    <span>Marks *</span>
+                    <input type="number" name="marks"
+                           min="1" max="1000" step="1"
+                           required value="{{ question.marks }}">
+                </label>
+            </div>
+
+            <div class="scholarship-form-actions">
+                <button class="scholarship-create-button" type="submit">
+                    Save Question
+                </button>
+            </div>
+
+            </fieldset>
+</form>
+
+        <form method="POST"
+              action="{{ url_for('admin_exam_question_delete', exam_id=exam.id, question_id=question.id) }}"
+              onsubmit="return confirm('Delete this question permanently?');"
+              style="margin-top: -16px; margin-bottom: 32px;">
+            <fieldset {% if exam_locked %}disabled{% endif %}>
+
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="review-button review-reject" type="submit">
+                Delete Question {{ loop.index }}
+            </button>
+
+            </fieldset>
+</form>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <strong>No questions have been added yet</strong>
+            <p>Add your first question below to create this exam's paper.</p>
+        </div>
+    {% endif %}
+
+    <form method="POST"
+          action="{{ url_for('admin_exam_questions', exam_id=exam.id) }}"
+          class="scholarship-admin-form">
+            <fieldset {% if exam_locked %}disabled{% endif %}>
+
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="scholarship-form-heading">
+            <h2>Add a question</h2>
+            <p>All four options and one correct answer are required.</p>
+        </div>
+
+        <div class="scholarship-form-grid">
+            <label class="admin-form-field field-full">
+                <span>Question text *</span>
+                <textarea name="question_text" rows="3"
+                          maxlength="10000" required
+                          placeholder="Enter the question"></textarea>
+            </label>
+
+            <label class="admin-form-field">
+                <span>Option A *</span>
+                <input name="option_a" maxlength="500" required>
+            </label>
+
+            <label class="admin-form-field">
+                <span>Option B *</span>
+                <input name="option_b" maxlength="500" required>
+            </label>
+
+            <label class="admin-form-field">
+                <span>Option C *</span>
+                <input name="option_c" maxlength="500" required>
+            </label>
+
+            <label class="admin-form-field">
+                <span>Option D *</span>
+                <input name="option_d" maxlength="500" required>
+            </label>
+
+            <label class="admin-form-field">
+                <span>Correct answer *</span>
+                <select name="correct_option" required>
+                    <option value="">Select correct option</option>
+                    <option value="A">Option A</option>
+                    <option value="B">Option B</option>
+                    <option value="C">Option C</option>
+                    <option value="D">Option D</option>
+                </select>
+            </label>
+
+            <label class="admin-form-field">
+                <span>Marks *</span>
+                <input type="number" name="marks" min="1" max="1000"
+                       step="1" value="1" required>
+            </label>
+        </div>
+
+        <div class="scholarship-form-actions">
+            <a class="clear-filters" href="{{ url_for('admin_exams') }}">
+                Back to Exam Management
+            </a>
+            <button class="scholarship-create-button" type="submit">
+                Add Question
+            </button>
+        </div>
+
+            </fieldset>
+</form>
+</section>
+{% endblock %}
