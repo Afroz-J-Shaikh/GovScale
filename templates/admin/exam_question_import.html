@@ -1,0 +1,93 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Import Questions | GovScale Admin{% endblock %}
+{% block admin_content %}
+<section class="dashboard-overview">
+  <div>
+    <span class="dashboard-overview-kicker">QUESTION PAPER EDITOR</span>
+    <h1>Import questions</h1>
+    <p>{{ exam.title }} · Exam ID #{{ exam.id }}</p>
+    <p>Upload a CSV or Word document. Review everything before importing.</p>
+  </div>
+</section>
+
+<section class="management-section scholarship-form-section">
+  {% for error in errors %}
+  <div class="empty-state" role="alert">{{ error }}</div>
+  {% endfor %}
+
+  <div class="scholarship-form-heading">
+    <h2>Upload file</h2>
+    <p>Maximum 5 MB and 200 questions. Existing questions will be preserved.</p>
+  </div>
+  <form method="POST" enctype="multipart/form-data"
+        action="{{ url_for('admin_exam_question_import', exam_id=exam.id) }}"
+        class="scholarship-admin-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="admin-form-field field-full">
+      <span>CSV or Word document (.docx) *</span>
+      <input type="file" name="question_file" accept=".csv,.docx" required>
+    </label>
+    <div class="scholarship-form-actions">
+      <a class="clear-filters" href="{{ url_for('admin_exam_questions', exam_id=exam.id) }}">Back</a>
+      <button class="scholarship-create-button" type="submit">Parse and preview</button>
+    </div>
+  </form>
+
+  <div class="scholarship-form-heading" style="margin-top:24px">
+    <h2>CSV columns</h2>
+  </div>
+  <p>Use these headers in the first row:</p>
+  <pre style="white-space:pre-wrap">question,option_a,option_b,option_c,option_d,correct_option,marks
+What is 2 + 2?,3,4,5,6,B,1</pre>
+
+  <div class="scholarship-form-heading" style="margin-top:24px">
+    <h2>Word document format</h2>
+  </div>
+  <pre style="white-space:pre-wrap">Question 1: What is the capital of France?
+A) Berlin
+B) Madrid
+C) Paris
+D) Rome
+Answer: C
+Marks: 2
+
+Question 2: Which planet is known as the Red Planet?
+A) Venus
+B) Mars
+C) Jupiter
+D) Mercury
+Answer: B
+Marks: 1</pre>
+  <p>Start each question with “Question 1:” (or “Q1:”). Put each option, answer, and marks on a separate line.</p>
+</section>
+
+{% if preview %}
+<section class="management-section scholarship-form-section">
+  <div class="scholarship-form-heading">
+    <h2>Review import</h2>
+    <p>{{ filename }} · {{ preview|length }} question(s) detected. Nothing has been saved yet.</p>
+  </div>
+  {% for q in preview %}
+  <div class="scholarship-admin-form" style="margin-bottom:16px">
+    <h3>Question {{ loop.index }} <small>(source row {{ q.source_row }})</small></h3>
+    <p><strong>{{ q.question_text }}</strong></p>
+    <ul>
+      <li>A. {{ q.option_a }}</li><li>B. {{ q.option_b }}</li>
+      <li>C. {{ q.option_c }}</li><li>D. {{ q.option_d }}</li>
+    </ul>
+    <p>Correct answer: <strong>{{ q.correct_option }}</strong> · Marks: {{ q.marks }}</p>
+  </div>
+  {% endfor %}
+  {% if preview_token %}
+  <form method="POST"
+        action="{{ url_for('admin_exam_question_import', exam_id=exam.id) }}"
+        onsubmit="return confirm('Import these questions? Existing questions will remain.');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="mode" value="confirm">
+    <input type="hidden" name="preview_token" value="{{ preview_token }}">
+    <button class="scholarship-create-button" type="submit">Import {{ preview|length }} Questions</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}
