@@ -242,10 +242,19 @@
                 <strong>₹{{ "{:,}".format(scholarship.award_amount) }}</strong>
             </div>
             <p class="catalogue-deadline">
+                {% if scholarship.category == 'exam' %}
+                Registration deadline:
+                <strong>
+                    {{ exam_registration_deadline_by_scholarship.get(scholarship.id).strftime('%d %b %Y, %I:%M %p')
+                       if exam_registration_deadline_by_scholarship.get(scholarship.id)
+                       else 'To be announced' }}
+                </strong>
+                {% else %}
                 Deadline:
                 <strong>
                     {{ scholarship.deadline.strftime('%d %b %Y') if scholarship.deadline else 'To be announced' }}
                 </strong>
+                {% endif %}
             </p>
             <a href="{{ url_for('scholarship_detail', scholarship_id=scholarship.id) }}"
                class="text-link">
