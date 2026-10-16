@@ -21,24 +21,51 @@
     </div>
 </section>
 
-<section class="management-section scholarship-form-section">
+<section class="management-section scholarship-form-section exam-question-management">
     {% if exam_locked %}
     <div class="empty-state" role="status">
         <strong>Question paper locked</strong>
         <p>The scheduled exam start time has been reached. Questions can be viewed but not changed.</p>
     </div>
     {% endif %}
-    <div class="scholarship-form-heading">
-        <h2>Paper summary</h2>
-        <p>
-            Questions:
-            {{ paper.questions|length if paper else 0 }}
-            · Total marks:
-            {{ paper.questions|sum(attribute='marks') if paper else 0 }}
-        </p>
+    <div class="exam-question-summary-row">
+        <div class="scholarship-form-heading">
+            <h2>Paper summary</h2>
+            <p>
+                Questions:
+                {{ paper.questions|length if paper else 0 }}
+                · Total marks:
+                {{ paper.questions|sum(attribute='marks') if paper else 0 }}
+            </p>
+        </div>
+        {% if not exam_locked %}
+        <a class="review-button review-approve exam-question-import-button"
+           href="{{ url_for('admin_exam_question_import', exam_id=exam.id) }}">
+            Import Questions from File
+        </a>
+        {% endif %}
     </div>
 
     {% if paper and paper.questions %}
+        {% if not exam_locked %}
+        <form id="bulk-delete-questions"
+              method="POST"
+              action="{{ url_for('admin_exam_questions', exam_id=exam.id) }}"
+              onsubmit="return confirm('Delete all selected questions permanently?');"
+              class="scholarship-form-actions exam-question-management-actions exam-question-bulk-actions"
+              style="margin-bottom: 16px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="bulk_action" value="delete">
+            <label class="admin-form-field exam-question-select-label">
+                <input type="checkbox" id="select-all-exam-questions">
+                Select all
+            </label>
+            <button class="review-button review-reject" type="submit">
+                Delete Selected
+            </button>
+        </form>
+        {% endif %}
+        <div class="exam-question-list" aria-label="Exam questions">
         {% for question in paper.questions %}
         <form method="POST"
               action="{{ url_for('admin_exam_questions', exam_id=exam.id) }}"
@@ -49,9 +76,17 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="question_id" value="{{ question.id }}">
 
-            <div class="scholarship-form-heading">
+            <div class="scholarship-form-heading exam-question-item-heading">
+                {% if not exam_locked %}
+                <label class="exam-question-item-checkbox" aria-label="Select Question {{ loop.index }} for bulk deletion">
+                    <input type="checkbox"
+                           form="bulk-delete-questions"
+                           name="question_ids"
+                           value="{{ question.id }}"
+                           class="exam-question-select">
+                </label>
+                {% endif %}
                 <h2>Question {{ loop.index }}</h2>
-                <p>Question ID #{{ question.id }}</p>
             </div>
 
             <div class="scholarship-form-grid">
@@ -101,39 +136,45 @@
                 </label>
             </div>
 
-            <div class="scholarship-form-actions">
+            <div class="scholarship-form-actions exam-question-management-actions">
                 <button class="scholarship-create-button" type="submit">
                     Save Question
                 </button>
+                {% if not exam_locked %}
+                <button class="review-button review-reject"
+                        type="submit"
+                        form="delete-question-{{ question.id }}"
+                        onclick="return confirm('Delete this question permanently?');">
+                    Delete Question
+                </button>
+                {% endif %}
             </div>
 
             </fieldset>
 </form>
-
-        <form method="POST"
+        {% if not exam_locked %}
+        <form id="delete-question-{{ question.id }}"
+              method="POST"
               action="{{ url_for('admin_exam_question_delete', exam_id=exam.id, question_id=question.id) }}"
-              onsubmit="return confirm('Delete this question permanently?');"
-              style="margin-top: -16px; margin-bottom: 32px;">
-            <fieldset {% if exam_locked %}disabled{% endif %}>
-
+              hidden>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="review-button review-reject" type="submit">
-                Delete Question {{ loop.index }}
-            </button>
+        </form>
+        {% endif %}
 
-            </fieldset>
-</form>
         {% endfor %}
+        </div>
     {% else %}
         <div class="empty-state">
             <strong>No questions have been added yet</strong>
-            <p>Add your first question below to create this exam's paper.</p>
+            <p>Use “Add Question” at the bottom of this page to create the first question.</p>
         </div>
     {% endif %}
 
-    <form method="POST"
+    <form id="add-exam-question-form"
+          method="POST"
           action="{{ url_for('admin_exam_questions', exam_id=exam.id) }}"
-          class="scholarship-admin-form">
+          class="scholarship-admin-form exam-question-add-form"
+          hidden>
             <fieldset {% if exam_locked %}disabled{% endif %}>
 
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -189,16 +230,112 @@
             </label>
         </div>
 
-        <div class="scholarship-form-actions">
-            <a class="clear-filters" href="{{ url_for('admin_exams') }}">
-                Back to Exam Management
-            </a>
+        <div class="scholarship-form-actions exam-question-management-actions exam-question-add-form-actions">
+            <button class="review-button" type="button" id="cancel-add-exam-question">
+                Cancel
+            </button>
             <button class="scholarship-create-button" type="submit">
-                Add Question
+                Save Question
             </button>
         </div>
 
             </fieldset>
 </form>
+
+<div class="scholarship-form-actions exam-question-management-actions exam-question-bottom-actions">
+    <a class="clear-filters" href="{{ url_for('admin_question_papers') }}">
+        ← Exam Management
+    </a>
+    {% if not exam_locked %}
+    <button class="scholarship-create-button" type="button" id="show-add-exam-question">
+        + Add Question
+    </button>
+    {% endif %}
+</div>
 </section>
+
+{% if paper and paper.questions and not exam_locked %}
+<script>
+(function () {
+    const selectAll = document.getElementById("select-all-exam-questions");
+    const questionBoxes = Array.from(
+        document.querySelectorAll(".exam-question-select")
+    );
+
+    if (!selectAll) return;
+
+    selectAll.addEventListener("change", function () {
+        questionBoxes.forEach(function (checkbox) {
+            checkbox.checked = selectAll.checked;
+        });
+    });
+
+    questionBoxes.forEach(function (checkbox) {
+        checkbox.addEventListener("change", function () {
+            selectAll.checked =
+                questionBoxes.length > 0 &&
+                questionBoxes.every(function (item) {
+                    return item.checked;
+                });
+        });
+    });
+})();
+
+(function () {
+    const showButton = document.getElementById("show-add-exam-question");
+    const cancelButton = document.getElementById("cancel-add-exam-question");
+    const addForm = document.getElementById("add-exam-question-form");
+
+    if (!showButton || !addForm) return;
+
+    function showAddForm() {
+        addForm.hidden = false;
+        showButton.hidden = true;
+        addForm.scrollIntoView({ behavior: "smooth", block: "start" });
+        const firstField = addForm.querySelector('[name="question_text"]');
+        if (firstField) firstField.focus({ preventScroll: true });
+    }
+
+    function hideAddForm() {
+        addForm.hidden = true;
+        showButton.hidden = false;
+        showButton.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    showButton.addEventListener("click", showAddForm);
+    if (cancelButton) cancelButton.addEventListener("click", hideAddForm);
+})();
+</script>
+{% endif %}
 {% endblock %}
+
+
+/* Question heading: selection checkbox directly before question number */
+.exam-question-management .exam-question-item-heading {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+}
+
+.exam-question-management .exam-question-item-heading h2 {
+    margin: 0;
+}
+
+.exam-question-management .exam-question-item-checkbox {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.exam-question-management .exam-question-item-checkbox input.exam-question-select {
+    display: block;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+}

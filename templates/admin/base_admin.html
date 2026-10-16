@@ -188,7 +188,7 @@
                     <div class="admin-flashes" aria-live="polite">
                         {% for category, message in messages %}
                         <div class="admin-flash flash-{{ category }}" role="status">
-                            <span class="admin-flash-text">{{ message }}</span>
+                            <span class="admin-flash-text{% if category == 'error' %} admin-flash-error-text{% endif %}">{{ message }}</span>
                             <button type="button"
                                     class="admin-flash-close"
                                     aria-label="Dismiss notification"

@@ -1,6 +1,10 @@
 
 import os
 import re
+import secrets
+import time as time_module
+import csv
+import io
 from functools import wraps
 from sqlalchemy import text, or_
 from pathlib import Path
@@ -3617,6 +3621,56 @@ def admin_exam_questions(exam_id):
         )
         return redirect(url_for("admin_exam_questions", exam_id=exam.id))
 
+    if request.method == "POST" and request.form.get("bulk_action") == "delete":
+        raw_ids = request.form.getlist("question_ids")
+        if not raw_ids:
+            flash("Select at least one question to delete.", "error")
+            return redirect(url_for("admin_exam_questions", exam_id=exam.id))
+
+        try:
+            selected_ids = [int(value) for value in raw_ids]
+        except (TypeError, ValueError):
+            abort(400)
+
+        # Do not accept duplicate or excessive submitted IDs.
+        if len(selected_ids) != len(set(selected_ids)) or len(selected_ids) > 2000:
+            abort(400)
+
+        if paper is None:
+            abort(400)
+
+        selected_questions = ExamQuestion.query.filter(
+            ExamQuestion.paper_id == paper.id,
+            ExamQuestion.id.in_(selected_ids),
+        ).all()
+
+        # All submitted IDs must belong to this exam's paper.
+        if len(selected_questions) != len(selected_ids):
+            abort(400)
+
+        # Recheck the lock immediately before changing records.
+        now_before_delete = datetime.now(
+            ZoneInfo("Asia/Kolkata")
+        ).replace(tzinfo=None)
+        if now_before_delete >= exam.start_at:
+            flash(
+                "This exam has started. Its question paper is locked; nothing was deleted.",
+                "error",
+            )
+            return redirect(url_for("admin_exam_questions", exam_id=exam.id))
+
+        try:
+            for selected_question in selected_questions:
+                db.session.delete(selected_question)
+            db.session.commit()
+            flash(f"Deleted {len(selected_questions)} selected question(s).", "success")
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Bulk question deletion failed for exam %s", exam.id)
+            flash("Could not delete the selected questions. Please try again.", "error")
+
+        return redirect(url_for("admin_exam_questions", exam_id=exam.id))
+
     if request.method == "POST":
         question_id_text = request.form.get("question_id", "").strip()
         question = None
@@ -3730,6 +3784,403 @@ def admin_exam_questions(exam_id):
         paper=paper,
         exam_locked=exam_locked,
     )
+
+
+def _parse_question_csv_or_docx(filename, content):
+    """Return question records parsed from CSV or a Word document."""
+    import csv
+    import io
+
+    suffix = Path(filename).suffix.lower()
+
+    if suffix == ".csv":
+        try:
+            text = content.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise ValueError("CSV must be saved as UTF-8.") from exc
+
+        reader = csv.DictReader(io.StringIO(text))
+        if not reader.fieldnames:
+            raise ValueError("The CSV must have a header row.")
+
+        aliases = {
+            "question": ("question", "question_text", "prompt"),
+            "option_a": ("option_a", "a"),
+            "option_b": ("option_b", "b"),
+            "option_c": ("option_c", "c"),
+            "option_d": ("option_d", "d"),
+            "correct_option": ("correct_option", "correct_answer", "answer"),
+            "marks": ("marks", "mark", "points"),
+        }
+
+        headers = {
+            (h or "").strip().lower().replace(" ", "_"): h
+            for h in reader.fieldnames
+        }
+        columns = {}
+        for field, options in aliases.items():
+            for alias in options:
+                if alias in headers:
+                    columns[field] = headers[alias]
+                    break
+
+        missing = [f for f in aliases if f not in columns]
+        if missing:
+            raise ValueError(
+                "Missing CSV columns: " + ", ".join(missing) +
+                ". Required: question, option_a, option_b, option_c, "
+                "option_d, correct_option, marks."
+            )
+
+        records = []
+        for line, raw in enumerate(reader, start=2):
+            records.append({
+                "source_row": line,
+                **{key: (raw.get(col) or "").strip()
+                   for key, col in columns.items()},
+            })
+
+    elif suffix == ".docx":
+        try:
+            from docx import Document
+            doc = Document(io.BytesIO(content))
+        except Exception as exc:
+            raise ValueError("Could not read this Word document.") from exc
+
+        lines = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+        for table in doc.tables:
+            for row in table.rows:
+                lines.append(" | ".join(c.text.strip() for c in row.cells))
+
+        records = []
+        current = None
+        active = None
+
+        def finish():
+            if current is not None:
+                records.append(dict(current))
+
+        import re
+        q_re = re.compile(
+            r"^(?:question(?:\s+\d+)?|q\s*\d+)\s*[:.)-]\s*(.*)$",
+            re.I,
+        )
+        option_re = re.compile(r"^(?:option\s*)?([A-D])\s*[).:]\s*(.*)$", re.I)
+        answer_re = re.compile(r"^(?:correct\s+answer|answer|correct)\s*[:=-]\s*(.*)$", re.I)
+        marks_re = re.compile(r"^marks?\s*[:=-]\s*(.*)$", re.I)
+
+        for line in lines:
+            m = q_re.match(line)
+            if m:
+                finish()
+                current = {
+                    "source_row": len(records) + 1,
+                    "question": m.group(1).strip(),
+                    "option_a": "", "option_b": "",
+                    "option_c": "", "option_d": "",
+                    "correct_option": "", "marks": "",
+                }
+                active = "question"
+                continue
+
+            if current is None:
+                continue
+
+            m = option_re.match(line)
+            if m:
+                active = "option_" + m.group(1).lower()
+                current[active] = m.group(2).strip()
+                continue
+
+            m = answer_re.match(line)
+            if m:
+                active = "correct_option"
+                current[active] = m.group(1).strip()
+                continue
+
+            m = marks_re.match(line)
+            if m:
+                active = "marks"
+                current[active] = m.group(1).strip()
+                continue
+
+            if active:
+                current[active] = (current[active] + " " + line).strip()
+
+        finish()
+    else:
+        raise ValueError("Upload a .csv or .docx file.")
+
+    if not records:
+        raise ValueError("No questions were found in the file.")
+    if len(records) > 200:
+        raise ValueError("Maximum 200 questions per upload.")
+
+    return records
+
+
+def _validate_import_questions(records):
+    cleaned = []
+    for i, item in enumerate(records, start=1):
+        row = {
+            "source_row": item.get("source_row", i),
+            "question_text": str(item.get("question", item.get("question_text", "")) or "").strip(),
+            "option_a": str(item.get("option_a", "") or "").strip(),
+            "option_b": str(item.get("option_b", "") or "").strip(),
+            "option_c": str(item.get("option_c", "") or "").strip(),
+            "option_d": str(item.get("option_d", "") or "").strip(),
+            "correct_option": str(item.get("correct_option", "") or "").strip().upper(),
+            "marks": str(item.get("marks", "") or "").strip(),
+            "errors": [],
+        }
+
+        if not row["question_text"] or len(row["question_text"]) > 10000:
+            row["errors"].append("Question text is required (maximum 10,000 characters).")
+
+        for key in ("option_a", "option_b", "option_c", "option_d"):
+            if not row[key] or len(row[key]) > 500:
+                row["errors"].append(f"{key.replace('_', ' ').upper()} is required (maximum 500 characters).")
+
+        answer = row["correct_option"]
+        if answer.startswith("OPTION "):
+            answer = answer[7:].strip()
+        if answer not in ("A", "B", "C", "D"):
+            row["errors"].append("Correct answer must be A, B, C, or D.")
+        row["correct_option"] = answer
+
+        try:
+            marks = int(row["marks"])
+            if not 1 <= marks <= 1000:
+                raise ValueError
+            row["marks"] = marks
+        except (TypeError, ValueError):
+            row["marks"] = None
+            row["errors"].append("Marks must be a whole number from 1 to 1000.")
+
+        cleaned.append(row)
+
+    return cleaned
+
+
+@app.route("/admin/exams/<int:exam_id>/questions/import", methods=["GET", "POST"])
+@admin_required
+def admin_exam_question_import(exam_id):
+    import json
+
+    exam = db.session.get(DemoExam, exam_id)
+    if exam is None or exam.scholarship_id is None:
+        abort(404)
+
+    scholarship = db.session.get(Scholarship, exam.scholarship_id)
+    if scholarship is None or scholarship.category != "exam":
+        abort(404)
+
+    now = datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
+    if now >= exam.start_at:
+        flash("This exam has started. Its question paper is locked.", "error")
+        return redirect(url_for("admin_exam_questions", exam_id=exam.id))
+
+    errors = []
+    preview = []
+    preview_token = ""
+    filename = ""
+
+    if request.method == "POST" and request.form.get("mode") == "confirm":
+        try:
+            token = request.form.get("preview_token", "").strip()
+            if not re.fullmatch(r"[A-Za-z0-9_-]{32,128}", token):
+                raise ValueError("Invalid import preview. Upload the file again.")
+
+            preview_dir = Path(app.instance_path) / "question_import_previews"
+            preview_path = preview_dir / f"{token}.json"
+            claimed_path = preview_dir / f"{token}.processing"
+
+            # Atomically claim the token so another request cannot reuse it.
+            try:
+                preview_path.rename(claimed_path)
+            except OSError:
+                raise ValueError(
+                    "This preview is already being processed, expired, or invalid. "
+                    "Upload the file again if needed."
+                )
+
+            try:
+                stored = json.loads(claimed_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                claimed_path.unlink(missing_ok=True)
+                raise ValueError("This preview has expired or is invalid. Upload the file again.")
+
+            if (
+                stored.get("admin_id") != current_user.id
+                or stored.get("exam_id") != exam.id
+                or not isinstance(stored.get("created_at"), (int, float))
+                or time_module.time() - stored["created_at"] > 900
+                or time_module.time() < stored["created_at"]
+            ):
+                claimed_path.unlink(missing_ok=True)
+                raise ValueError("This preview has expired or is invalid. Upload the file again.")
+
+            data = stored.get("questions")
+            filename = stored.get("filename", "")
+            if not isinstance(data, list) or not data or len(data) > 200:
+                claimed_path.unlink(missing_ok=True)
+                raise ValueError("Invalid import preview. Upload the file again.")
+
+            validated = _validate_import_questions(data)
+            problems = [
+                f"Row {r['source_row']}: " + "; ".join(r["errors"])
+                for r in validated if r["errors"]
+            ]
+            if problems:
+                raise ValueError("Validation failed: " + " ".join(problems))
+
+            paper = ExamQuestionPaper.query.filter_by(exam_id=exam.id).first()
+            if paper is None:
+                paper = ExamQuestionPaper(exam_id=exam.id)
+                db.session.add(paper)
+                db.session.flush()
+
+            # Prevent duplicate questions within this upload and against
+            # questions already saved to this exam's paper.
+            def _question_fingerprint(value):
+                return re.sub(r"\\s+", " ", str(value or "")).strip().casefold()
+
+            existing_texts = {
+                _question_fingerprint(text)
+                for (text,) in db.session.query(ExamQuestion.question_text)
+                    .filter_by(paper_id=paper.id).all()
+            }
+
+            incoming_texts = set()
+            duplicate_texts = []
+            for row in validated:
+                fingerprint = _question_fingerprint(row["question_text"])
+                if fingerprint in existing_texts or fingerprint in incoming_texts:
+                    duplicate_texts.append(row["source_row"])
+                incoming_texts.add(fingerprint)
+
+            if duplicate_texts:
+                db.session.rollback()
+                claimed_path.unlink(missing_ok=True)
+                rows = ", ".join(str(row_number) for row_number in duplicate_texts[:20])
+                suffix = "…" if len(duplicate_texts) > 20 else ""
+                raise ValueError("Duplicate questions found.")
+
+            for row in validated:
+                db.session.add(ExamQuestion(
+                    paper_id=paper.id,
+                    question_text=row["question_text"],
+                    option_a=row["option_a"],
+                    option_b=row["option_b"],
+                    option_c=row["option_c"],
+                    option_d=row["option_d"],
+                    correct_option=row["correct_option"],
+                    marks=row["marks"],
+                ))
+
+            # Enforce the exam lock again immediately before committing.
+            now_before_commit = datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
+            if now_before_commit >= exam.start_at:
+                db.session.rollback()
+                claimed_path.unlink(missing_ok=True)
+                raise ValueError(
+                    "The exam has started, so its question paper is locked. Nothing was imported."
+                )
+
+            db.session.commit()
+            try:
+                claimed_path.unlink(missing_ok=True)
+            except OSError:
+                # The token was already claimed, so cleanup failure must not
+                # misreport a successful database commit as an import failure.
+                app.logger.warning(
+                    "Could not clean claimed question-import preview for exam %s",
+                    exam.id,
+                )
+            flash(f"Imported {len(validated)} questions. Existing questions were preserved.", "success")
+            return redirect(url_for("admin_exam_questions", exam_id=exam.id))
+        except (ValueError, TypeError, json.JSONDecodeError) as exc:
+            db.session.rollback()
+            reason = str(exc).strip()
+            if reason.lower().startswith("import rejected:"):
+                reason = reason.split(":", 1)[1].strip()
+            elif reason.startswith("Validation failed:"):
+                reason = reason.split(":", 1)[1].strip()
+            flash(f"Import rejected: {reason}", "error")
+            return redirect(url_for("admin_exam_question_import", exam_id=exam.id))
+        except Exception:
+            db.session.rollback()
+            if "claimed_path" in locals():
+                try:
+                    claimed_path.unlink(missing_ok=True)
+                except OSError:
+                    app.logger.warning("Could not clean failed question-import preview")
+            app.logger.exception("Question import failed for exam %s", exam.id)
+            errors.append("Import failed. Please upload the file again if no questions were saved.")
+
+    elif request.method == "POST":
+        upload = request.files.get("question_file")
+        if upload is None or not upload.filename:
+            errors.append("Choose a CSV or Word document.")
+        else:
+            filename = Path(upload.filename).name
+            content = upload.read(5 * 1024 * 1024 + 1)
+            if len(content) > 5 * 1024 * 1024:
+                errors.append("Maximum file size is 5 MB.")
+            elif Path(filename).suffix.lower() not in (".csv", ".docx"):
+                errors.append("Only .csv and .docx files are supported.")
+            else:
+                try:
+                    parsed = _parse_question_csv_or_docx(filename, content)
+                    preview = _validate_import_questions(parsed)
+                    if any(r["errors"] for r in preview):
+                        errors.append("Fix the invalid rows in your file and upload it again. Nothing has been imported.")
+                    else:
+                        preview_dir = Path(app.instance_path) / "question_import_previews"
+                        preview_dir.mkdir(parents=True, exist_ok=True)
+
+                        # Remove abandoned previews older than 24 hours.
+                        for old_file in preview_dir.glob("*.json"):
+                            try:
+                                if time_module.time() - old_file.stat().st_mtime > 86400:
+                                    old_file.unlink(missing_ok=True)
+                            except OSError:
+                                app.logger.warning(
+                                    "Could not clean expired question-import preview"
+                                )
+
+                        preview_token = secrets.token_urlsafe(32)
+                        preview_path = preview_dir / f"{preview_token}.json"
+                        preview_path.write_text(
+                            json.dumps({
+                                "admin_id": current_user.id,
+                                "exam_id": exam.id,
+                                "created_at": time_module.time(),
+                                "filename": filename,
+                                "questions": [
+                                    {k: r[k] for k in (
+                                        "source_row", "question_text", "option_a",
+                                        "option_b", "option_c", "option_d",
+                                        "correct_option", "marks",
+                                    )}
+                                    for r in preview
+                                ],
+                            }, ensure_ascii=False),
+                            encoding="utf-8",
+                        )
+                except ValueError as exc:
+                    errors.append(str(exc))
+
+    return render_template(
+        "admin/exam_question_import.html",
+        exam=exam,
+        scholarship=scholarship,
+        errors=errors,
+        preview=preview,
+        preview_token=preview_token,
+        filename=filename,
+    )
+
 
 @app.route(
     "/admin/exams/<int:exam_id>/questions/<int:question_id>/delete",

@@ -12,6 +12,43 @@
         in one place.
     </p>
 
+    {% if registered_exam %}
+    <div class="dashboard-card exam-countdown-card">
+        <div class="exam-banner-content">
+            <span class="section-kicker">YOUR REGISTERED EXAM</span>
+
+            <h2>{{ registered_exam.scholarship.title if registered_exam.scholarship else 'Registered Scholarship Exam' }}</h2>
+
+            <p>
+                Scheduled for {{ registered_exam.start_at.strftime("%d %B %Y") }}
+                at {{ registered_exam.start_at.strftime("%I:%M %p") }} IST.
+            </p>
+
+            <a href="{{ url_for('exam_entry', exam_id=registered_exam.id) }}"
+               class="exam-action">
+                Start Exam <span aria-hidden="true">→</span>
+            </a>
+        </div>
+
+        <div class="exam-banner-motivation" aria-label="Scale Your Ambition. Shape Your Future.">
+            <span class="exam-banner-orbit exam-banner-orbit-one" aria-hidden="true"></span>
+            <span class="exam-banner-orbit exam-banner-orbit-two" aria-hidden="true"></span>
+            <span class="exam-banner-star exam-banner-star-one" aria-hidden="true">✦</span>
+            <span class="exam-banner-star exam-banner-star-two" aria-hidden="true">✧</span>
+            <span class="exam-banner-star exam-banner-star-three" aria-hidden="true">✧</span>
+            <span class="exam-banner-star exam-banner-star-four" aria-hidden="true">✦</span>
+            <div class="exam-banner-motivation-copy">
+                <span class="exam-banner-eyebrow">🇮🇳 GOVSCALE</span>
+                <div class="exam-banner-slogan">
+                    <p>Scale Your Ambition.</p>
+                    <p class="exam-banner-highlight">Shape Your Future.</p>
+                </div>
+                <span class="exam-banner-caption">Your next step starts here.</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="dashboard-grid dashboard-stats-grid">
         <article class="dashboard-card">
             <div class="dashboard-card-heading">
@@ -107,23 +144,7 @@
 
     </div>
 
-    {% if registered_exam %}
-    <div class="dashboard-card exam-countdown-card">
-        <span class="section-kicker">YOUR REGISTERED EXAM</span>
 
-        <h2>{{ registered_exam.scholarship.title if registered_exam.scholarship else 'Registered Scholarship Exam' }}</h2>
-
-        <p>
-            Scheduled for {{ registered_exam.start_at.strftime("%d %B %Y") }}
-            at {{ registered_exam.start_at.strftime("%I:%M %p") }} IST.
-        </p>
-
-        <a href="{{ url_for('exam_entry', exam_id=registered_exam.id) }}"
-        class="exam-action">
-            Start Exam <span aria-hidden="true">→</span>
-        </a>
-    </div>
-    {% endif %}
 
 </section>
 
