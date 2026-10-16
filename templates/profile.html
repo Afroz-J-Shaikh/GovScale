@@ -1,0 +1,350 @@
+
+{% extends "base.html" %}
+
+{% block title %}My Profile | GovScale{% endblock %}
+
+{% block content %}
+<section class="student-profile-page">
+    <div class="student-profile-heading">
+        <h1>My Student Profile</h1>
+        <p>
+            Tell us about your education so we can compare your details
+            with the sample scholarship eligibility criteria.
+        </p>
+    </div>
+
+    <div class="student-profile-card">
+        <div class="profile-card-heading">
+            <h2>Education information</h2>
+            <p>Fields marked below are required unless indicated optional.</p>
+        </div>
+
+        <form method="POST" class="student-profile-form">
+            {{ form.hidden_tag() }}
+
+            <div class="profile-form-grid">
+                <div class="profile-field">
+                    {{ form.education_category.label(class="profile-label") }}
+                    {{ form.education_category(class="profile-control", id="education_category") }}
+                    {% for error in form.education_category.errors %}
+                        <small class="profile-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+
+                <div class="profile-field">
+                    {{ form.study_level.label(class="profile-label") }}
+                    {{ form.study_level(class="profile-control", id="study_level") }}
+                    {% for error in form.study_level.errors %}
+                        <small class="profile-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+
+                
+                <div class="profile-field profile-field-full">
+                    {{ form.institution_name.label(class="profile-label") }}
+
+                    <div class="institution-picker" id="institution-picker">
+                        <input
+                            type="text"
+                            id="institution-search"
+                            class="profile-control"
+                            placeholder="Select or search for your institution"
+                            autocomplete="off"
+                            value="{{ form.institution_name.data or '' }}"
+                            aria-expanded="false"
+                            aria-controls="institution-dropdown"
+                        >
+
+                        {{ form.institution_name(
+                            type="hidden",
+                            id="institution_name"
+                        ) }}
+
+                        <div
+                            id="institution-dropdown"
+                            class="institution-dropdown"
+                            hidden
+                        >
+                            <div id="institution-options-list"></div>
+                            <button
+                                type="button"
+                                id="add-institution-option"
+                                class="institution-option institution-add-option"
+                                hidden
+                            >
+                                + Add this institution
+                            </button>
+                        </div>
+                    </div>
+
+                    <small class="profile-help">
+                        Choose an institution from the list or add a new one if it is missing.
+                    </small>
+
+                    {% for error in form.institution_name.errors %}
+                        <small class="profile-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+
+
+                <div class="profile-field profile-field-full">
+                    <label class="profile-checkbox">
+                        {{ form.institution_not_listed() }}
+                        <span>My institution is not listed</span>
+                    </label>
+                </div>
+
+                <div class="profile-field">
+                    {{ form.grading_system.label(class="profile-label") }}
+                    {{ form.grading_system(class="profile-control") }}
+                    {% for error in form.grading_system.errors %}
+                        <small class="profile-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+
+                <div class="profile-field">
+                    {{ form.academic_score.label(class="profile-label") }}
+                    {{ form.academic_score(class="profile-control", placeholder="e.g. 82 or 8.2", inputmode="decimal") }}
+                    <small class="profile-help">
+                        Percentage out of 100 or CGPA out of 10.
+                    </small>
+                    {% for error in form.academic_score.errors %}
+                        <small class="profile-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+
+                <div class="profile-field profile-field-full">
+                    {{ form.annual_family_income.label(class="profile-label") }}
+                    <div class="profile-income-wrap">
+                        <span aria-hidden="true">₹</span>
+                        {{ form.annual_family_income(class="profile-control", placeholder="e.g. 250000", inputmode="numeric") }}
+                    </div>
+                    <small class="profile-help">
+                        Optional. Relevant only when a scholarship has an income requirement.
+                    </small>
+                    {% for error in form.annual_family_income.errors %}
+                        <small class="profile-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="profile-information-note">
+                <strong>About your information</strong>
+                <p>
+                    This is a demonstration portal. Your entries are not
+                    independently verified, and saving your profile does
+                    not guarantee scholarship eligibility.
+                </p>
+            </div>
+
+            <div class="profile-form-actions">
+                {{ form.submit(class="profile-submit", value="Save my profile") }}
+            </div>
+        </form>
+    </div>
+
+    <div class="student-dashboard-return">
+        <a class="student-back-dashboard" href="{{ url_for('dashboard') }}">
+            <span aria-hidden="true">←</span> Back to Dashboard
+        </a>
+    </div>
+
+</section>
+
+<script type="application/json" id="institutions-data">
+    {{ institutions | tojson }}
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const category = document.getElementById("education_category");
+    const level = document.getElementById("study_level");
+    const search = document.getElementById("institution-search");
+    const hiddenName = document.getElementById("institution_name");
+    const dropdown = document.getElementById("institution-dropdown");
+    const optionsList = document.getElementById("institution-options-list");
+    const addButton = document.getElementById("add-institution-option");
+    const picker = document.getElementById("institution-picker");
+
+    if (!category || !level || !search || !hiddenName ||
+        !dropdown || !optionsList || !addButton || !picker) {
+        console.error("Institution dropdown: required HTML elements are missing.");
+        return;
+    }
+
+    const institutionsData = document.getElementById("institutions-data");
+    const institutions = institutionsData
+        ? JSON.parse(institutionsData.textContent)
+        : [];
+
+    const institutionAliases = {
+    "pune university": "Savitribai Phule Pune University",
+    "university of pune": "Savitribai Phule Pune University",
+    "mumbai university": "University of Mumbai",
+    "bombay university": "University of Mumbai",
+    "delhi university": "University of Delhi",
+    "du": "University of Delhi",
+    "iit bombay": "Indian Institute of Technology Bombay",
+    "iit delhi": "Indian Institute of Technology Delhi",
+    "iit madras": "Indian Institute of Technology Madras",
+    "pune uni": "Savitribai Phule Pune University"
+    };
+
+    const levels = {
+        school_8_10: [
+            ["class_8", "Class 8"],
+            ["class_9", "Class 9"],
+            ["class_10", "Class 10"]
+        ],
+        school_11_12: [
+            ["class_11", "Class 11"],
+            ["class_12", "Class 12"]
+        ],
+        undergraduate_1_4: [
+            ["ug_year_1", "Undergraduate Year 1"],
+            ["ug_year_2", "Undergraduate Year 2"],
+            ["ug_year_3", "Undergraduate Year 3"],
+            ["ug_year_4", "Undergraduate Year 4"]
+        ]
+    };
+
+    function updateLevels() {
+        const previous = level.value;
+        level.replaceChildren();
+
+        (levels[category.value] || []).forEach(function (item) {
+            const option = document.createElement("option");
+            option.value = item[0];
+            option.textContent = item[1];
+            level.appendChild(option);
+        });
+
+        if ([...level.options].some(function (option) {
+            return option.value === previous;
+        })) {
+            level.value = previous;
+        }
+    }
+
+    function matchingInstitutions() {
+    const query = search.value.trim().toLowerCase();
+    const aliasTarget = institutionAliases[query];
+
+    return institutions.filter(function (institution) {
+        const name = institution.name.toLowerCase();
+
+        return institution.categories.includes(category.value) &&
+            (
+                name.includes(query) ||
+                (aliasTarget && name === aliasTarget.toLowerCase())
+            );
+        });
+    }
+
+    function renderOptions() {
+        optionsList.replaceChildren();
+
+        const matches = matchingInstitutions();
+
+        if (matches.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "institution-empty";
+            empty.textContent = "No matching institutions found.";
+            optionsList.appendChild(empty);
+        }
+
+        matches.forEach(function (institution) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "institution-option";
+            button.textContent = institution.name;
+
+            button.addEventListener("click", function () {
+                search.value = institution.name;
+                hiddenName.value = institution.name;
+                closeDropdown();
+            });
+
+            optionsList.appendChild(button);
+        });
+
+
+        const query = search.value.trim().toLowerCase();
+        const aliasTarget = institutionAliases[query];
+
+        const alreadyExists = institutions.some(function (institution) {
+            const name = institution.name.trim().toLowerCase();
+
+            return institution.categories.includes(category.value) &&
+                (name === query ||
+                (aliasTarget && name === aliasTarget.toLowerCase()));
+        });
+
+        addButton.hidden = !query || alreadyExists;
+        addButton.textContent = query
+            ? '+ Add "' + search.value.trim() + '"'
+            : "+ Add this institution";
+
+        addButton.hidden = !query || alreadyExists;
+        addButton.textContent = query
+            ? '+ Add "' + search.value.trim() + '"'
+            : "+ Add this institution";
+    }
+
+    function openDropdown() {
+        dropdown.hidden = false;
+        search.setAttribute("aria-expanded", "true");
+        renderOptions();
+    }
+
+    function closeDropdown() {
+        dropdown.hidden = true;
+        search.setAttribute("aria-expanded", "false");
+    }
+
+    search.addEventListener("focus", openDropdown);
+    search.addEventListener("click", openDropdown);
+
+    search.addEventListener("input", function () {
+        hiddenName.value = search.value.trim();
+        openDropdown();
+    });
+
+    addButton.addEventListener("click", function () {
+        const value = search.value.trim();
+
+        if (value.length < 2) return;
+
+        hiddenName.value = value;
+        search.value = value;
+        closeDropdown();
+    });
+
+    category.addEventListener("change", function () {
+        search.value = "";
+        hiddenName.value = "";
+        updateLevels();
+        renderOptions();
+    });
+
+    document.addEventListener("click", function (event) {
+        if (!picker.contains(event.target)) {
+            closeDropdown();
+        }
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            closeDropdown();
+        }
+    });
+
+    updateLevels();
+
+    if (hiddenName.value) {
+        search.value = hiddenName.value;
+    }
+
+    renderOptions();
+});
+</script>
+{% endblock %}

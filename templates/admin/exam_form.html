@@ -1,0 +1,109 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}{{ 'Edit' if is_edit else 'Create' }} Exam Opportunity | GovScale Admin{% endblock %}
+
+{% block admin_content %}
+<section class="dashboard-overview">
+    <div>
+        <span class="dashboard-overview-kicker">EXAM OPPORTUNITY MANAGEMENT</span>
+        <h1>
+            {% if exam %}Edit Exam Opportunity
+            {% elif scholarship %}Complete Exam Schedule
+            {% else %}Create Exam Opportunity{% endif %}
+        </h1>
+        <p>Manage the scholarship details and exam schedule together. All date and time fields use Indian Standard Time (IST).</p>
+    </div>
+</section>
+
+<section class="management-section scholarship-form-section">
+    <form method="POST"
+          action="{% if exam %}{{ url_for('admin_exam_form', exam_id=exam.id) }}{% elif scholarship %}{{ url_for('admin_exam_form', scholarship_id=scholarship.id) }}{% else %}{{ url_for('admin_exam_form') }}{% endif %}"
+          class="scholarship-admin-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="scholarship-form-heading">
+            <h2>Scholarship details</h2>
+            <p>Fields marked * are required.</p>
+        </div>
+
+        <div class="scholarship-form-grid">
+            <label class="admin-form-field field-full">
+                <span>Scholarship / exam title *</span>
+                <input name="title" maxlength="160" required
+                       value="{{ request.form.get('title', scholarship.title if scholarship else '') }}"
+                       placeholder="e.g. National Merit Challenge">
+            </label>
+
+            <label class="admin-form-field">
+                <span>Award amount (₹) *</span>
+                <input type="number" name="award_amount" min="2000" step="1" required
+                       value="{{ request.form.get('award_amount', scholarship.award_amount if scholarship else '') }}"
+                       placeholder="25000">
+            </label>
+
+            <label class="admin-form-field">
+                <span>Passing threshold (%) *</span>
+                <input type="number" name="passing_threshold"
+                       min="0" max="100" step="0.1" required
+                       value="{{ request.form.get('passing_threshold', scholarship.passing_threshold if scholarship else 80) }}">
+                <small>Students pass when their score percentage meets or exceeds this value. Default: 80%.</small>
+            </label>
+
+            <label class="admin-form-field field-full">
+                <span>Description *</span>
+                <textarea name="description" rows="3" required
+                          placeholder="Explain the opportunity and exam">{{ request.form.get('description', scholarship.description if scholarship else '') }}</textarea>
+            </label>
+
+            <label class="admin-form-field field-full">
+                <span>Eligibility requirements *</span>
+                <textarea name="eligibility_description" rows="3" required
+                          placeholder="Explain who can participate">{{ request.form.get('eligibility_description', scholarship.eligibility_description if scholarship else '') }}</textarea>
+            </label>
+        </div>
+
+        <div class="scholarship-form-heading">
+            <h2>Registration and exam schedule</h2>
+            <p>Registration must open at least 24 hours before the exam starts. Registration closes at midnight at the beginning of exam day.</p>
+        </div>
+
+        <div class="scholarship-form-grid">
+            <label class="admin-form-field">
+                <span>Registration opens (IST) *</span>
+                <input type="datetime-local" name="registration_opens_at" required
+                       value="{{ request.form.get('registration_opens_at', exam.registration_opens_at.strftime('%Y-%m-%dT%H:%M') if exam and exam.registration_opens_at else '') }}">
+            </label>
+
+            <label class="admin-form-field">
+                <span>Exam starts (IST) *</span>
+                <input type="datetime-local" name="start_at" required
+                       value="{{ request.form.get('start_at', exam.start_at.strftime('%Y-%m-%dT%H:%M') if exam else '') }}">
+            </label>
+
+            <label class="admin-form-field">
+                <span>Exam duration (minutes) *</span>
+                <input type="number" name="duration_minutes" min="16" max="1440" step="1" required
+                       value="{{ request.form.get('duration_minutes', ((exam.end_at - exam.start_at).total_seconds() // 60)|int if exam else '') }}"
+                       placeholder="e.g. 60">
+                <small>The end time is calculated automatically from the start time and duration.</small>
+            </label>
+
+            <label class="admin-form-field">
+                <span>Opportunity status</span>
+                <span>
+                    <input type="checkbox" name="is_active"
+                           {% if (request.method != 'POST' and (not scholarship or scholarship.is_active) and (not exam or exam.is_active)) or request.form.get('is_active') == 'on' %}checked{% endif %}>
+                    Active — visible to students when applicable
+                </span>
+            </label>
+        </div>
+
+        <div class="scholarship-form-actions">
+            <a class="clear-filters" href="{{ url_for('admin_exams') }}">Cancel</a>
+            <button class="scholarship-create-button" type="submit">
+                {% if exam or scholarship %}Save Exam Opportunity{% else %}Create Exam Opportunity{% endif %}
+            </button>
+        </div>
+    </form>
+</section>
+{% endblock %}
