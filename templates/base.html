@@ -62,8 +62,6 @@
                 {% else %}
                     <a href="{{ url_for('home') }}#scholarships">Scholarships</a>
                     <a href="{{ url_for('home') }}#how-it-works">How it works</a>
-                    <a href="{{ url_for('home') }}#about">About</a>
-                    <a href="{{ url_for('home') }}#contact">Contact us</a>
                 {% endif %}
             </div>
 
@@ -284,6 +282,77 @@
                 if (!event.target.closest(".notification-dropdown")) {
                     notificationMenu.hidden = true;
                     notificationToggle.setAttribute("aria-expanded", "false");
+                }
+            });
+
+            // Dismiss a student notification without closing or reloading the dropdown.
+            notificationMenu.addEventListener("submit", async function (event) {
+                const form = event.target.closest(
+                    'form[action*="/notifications/"][action$="/close"]'
+                );
+                if (!form) return;
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                const item = form.closest(".notification-preview-item");
+                const button = form.querySelector(".notification-close");
+                if (!item || !button || button.disabled) return;
+
+                button.disabled = true;
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: "POST",
+                        body: new FormData(form),
+                        credentials: "same-origin",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                            "Accept": "application/json"
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Dismiss request failed: " + response.status);
+                    }
+
+                    const data = await response.json();
+                    if (!data.success) {
+                        throw new Error("Server did not confirm notification dismissal.");
+                    }
+
+                    item.remove();
+
+                    // Keep the unread badge synchronized with the server.
+                    const badge = notificationToggle.querySelector(".notification-badge");
+                    if (data.unread_count > 0) {
+                        if (badge) {
+                            badge.textContent = data.unread_count;
+                        } else {
+                            const newBadge = document.createElement("span");
+                            newBadge.className = "notification-badge";
+                            newBadge.textContent = data.unread_count;
+                            notificationToggle.appendChild(newBadge);
+                        }
+                    } else if (badge) {
+                        badge.remove();
+                    }
+
+                    // Keep the dropdown open, even when its last item is dismissed.
+                    if (!notificationMenu.querySelector(".notification-preview-item") &&
+                        !notificationMenu.querySelector(".notification-empty")) {
+                        const emptyMessage = document.createElement("p");
+                        emptyMessage.className = "notification-empty";
+                        emptyMessage.textContent = "No new notifications.";
+                        const viewAll = notificationMenu.querySelector(".notification-view-all");
+                        notificationMenu.insertBefore(emptyMessage, viewAll || null);
+                    }
+
+                    notificationMenu.hidden = false;
+                    notificationToggle.setAttribute("aria-expanded", "true");
+                } catch (error) {
+                    button.disabled = false;
+                    console.error("Could not dismiss student notification:", error);
                 }
             });
         }
