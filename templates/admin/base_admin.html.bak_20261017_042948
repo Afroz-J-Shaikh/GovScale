@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#244E3B">
+    <title>{% block title %}Admin | GovScale{% endblock %}</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/admin.css') }}?v=received-status-20261017_035618">
+    {% block head %}{% endblock %}
+</head>
+<body class="admin-body">
+    <div class="admin-shell">
+        <aside class="admin-sidebar" id="admin-sidebar">
+            <a class="admin-brand" href="{{ url_for('admin_dashboard') }}">
+                <span class="admin-brand-mark">
+                    <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                        <circle cx="24" cy="24" r="21"
+                                stroke="currentColor" stroke-width="1.8"/>
+                        <path d="M10 20L24 12L38 20L24 28L10 20Z"
+                              fill="currentColor"/>
+                        <path d="M15 24V31C20 35 28 35 33 31V24"
+                              stroke="currentColor" stroke-width="1.8"
+                              stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <span>
+                    <strong>GovScale</strong>
+                    <small>ADMINISTRATION</small>
+                </span>
+            </a>
+
+
+            <nav class="admin-nav" aria-label="Admin navigation">
+                <a class="admin-nav-link {% if request.endpoint == 'admin_dashboard' %}active{% endif %}"
+                   href="{{ url_for('admin_dashboard') }}">
+                    <span class="nav-icon" aria-hidden="true">📊</span>
+                    <span>Dashboard</span>
+                </a>
+
+                <a class="admin-nav-link {% if request.endpoint == 'admin_students' %}active{% endif %}"
+                   href="{{ url_for('admin_students') }}">
+                    <span class="nav-icon" aria-hidden="true">🧑‍🎓</span>
+                    <span>Students</span>
+                </a>
+
+                {% set scholarship_endpoints = (
+                    'admin_scholarships',
+                    'admin_scholarship_form',
+                    'admin_toggle_scholarship',
+                    'admin_exams',
+                    'admin_exam_form'
+                ) %}
+                <details class="admin-nav-group"
+                         {% if request.endpoint in scholarship_endpoints %}open{% endif %}>
+                    <summary class="admin-nav-link {% if request.endpoint in scholarship_endpoints %}active{% endif %}">
+                        <span class="nav-icon" aria-hidden="true">🎓</span>
+                        <span>Scholarship Management</span>
+                        <span class="nav-group-chevron">⌄</span>
+                    </summary>
+                    <div class="admin-subnav">
+                        <a class="admin-subnav-link {% if request.endpoint in ('admin_scholarships', 'admin_scholarship_form', 'admin_toggle_scholarship') %}active{% endif %}"
+                           href="{{ url_for('admin_scholarships') }}">
+                            📚 Grade-based
+                        </a>
+                        <a class="admin-subnav-link {% if request.endpoint in ('admin_exams', 'admin_exam_questions') %}active{% endif %}"
+                           href="{{ url_for('admin_exams') }}">
+                            📝 Exam-based
+                        </a>
+                    </div>
+                </details>
+
+                <a class="admin-nav-link {% if request.endpoint in ('admin_question_papers', 'admin_exam_questions') %}active{% endif %}"
+                   href="{{ url_for('admin_question_papers') }}">
+                    <span class="nav-icon" aria-hidden="true">📑</span>
+                    <span>Exam Management</span>
+                </a>
+
+                <details class="admin-nav-group"
+                         {% if request.endpoint in ('admin_applications', 'admin_exam_applications') %}open{% endif %}>
+                    <summary class="admin-nav-link {% if request.endpoint in ('admin_applications', 'admin_exam_applications') %}active{% endif %}">
+                        <span class="nav-icon" aria-hidden="true">📂</span>
+                        <span>Applications</span>
+                        <span class="nav-group-chevron">⌄</span>
+                    </summary>
+                    <div class="admin-subnav">
+                        <a class="admin-subnav-link {% if request.endpoint == 'admin_applications' %}active{% endif %}"
+                           href="{{ url_for('admin_applications') }}">📚 Grade-based</a>
+                        <a class="admin-subnav-link {% if request.endpoint == 'admin_exam_applications' %}active{% endif %}"
+                           href="{{ url_for('admin_exam_applications') }}">📝 Exam-based</a>
+                    </div>
+                </details>
+
+                <details class="admin-nav-group"
+                         {% if request.endpoint in ('admin_grade_application_history', 'admin_exam_application_history') %}open{% endif %}>
+                    <summary class="admin-nav-link {% if request.endpoint in ('admin_grade_application_history', 'admin_exam_application_history') %}active{% endif %}">
+                        <span class="nav-icon" aria-hidden="true">🗂️</span>
+                        <span>Application History</span>
+                        <span class="nav-group-chevron">⌄</span>
+                    </summary>
+                    <div class="admin-subnav">
+                        <a class="admin-subnav-link {% if request.endpoint == 'admin_grade_application_history' %}active{% endif %}"
+                           href="{{ url_for('admin_grade_application_history') }}">📚 Grade-based</a>
+                        <a class="admin-subnav-link {% if request.endpoint == 'admin_exam_application_history' %}active{% endif %}"
+                           href="{{ url_for('admin_exam_application_history') }}">📝 Exam-based</a>
+                    </div>
+                </details>
+
+                <a class="admin-nav-link {% if request.endpoint in ('admin_rewards', 'admin_initiate_reward_payout', 'admin_resolve_reward_payout') %}active{% endif %}"
+                   href="{{ url_for('admin_rewards') }}">
+                    <span class="nav-icon" aria-hidden="true">🏆</span>
+                    <span>Rewards &amp; Payouts</span>
+                </a>
+
+                <a class="admin-nav-link {% if request.endpoint == 'admin_scholarship_history' %}active{% endif %}"
+                href="{{ url_for('admin_scholarship_history') }}">
+                    <span class="nav-icon" aria-hidden="true">🗂️</span>
+                    <span>Scholarship History</span>
+                </a>
+
+                <details class="admin-nav-group admin-notification-group">
+                    <summary class="admin-nav-link {% if request.endpoint in ('notification_inbox', 'open_notification') %}active{% endif %}">
+                        <span class="nav-icon" aria-hidden="true">🔔</span>
+                        <span>Notifications</span>
+                        {% if notification_unread_count %}
+                        <span class="notification-badge">{{ notification_unread_count }}</span>
+                        {% endif %}
+                    </summary>
+                    <div class="admin-subnav admin-notification-subnav">
+                        {% if notification_preview %}
+                            {% for notification in notification_preview %}
+                            <div class="admin-notification-preview {% if not notification.is_read %}is-unread{% endif %}">
+                                <a href="{{ url_for('open_notification', notification_id=notification.id) }}">
+                                                                        <span>{{ notification.message }}</span>
+                                    <small class="notification-preview-date">{{ notification.created_at|ist_datetime("%d %b") }}</small>
+                                </a>
+                                <form method="POST" action="{{ url_for('close_notification', notification_id=notification.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="notification-close" aria-label="Close notification" title="Close">×</button>
+                                </form>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <span class="admin-notification-empty">No new notifications.</span>
+                        {% endif %}
+                        <a class="admin-subnav-link" href="{{ url_for('notification_inbox') }}">View all notifications</a>
+                    </div>
+                </details>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <details class="admin-account-menu">
+                    <summary>
+                        <span class="admin-avatar">{{ current_user.full_name[:1]|upper }}</span>
+                        <span class="admin-profile-copy">
+                            <strong>{{ current_user.full_name }}</strong>
+                            <span>Administrator</span>
+                        </span>
+                        <span class="account-chevron">⌃</span>
+                    </summary>
+                    <div class="account-dropdown">
+                        <div class="account-dropdown-heading">Account</div>
+                        <a class="account-menu-item"
+                           href="{{ url_for('admin_account') }}">
+                            <span aria-hidden="true">🪪</span> Account
+                        </a>
+                        <a class="account-menu-item"
+                           href="{{ url_for('admin_profile') }}">
+                            <span aria-hidden="true">👤</span> Profile
+                        </a>
+                        <a class="account-menu-item"
+                           href="{{ url_for('admin_settings') }}">
+                            <span aria-hidden="true">⚙️</span> Settings
+                        </a>
+                        <form action="{{ url_for('logout') }}" method="POST">
+                            <input type="hidden" name="csrf_token"
+                                   value="{{ csrf_token() }}">
+                            <button class="account-menu-item account-signout"
+                                    type="submit">
+                                <span aria-hidden="true">🚪</span> Sign out
+                            </button>
+                        </form>
+                    </div>
+                </details>
+                <div class="sidebar-version">GOVSCALE · STUDENT OPPORTUNITIES</div>
+            </div>
+        </aside>
+
+        <div class="admin-main">
+            <div class="mobile-admin-bar">
+                <button class="sidebar-toggle" id="sidebar-toggle"
+                        type="button" aria-label="Toggle navigation"
+                        aria-expanded="false">☰</button>
+            </div>
+
+            <main class="admin-content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    <div class="admin-flashes" aria-live="polite">
+                        {% for category, message in messages %}
+                        <div class="admin-flash flash-{{ category }}" role="status">
+                            <span class="admin-flash-text{% if category == 'error' %} admin-flash-error-text{% endif %}">{{ message }}</span>
+                            <button type="button"
+                                    class="admin-flash-close"
+                                    aria-label="Dismiss notification"
+                                    title="Dismiss">&times;</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                {% endwith %}
+
+                {% block admin_content %}{% endblock %}
+
+                <footer class="admin-footer">
+                    <span>GovScale Administration</span>
+                    <span>Student opportunity management platform</span>
+                </footer>
+            </main>
+        </div>
+    </div>
+
+    <script>
+    (() => {
+        const toggle = document.getElementById("sidebar-toggle");
+        const sidebar = document.getElementById("admin-sidebar");
+        if (!toggle || !sidebar) return;
+
+        toggle.addEventListener("click", () => {
+            const open = sidebar.classList.toggle("sidebar-open");
+            toggle.setAttribute("aria-expanded", String(open));
+        });
+
+        document.addEventListener("click", (event) => {
+            if (window.innerWidth <= 900 &&
+                !sidebar.contains(event.target) &&
+                !toggle.contains(event.target)) {
+                sidebar.classList.remove("sidebar-open");
+                toggle.setAttribute("aria-expanded", "false");
+            }
+        });
+    })();
+    </script>
+
+<script>
+document.querySelectorAll(".admin-flash").forEach(function (notice) {
+    let dismissed = false;
+
+    function dismissNotice() {
+        if (dismissed) return;
+        dismissed = true;
+        notice.classList.add("is-dismissing");
+
+        window.setTimeout(function () {
+            notice.remove();
+        }, 250);
+    }
+
+    const closeButton = notice.querySelector(".admin-flash-close");
+    if (closeButton) {
+        closeButton.addEventListener("click", dismissNotice);
+    }
+
+    window.setTimeout(dismissNotice, 4000);
+});
+</script>
+
+</body>
+</html>

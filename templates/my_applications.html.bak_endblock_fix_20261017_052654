@@ -1,0 +1,82 @@
+
+{% extends "base.html" %}
+
+{% block title %}My Applications | GovScale{% endblock %}
+
+{% block content %}
+<section class="dashboard-section">
+    <h1>My Applications</h1>
+    <p class="dashboard-intro">
+        Track the scholarships you have applied for.
+    </p>
+
+    {% if applications %}
+        {% for category, category_applications in applications|groupby("scholarship.category") %}
+            <h2>
+                {{ "Exam-based Applications" if category == "exam" else "Grade-based Applications" }}
+            </h2>
+
+            <div class="dashboard-grid dashboard-management-grid">
+                {% for application in category_applications %}
+                    {% set reward = reward_by_application.get(application.id) %}
+                    <article class="dashboard-card">
+                        <h3>{{ application.scholarship.title }}</h3>
+                        <p>Submitted: {{ application.submitted_at.strftime("%d %B %Y, %I:%M %p") }}</p>
+
+                        <p>Status:
+                            <strong>
+                            {% if application.status == "submitted" %}
+                                Submitted — awaiting review
+                            {% elif application.status == "pending" %}
+                                Pending review
+                            {% elif application.status == "approved" and reward and reward.status == "pending" %}
+                                Approved — payout pending confirmation
+                            {% elif application.status == "approved" and reward and reward.status == "failed" %}
+                                Approved — payout failed, awaiting retry
+                            {% elif application.status == "approved" %}
+                                Approved — awaiting reward processing
+                            {% else %}
+                                {{ application.status|capitalize }}
+                            {% endif %}
+                            </strong>
+                        </p>
+
+                        {% if application.status == "approved" %}
+                            <p>Your reward is not marked as received until an administrator confirms a successful payout.</p>
+                            {% if not current_user.payment_details %}
+                                <a class="text-link" href="{{ url_for('payment_details') }}">
+                                    Add Payment Details →
+                                </a>
+                            {% endif %}
+                        {% endif %}
+
+                        <div class="dashboard-card-actions">
+                            <a class="text-link"
+                               href="{{ url_for('scholarship_detail', scholarship_id=application.scholarship_id) }}">
+                                View scholarship →
+                            </a>
+
+                            {% if category == "grade" and application.status == "submitted" %}
+                                <form method="POST"
+                                      action="{{ url_for('withdraw_scholarship_application', application_id=application.id) }}"
+                                      onsubmit="return confirm('Are you sure you want to withdraw? You will not be able to apply for this scholarship again.');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="detail-apply-button dashboard-action-button">
+                                        Withdraw application
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <article class="dashboard-card">
+            <h2>No active scholarship applications</h2>
+            <p>Applications under review and approved applications awaiting reward processing will appear here. Confirmed rewards move to My History.</p>
+            <a class="text-link" href="{{ url_for('home') }}#scholarships">
+                Browse scholarships →
+            </a>
+        </article>
+    {% endif %}

@@ -17,7 +17,7 @@
         <div>
             <span class="eyebrow"><span class="eyebrow-line"></span> EXAM REGISTRATIONS</span>
             <h2>Registered students</h2>
-            <p>Registration records are loaded from the GovScale database.</p>
+            <p>Only registrations with no submitted result and an exam end time in the future appear here.</p>
         </div>
         <div class="table-total">
             <strong>{{ registrations|length }}</strong>
@@ -33,11 +33,6 @@
                    placeholder="Search student, exam, or scholarship…"
                    aria-label="Search registrations">
         </label>
-        <select name="status" aria-label="Filter registration status">
-            <option value="">All statuses</option>
-            <option value="registered" {% if status_filter == 'registered' %}selected{% endif %}>Registered</option>
-            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
-        </select>
         <button class="filter-button" type="submit">Apply filters</button>
         {% if search or status_filter %}
         <a class="clear-filters" href="{{ url_for('admin_exam_applications') }}">Clear</a>
