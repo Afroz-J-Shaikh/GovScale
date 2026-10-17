@@ -1,0 +1,24 @@
+services:
+  govscale:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: govscale:local
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      GOVSCALE_SECRET_KEY: ${GOVSCALE_SECRET_KEY:?Set GOVSCALE_SECRET_KEY in your shell}
+    volumes:
+      - govscale_instance:/app/instance
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  govscale_instance:
