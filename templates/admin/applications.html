@@ -34,17 +34,9 @@
                    aria-label="Search by student name, email, or scholarship">
         </label>
 
-        <select name="status" aria-label="Filter applications by status">
-            <option value="">All statuses</option>
-            <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Submitted</option>
-            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
-            <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
-            <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
-            <option value="withdrawn" {% if status_filter == 'withdrawn' %}selected{% endif %}>Withdrawn</option>
-        </select>
 
-        <button class="filter-button" type="submit">Apply filters</button>
-        {% if search or status_filter %}
+        <button class="filter-button" type="submit">Search</button>
+        {% if search %}
         <a class="clear-filters" href="{{ url_for('admin_applications') }}">Clear</a>
         {% endif %}
     </form>
@@ -57,7 +49,6 @@
                     <th>ID</th>
                     <th>STUDENT</th>
                     <th>SCHOLARSHIP</th>
-                    <th>CATEGORY</th>
                     <th>AWARD</th>
                     <th>SUBMITTED</th>
                     <th>STATUS</th>
@@ -74,15 +65,6 @@
                     </td>
                     <td>
                         <div class="opportunity-name">{{ application.scholarship.title }}</div>
-                    </td>
-                    <td>
-                        {% if application.scholarship.category == 'exam' %}
-                            Exam-based
-                        {% elif application.scholarship.category == 'grade' %}
-                            Grade-based
-                        {% else %}
-                            {{ application.scholarship.category|title }}
-                        {% endif %}
                     </td>
                     <td class="amount-cell">₹{{ "{:,}".format(application.scholarship.award_amount) }}</td>
                     <td>
@@ -120,13 +102,13 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="8">
+                    <td colspan="7">
                         <div class="empty-state">
                             <span class="empty-state-icon">▤</span>
                             <strong>No applications found</strong>
                             <p>
-                                {% if search or status_filter %}
-                                    Try changing your search or status filter.
+                                {% if search %}
+                                    Try a different search term or check the spelling.
                                 {% else %}
                                     Student scholarship applications will appear here when submitted.
                                 {% endif %}

@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#244E3B">
     <title>{% block title %}Admin | GovScale{% endblock %}</title>
     <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/admin.css') }}?v=student-detail-20261016">
+          href="{{ url_for('static', filename='css/admin.css') }}?v=notification-dismiss-v3-20261017">
     {% block head %}{% endblock %}
 </head>
 <body class="admin-body">
@@ -85,13 +85,24 @@
                     </summary>
                     <div class="admin-subnav">
                         <a class="admin-subnav-link {% if request.endpoint == 'admin_applications' %}active{% endif %}"
-                           href="{{ url_for('admin_applications') }}">
-                            📚 Grade-based
-                        </a>
+                           href="{{ url_for('admin_applications') }}">📚 Grade-based</a>
                         <a class="admin-subnav-link {% if request.endpoint == 'admin_exam_applications' %}active{% endif %}"
-                           href="{{ url_for('admin_exam_applications') }}">
-                            📝 Exam-based
-                        </a>
+                           href="{{ url_for('admin_exam_applications') }}">📝 Exam-based</a>
+                    </div>
+                </details>
+
+                <details class="admin-nav-group"
+                         {% if request.endpoint in ('admin_grade_application_history', 'admin_exam_application_history') %}open{% endif %}>
+                    <summary class="admin-nav-link {% if request.endpoint in ('admin_grade_application_history', 'admin_exam_application_history') %}active{% endif %}">
+                        <span class="nav-icon" aria-hidden="true">🗂️</span>
+                        <span>Application History</span>
+                        <span class="nav-group-chevron">⌄</span>
+                    </summary>
+                    <div class="admin-subnav">
+                        <a class="admin-subnav-link {% if request.endpoint == 'admin_grade_application_history' %}active{% endif %}"
+                           href="{{ url_for('admin_grade_application_history') }}">📚 Grade-based</a>
+                        <a class="admin-subnav-link {% if request.endpoint == 'admin_exam_application_history' %}active{% endif %}"
+                           href="{{ url_for('admin_exam_application_history') }}">📝 Exam-based</a>
                     </div>
                 </details>
 
@@ -107,34 +118,16 @@
                     <span>Scholarship History</span>
                 </a>
 
-                <details class="admin-nav-group admin-notification-group">
-                    <summary class="admin-nav-link {% if request.endpoint in ('notification_inbox', 'open_notification') %}active{% endif %}">
-                        <span class="nav-icon" aria-hidden="true">🔔</span>
-                        <span>Notifications</span>
-                        {% if notification_unread_count %}
-                        <span class="notification-badge">{{ notification_unread_count }}</span>
-                        {% endif %}
-                    </summary>
-                    <div class="admin-subnav admin-notification-subnav">
-                        {% if notification_preview %}
-                            {% for notification in notification_preview %}
-                            <div class="admin-notification-preview {% if not notification.is_read %}is-unread{% endif %}">
-                                <a href="{{ url_for('open_notification', notification_id=notification.id) }}">
-                                                                        <span>{{ notification.message }}</span>
-                                    <small class="notification-preview-date">{{ notification.created_at|ist_datetime("%d %b") }}</small>
-                                </a>
-                                <form method="POST" action="{{ url_for('close_notification', notification_id=notification.id) }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="notification-close" aria-label="Close notification" title="Close">×</button>
-                                </form>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <span class="admin-notification-empty">No new notifications.</span>
-                        {% endif %}
-                        <a class="admin-subnav-link" href="{{ url_for('notification_inbox') }}">View all notifications</a>
-                    </div>
-                </details>
+                <button class="admin-nav-link admin-notification-trigger {% if request.endpoint in ('notification_inbox', 'open_notification') %}active{% endif %}"
+                        id="admin-notification-open" type="button"
+                        aria-controls="admin-notification-drawer"
+                        aria-expanded="false">
+                    <span class="nav-icon" aria-hidden="true">🔔</span>
+                    <span>Notifications</span>
+                    {% if notification_unread_count %}
+                    <span class="notification-badge" aria-label="{{ notification_unread_count }} unread notifications">{{ notification_unread_count }}</span>
+                    {% endif %}
+                </button>
             </nav>
 
             <div class="sidebar-bottom">
@@ -209,8 +202,54 @@
         </div>
     </div>
 
+    <div class="admin-notification-overlay" id="admin-notification-overlay" hidden></div>
+    <aside class="admin-notification-drawer" id="admin-notification-drawer"
+           aria-label="Notifications" aria-hidden="true">
+        <div class="admin-notification-drawer-header">
+            <div>
+                <h2>Notifications</h2>
+                <p>
+                    {% if notification_unread_count %}
+                    {{ notification_unread_count }} unread
+                    {% else %}
+                    You're all caught up
+                    {% endif %}
+                </p>
+            </div>
+            <button type="button" class="admin-notification-drawer-close"
+                    id="admin-notification-close" aria-label="Close notifications">×</button>
+        </div>
+
+        <div class="admin-notification-drawer-list" id="admin-notification-drawer-list">
+            {% for notification in notification_preview %}
+            <article class="admin-notification-item {% if not notification.is_read %}is-unread{% else %}is-read{% endif %}">
+                <a class="admin-notification-item-link"
+                   href="{{ url_for('open_notification', notification_id=notification.id) }}">
+                    <span class="admin-notification-item-title">{{ notification.title }}</span>
+                    <span class="admin-notification-item-message">{{ notification.message }}</span>
+                    <time datetime="{{ notification.created_at.isoformat() }}">
+                        {{ notification.created_at|ist_datetime("%d %b %Y, %I:%M %p") }} IST
+                    </time>
+                </a>
+                <form class="admin-notification-dismiss-form"
+                      method="POST"
+                      action="{{ url_for('close_notification', notification_id=notification.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="admin-notification-item-dismiss"
+                            aria-label="Dismiss notification">×</button>
+                </form>
+            </article>
+            {% else %}
+            <p class="admin-notification-drawer-empty">No notifications to show.</p>
+            {% endfor %}
+        </div>
+    </aside>
+
     <script>
     (() => {
+        const toggle = document.getElementById("sidebar-toggle");
+        const sidebar = document.getElementById("admin-sidebar");
+        if (!toggle || !sidebar) return;
         const toggle = document.getElementById("sidebar-toggle");
         const sidebar = document.getElementById("admin-sidebar");
         if (!toggle || !sidebar) return;
@@ -230,6 +269,108 @@
         });
     })();
     </script>
+
+<script>
+(() => {
+    const drawer = document.getElementById("admin-notification-drawer");
+    const overlay = document.getElementById("admin-notification-overlay");
+    const openButton = document.getElementById("admin-notification-open");
+    const closeButton = document.getElementById("admin-notification-close");
+
+    if (!drawer || !overlay || !openButton || !closeButton) return;
+
+    function openDrawer() {
+        drawer.classList.add("is-open");
+        overlay.hidden = false;
+        document.body.classList.add("admin-notifications-open");
+        drawer.setAttribute("aria-hidden", "false");
+        openButton.setAttribute("aria-expanded", "true");
+        closeButton.focus();
+    }
+
+    function closeDrawer() {
+        drawer.classList.remove("is-open");
+        overlay.hidden = true;
+        document.body.classList.remove("admin-notifications-open");
+        drawer.setAttribute("aria-hidden", "true");
+        openButton.setAttribute("aria-expanded", "false");
+        openButton.focus();
+    }
+
+    openButton.addEventListener("click", openDrawer);
+    closeButton.addEventListener("click", closeDrawer);
+    overlay.addEventListener("click", closeDrawer);
+
+    const notificationList = document.getElementById("admin-notification-drawer-list");
+    if (notificationList) {
+        notificationList.addEventListener("submit", async function (event) {
+            const form = event.target.closest(".admin-notification-dismiss-form");
+            if (!form) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const item = form.closest(".admin-notification-item");
+            const button = form.querySelector(".admin-notification-item-dismiss");
+            if (!item || !button || button.disabled) return;
+
+            button.disabled = true;
+            try {
+                const response = await fetch(form.action, {
+                    method: "POST",
+                    body: new FormData(form),
+                    credentials: "same-origin",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        "Accept": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error("Dismiss request failed: " + response.status);
+                }
+
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error("Server did not confirm notification dismissal.");
+                }
+
+                item.remove();
+
+                if (!notificationList.querySelector(".admin-notification-item")) {
+                    notificationList.innerHTML =
+                        '<p class="admin-notification-drawer-empty">No notifications to show.</p>';
+                }
+
+                const badge = openButton.querySelector(".notification-badge");
+                if (data.unread_count > 0) {
+                    if (badge) {
+                        badge.textContent = data.unread_count;
+                        badge.setAttribute("aria-label", data.unread_count + " unread notifications");
+                    } else {
+                        const newBadge = document.createElement("span");
+                        newBadge.className = "notification-badge";
+                        newBadge.setAttribute("aria-label", data.unread_count + " unread notifications");
+                        newBadge.textContent = data.unread_count;
+                        openButton.appendChild(newBadge);
+                    }
+                } else if (badge) {
+                    badge.remove();
+                }
+            } catch (error) {
+                button.disabled = false;
+                console.error("Could not dismiss notification:", error);
+            }
+        });
+    }
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && drawer.classList.contains("is-open")) {
+            closeDrawer();
+        }
+    });
+})();
+</script>
 
 <script>
 document.querySelectorAll(".admin-flash").forEach(function (notice) {
