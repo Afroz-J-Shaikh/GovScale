@@ -1,0 +1,2060 @@
+{
+  "format_version": 1,
+  "source": "sanitized GovScale demo dataset",
+  "system_identity": {
+    "user_id": 5,
+    "full_name": "GovScale Demo System",
+    "email": "govscale-demo-system@example.invalid"
+  },
+  "tables": {
+    "demo_exam": [
+      {
+        "id": 1,
+        "title": "National Merit Challenge",
+        "description": "A fictional scholarship opportunity based on performance in a timed demonstration assessment.",
+        "start_at": "2026-10-14 17:59:00.000000",
+        "end_at": "2026-10-14 18:29:00.000000",
+        "is_active": 0,
+        "scholarship_id": 1,
+        "registration_opens_at": "2026-10-10 10:00:00"
+      },
+      {
+        "id": 2,
+        "title": "Testing Exam Based",
+        "description": "Testig if it is visible even though one is already reunning",
+        "start_at": "2026-10-16 22:41:00.000000",
+        "end_at": "2026-10-16 23:11:00.000000",
+        "is_active": 0,
+        "scholarship_id": 5,
+        "registration_opens_at": "2026-10-15 03:37:00.000000"
+      },
+      {
+        "id": 3,
+        "title": "GovScale Phase 2 Demo Exam",
+        "description": "Five-question practice exam for testing the complete GovScale exam lifecycle.",
+        "start_at": "2026-10-14 22:45:25.542932",
+        "end_at": "2026-10-14 23:45:25.542932",
+        "is_active": 0,
+        "scholarship_id": 7,
+        "registration_opens_at": "2026-10-14 22:39:25.542932"
+      },
+      {
+        "id": 4,
+        "title": "Mathematics Skills Exam",
+        "description": "Specially designed for mathematics geniuses.",
+        "start_at": "2026-10-18 17:00:00.000000",
+        "end_at": "2026-10-18 17:30:00.000000",
+        "is_active": 1,
+        "scholarship_id": 8,
+        "registration_opens_at": "2026-10-17 04:21:00.000000"
+      },
+      {
+        "id": 5,
+        "title": "NextGen Builder",
+        "description": "Aimed at students who create the most creative or out-of-the-box prototype.",
+        "start_at": "2026-10-19 02:08:00.000000",
+        "end_at": "2026-10-19 02:38:00.000000",
+        "is_active": 1,
+        "scholarship_id": 12,
+        "registration_opens_at": "2026-10-18 02:00:00.000000"
+      },
+      {
+        "id": 6,
+        "title": "National Science & Technology Endowment:",
+        "description": "Demonstrating excellence in foundational STEM research and real-world application.",
+        "start_at": "2026-10-20 00:00:00.000000",
+        "end_at": "2026-10-20 01:00:00.000000",
+        "is_active": 1,
+        "scholarship_id": 13,
+        "registration_opens_at": "2026-10-19 00:00:00.000000"
+      }
+    ],
+    "exam_answer": [
+      {
+        "id": 1,
+        "submission_id": 1,
+        "question_id": 11,
+        "selected_option": "A",
+        "is_correct": 0,
+        "awarded_marks": 0
+      },
+      {
+        "id": 2,
+        "submission_id": 1,
+        "question_id": 12,
+        "selected_option": "C",
+        "is_correct": 1,
+        "awarded_marks": 1
+      },
+      {
+        "id": 3,
+        "submission_id": 1,
+        "question_id": 13,
+        "selected_option": "D",
+        "is_correct": 1,
+        "awarded_marks": 1
+      },
+      {
+        "id": 4,
+        "submission_id": 1,
+        "question_id": 14,
+        "selected_option": "B",
+        "is_correct": 1,
+        "awarded_marks": 1
+      },
+      {
+        "id": 5,
+        "submission_id": 1,
+        "question_id": 15,
+        "selected_option": "C",
+        "is_correct": 0,
+        "awarded_marks": 0
+      },
+      {
+        "id": 6,
+        "submission_id": 2,
+        "question_id": 16,
+        "selected_option": "C",
+        "is_correct": 1,
+        "awarded_marks": 1
+      },
+      {
+        "id": 7,
+        "submission_id": 2,
+        "question_id": 17,
+        "selected_option": "D",
+        "is_correct": 1,
+        "awarded_marks": 1
+      },
+      {
+        "id": 8,
+        "submission_id": 3,
+        "question_id": 16,
+        "selected_option": "C",
+        "is_correct": 1,
+        "awarded_marks": 1
+      },
+      {
+        "id": 9,
+        "submission_id": 3,
+        "question_id": 17,
+        "selected_option": null,
+        "is_correct": 0,
+        "awarded_marks": 0
+      }
+    ],
+    "exam_question": [
+      {
+        "id": 1,
+        "paper_id": 1,
+        "question_text": "Which planet is known as the Red Planet?",
+        "option_a": "Venus",
+        "option_b": "Mars",
+        "option_c": "Jupiter",
+        "option_d": "Saturn",
+        "correct_option": "B",
+        "marks": 2
+      },
+      {
+        "id": 2,
+        "paper_id": 1,
+        "question_text": "• What is the chemical symbol for water?",
+        "option_a": "CO2",
+        "option_b": "H2O",
+        "option_c": "NaCl",
+        "option_d": "O2",
+        "correct_option": "B",
+        "marks": 2
+      },
+      {
+        "id": 3,
+        "paper_id": 1,
+        "question_text": "Which is the largest ocean on Earth?",
+        "option_a": "Atlantic",
+        "option_b": "Indian",
+        "option_c": "Arctic",
+        "option_d": "Pacific",
+        "correct_option": "D",
+        "marks": 2
+      },
+      {
+        "id": 4,
+        "paper_id": 1,
+        "question_text": "What is the square root of 64?",
+        "option_a": "6",
+        "option_b": "7",
+        "option_c": "8",
+        "option_d": "9",
+        "correct_option": "C",
+        "marks": 2
+      },
+      {
+        "id": 5,
+        "paper_id": 1,
+        "question_text": "Which of the following is a noun?",
+        "option_a": "Run",
+        "option_b": "Beautiful",
+        "option_c": "Happiness",
+        "option_d": "Quickly",
+        "correct_option": "C",
+        "marks": 2
+      },
+      {
+        "id": 6,
+        "paper_id": 1,
+        "question_text": "How many days are there in a leap year?",
+        "option_a": "364",
+        "option_b": "365",
+        "option_c": "367",
+        "option_d": "366",
+        "correct_option": "D",
+        "marks": 2
+      },
+      {
+        "id": 7,
+        "paper_id": 1,
+        "question_text": "Which organ is responsible for pumping blood throughout the human body?",
+        "option_a": "Lungs",
+        "option_b": "Liver",
+        "option_c": "Brain",
+        "option_d": "Heart",
+        "correct_option": "D",
+        "marks": 2
+      },
+      {
+        "id": 8,
+        "paper_id": 1,
+        "question_text": "What does CPU stand for in computer science?",
+        "option_a": "Central Processing Unit",
+        "option_b": "Central Power Unit",
+        "option_c": "Central Power Unit",
+        "option_d": "Control Process Unit",
+        "correct_option": "A",
+        "marks": 2
+      },
+      {
+        "id": 9,
+        "paper_id": 1,
+        "question_text": "What is the value of 15 multiplied by 4?",
+        "option_a": "50",
+        "option_b": "55",
+        "option_c": "60",
+        "option_d": "65",
+        "correct_option": "C",
+        "marks": 2
+      },
+      {
+        "id": 10,
+        "paper_id": 1,
+        "question_text": "How many sides does a hexagon have?",
+        "option_a": "5",
+        "option_b": "6",
+        "option_c": "7",
+        "option_d": "8",
+        "correct_option": "B",
+        "marks": 2
+      },
+      {
+        "id": 11,
+        "paper_id": 2,
+        "question_text": "Which planet is known as the Red Planet?",
+        "option_a": "Venus",
+        "option_b": "Mars",
+        "option_c": "Jupiter",
+        "option_d": "Mercury",
+        "correct_option": "B",
+        "marks": 1
+      },
+      {
+        "id": 12,
+        "paper_id": 2,
+        "question_text": "What is 12 multiplied by 8?",
+        "option_a": "86",
+        "option_b": "92",
+        "option_c": "96",
+        "option_d": "108",
+        "correct_option": "C",
+        "marks": 1
+      },
+      {
+        "id": 13,
+        "paper_id": 2,
+        "question_text": "Which is the largest ocean on Earth?",
+        "option_a": "Atlantic Ocean",
+        "option_b": "Indian Ocean",
+        "option_c": "Arctic Ocean",
+        "option_d": "Pacific Ocean",
+        "correct_option": "D",
+        "marks": 1
+      },
+      {
+        "id": 14,
+        "paper_id": 2,
+        "question_text": "What is the chemical formula for water?",
+        "option_a": "CO2",
+        "option_b": "H2O",
+        "option_c": "O2",
+        "option_d": "NaCl",
+        "correct_option": "B",
+        "marks": 1
+      },
+      {
+        "id": 15,
+        "paper_id": 2,
+        "question_text": "How many sides does a hexagon have?",
+        "option_a": "Five",
+        "option_b": "Six",
+        "option_c": "Seven",
+        "option_d": "Eight",
+        "correct_option": "B",
+        "marks": 1
+      },
+      {
+        "id": 16,
+        "paper_id": 3,
+        "question_text": "What is 2 plus 2?",
+        "option_a": "2",
+        "option_b": "3",
+        "option_c": "4",
+        "option_d": "5",
+        "correct_option": "C",
+        "marks": 1
+      },
+      {
+        "id": 17,
+        "paper_id": 3,
+        "question_text": "Color of mango?",
+        "option_a": "Green",
+        "option_b": "Blue",
+        "option_c": "Orange",
+        "option_d": "Yellow",
+        "correct_option": "D",
+        "marks": 1
+      },
+      {
+        "id": 18,
+        "paper_id": 4,
+        "question_text": "What is the SI unit of capacitance?",
+        "option_a": "Henry",
+        "option_b": "Farad",
+        "option_c": "Ohm",
+        "option_d": "Coulomb",
+        "correct_option": "B",
+        "marks": 3
+      },
+      {
+        "id": 19,
+        "paper_id": 4,
+        "question_text": "Which electromagnetic wave has the shortest wavelength?",
+        "option_a": "X-rays",
+        "option_b": "Microwaves",
+        "option_c": "Gamma rays",
+        "option_d": "Radio waves",
+        "correct_option": "C",
+        "marks": 3
+      },
+      {
+        "id": 20,
+        "paper_id": 4,
+        "question_text": "In a uniform electric field, the equipotential surfaces are:",
+        "option_a": "Concentric spheres",
+        "option_b": "Planes parallel to each other",
+        "option_c": "Coaxial cylinders",
+        "option_d": "Intersecting planes",
+        "correct_option": "B",
+        "marks": 4
+      },
+      {
+        "id": 21,
+        "paper_id": 4,
+        "question_text": "What is the oxidation number of Cr in K2Cr2O7?",
+        "option_a": "+3",
+        "option_b": "+4",
+        "option_c": "+6",
+        "option_d": "+7",
+        "correct_option": "C",
+        "marks": 3
+      },
+      {
+        "id": 22,
+        "paper_id": 4,
+        "question_text": "Which of the following is a condensation polymer?",
+        "option_a": "Teflon",
+        "option_b": "PVC",
+        "option_c": "Polythene",
+        "option_d": "Nylon 6,6",
+        "correct_option": "D",
+        "marks": 3
+      },
+      {
+        "id": 23,
+        "paper_id": 4,
+        "question_text": "The rate constant of a zero-order reaction has the unit:",
+        "option_a": "s^-1",
+        "option_b": "mol L^-1 s^-1",
+        "option_c": "L mol^-1 s^-1",
+        "option_d": "L^2 mol^-2 s^-1",
+        "correct_option": "B",
+        "marks": 4
+      },
+      {
+        "id": 24,
+        "paper_id": 4,
+        "question_text": "What is the derivative of sin(x) with respect to x?",
+        "option_a": "-cos(x)",
+        "option_b": "cos(x)",
+        "option_c": "-sin(x)",
+        "option_d": "tan(x)",
+        "correct_option": "B",
+        "marks": 3
+      },
+      {
+        "id": 25,
+        "paper_id": 4,
+        "question_text": "The value of the definite integral from 0 to pi/2 of cos(x) dx is:",
+        "option_a": "0",
+        "option_b": "1",
+        "option_c": "-1",
+        "option_d": "2",
+        "correct_option": "B",
+        "marks": 3
+      },
+      {
+        "id": 26,
+        "paper_id": 4,
+        "question_text": "If a matrix A is both symmetric and skew-symmetric, then A is:",
+        "option_a": "Diagonal matrix",
+        "option_b": "Zero matrix",
+        "option_c": "Identity matrix",
+        "option_d": "Scalar matrix",
+        "correct_option": "B",
+        "marks": 4
+      },
+      {
+        "id": 27,
+        "paper_id": 4,
+        "question_text": "The structural and functional unit of the nervous system is:",
+        "option_a": "Nephron",
+        "option_b": "Neuron",
+        "option_c": "Alveoli",
+        "option_d": "Sarcomere",
+        "correct_option": "B",
+        "marks": 3
+      },
+      {
+        "id": 28,
+        "paper_id": 4,
+        "question_text": "Which blood group is known as the universal donor?",
+        "option_a": "O negative",
+        "option_b": "AB positive",
+        "option_c": "A positive",
+        "option_d": "B negative",
+        "correct_option": "A",
+        "marks": 3
+      },
+      {
+        "id": 29,
+        "paper_id": 4,
+        "question_text": "What is the main function of the mitochondria?",
+        "option_a": "Protein synthesis",
+        "option_b": "Photosynthesis",
+        "option_c": "Cellular respiration",
+        "option_d": "Lipid storage",
+        "correct_option": "C",
+        "marks": 4
+      },
+      {
+        "id": 30,
+        "paper_id": 4,
+        "question_text": "Choose the correct synonym for 'Ephemeral':",
+        "option_a": "Permanent",
+        "option_b": "Short-lived",
+        "option_c": "Glowing",
+        "option_d": "Heavy",
+        "correct_option": "B",
+        "marks": 3
+      },
+      {
+        "id": 31,
+        "paper_id": 4,
+        "question_text": "Identify the figure of speech in 'The wind whistled through the trees':",
+        "option_a": "Simile",
+        "option_b": "Metaphor",
+        "option_c": "Personification",
+        "option_d": "Hyperbole",
+        "correct_option": "C",
+        "marks": 3
+      },
+      {
+        "id": 32,
+        "paper_id": 4,
+        "question_text": "What is the antonym of 'Opaque'?",
+        "option_a": "Transparent",
+        "option_b": "Cloudy",
+        "option_c": "Solid",
+        "option_d": "Thick",
+        "correct_option": "A",
+        "marks": 4
+      }
+    ],
+    "exam_question_paper": [
+      {
+        "id": 1,
+        "exam_id": 1
+      },
+      {
+        "id": 2,
+        "exam_id": 3
+      },
+      {
+        "id": 3,
+        "exam_id": 2
+      },
+      {
+        "id": 4,
+        "exam_id": 4
+      }
+    ],
+    "exam_registration": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "exam_id": 1,
+        "registered_at": "2026-10-12 20:55:14",
+        "status": "missed"
+      },
+      {
+        "id": 2,
+        "user_id": 4,
+        "exam_id": 1,
+        "registered_at": "2026-10-13 16:16:12",
+        "status": "missed"
+      },
+      {
+        "id": 3,
+        "user_id": 4,
+        "exam_id": 3,
+        "registered_at": "2026-10-14 17:13:02",
+        "status": "missed"
+      },
+      {
+        "id": 4,
+        "user_id": 2,
+        "exam_id": 3,
+        "registered_at": "2026-10-14 17:13:26",
+        "status": "completed"
+      },
+      {
+        "id": 5,
+        "user_id": 3,
+        "exam_id": 2,
+        "registered_at": "2026-10-14 22:25:16",
+        "status": "completed"
+      },
+      {
+        "id": 6,
+        "user_id": 1,
+        "exam_id": 2,
+        "registered_at": "2026-10-16 13:31:03",
+        "status": "completed"
+      },
+      {
+        "id": 7,
+        "user_id": 6,
+        "exam_id": 4,
+        "registered_at": "2026-10-16 22:52:34",
+        "status": "registered"
+      },
+      {
+        "id": 8,
+        "user_id": 1,
+        "exam_id": 4,
+        "registered_at": "2026-10-16 22:54:39",
+        "status": "registered"
+      },
+      {
+        "id": 9,
+        "user_id": 2,
+        "exam_id": 4,
+        "registered_at": "2026-10-16 23:53:09",
+        "status": "cancelled"
+      }
+    ],
+    "exam_submission": [
+      {
+        "id": 1,
+        "user_id": 2,
+        "exam_id": 3,
+        "submitted_at": "2026-10-14 22:50:41.837003",
+        "score": 3,
+        "total_marks": 5,
+        "percentage": 60.0,
+        "passing_threshold": 60.0,
+        "passed": 1
+      },
+      {
+        "id": 2,
+        "user_id": 1,
+        "exam_id": 2,
+        "submitted_at": "2026-10-16 23:04:51.670563",
+        "score": 2,
+        "total_marks": 2,
+        "percentage": 100.0,
+        "passing_threshold": 80.0,
+        "passed": 1
+      },
+      {
+        "id": 3,
+        "user_id": 3,
+        "exam_id": 2,
+        "submitted_at": "2026-10-16 23:06:46.102152",
+        "score": 1,
+        "total_marks": 2,
+        "percentage": 50.0,
+        "passing_threshold": 80.0,
+        "passed": 0
+      }
+    ],
+    "institution": [
+      {
+        "id": 1,
+        "name": "Delhi Public School, R.K. Puram",
+        "normalized_name": "delhi public school, r.k. puram",
+        "institution_type": "school",
+        "education_categories": "school_8_10,school_11_12",
+        "state": "Delhi",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 2,
+        "name": "The Doon School",
+        "normalized_name": "the doon school",
+        "institution_type": "school",
+        "education_categories": "school_8_10,school_11_12",
+        "state": "Uttarakhand",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 3,
+        "name": "Modern School, Barakhamba Road",
+        "normalized_name": "modern school, barakhamba road",
+        "institution_type": "school",
+        "education_categories": "school_8_10,school_11_12",
+        "state": "Delhi",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 4,
+        "name": "The Cathedral and John Connon School",
+        "normalized_name": "the cathedral and john connon school",
+        "institution_type": "school",
+        "education_categories": "school_8_10,school_11_12",
+        "state": "Maharashtra",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 5,
+        "name": "Bombay Scottish School, Mahim",
+        "normalized_name": "bombay scottish school, mahim",
+        "institution_type": "school",
+        "education_categories": "school_8_10,school_11_12",
+        "state": "Maharashtra",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 6,
+        "name": "St. Xavier's Collegiate School",
+        "normalized_name": "st. xavier's collegiate school",
+        "institution_type": "school",
+        "education_categories": "school_8_10,school_11_12",
+        "state": "West Bengal",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 7,
+        "name": "Loyola High School, Pune",
+        "normalized_name": "loyola high school, pune",
+        "institution_type": "school",
+        "education_categories": "school_8_10,school_11_12",
+        "state": "Maharashtra",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 8,
+        "name": "Kendriya Vidyalaya, IIT Bombay",
+        "normalized_name": "kendriya vidyalaya, iit bombay",
+        "institution_type": "school",
+        "education_categories": "school_8_10,school_11_12",
+        "state": "Maharashtra",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 9,
+        "name": "University of Delhi",
+        "normalized_name": "university of delhi",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Delhi",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 10,
+        "name": "University of Mumbai",
+        "normalized_name": "university of mumbai",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Maharashtra",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 11,
+        "name": "Savitribai Phule Pune University",
+        "normalized_name": "savitribai phule pune university",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Maharashtra",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 12,
+        "name": "Jawaharlal Nehru University",
+        "normalized_name": "jawaharlal nehru university",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Delhi",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 13,
+        "name": "University of Hyderabad",
+        "normalized_name": "university of hyderabad",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Telangana",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 14,
+        "name": "Banaras Hindu University",
+        "normalized_name": "banaras hindu university",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Uttar Pradesh",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 15,
+        "name": "Aligarh Muslim University",
+        "normalized_name": "aligarh muslim university",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Uttar Pradesh",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 16,
+        "name": "Jamia Millia Islamia",
+        "normalized_name": "jamia millia islamia",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Delhi",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 17,
+        "name": "University of Calcutta",
+        "normalized_name": "university of calcutta",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "West Bengal",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 18,
+        "name": "Anna University",
+        "normalized_name": "anna university",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Tamil Nadu",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 19,
+        "name": "Andhra University",
+        "normalized_name": "andhra university",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Andhra Pradesh",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 20,
+        "name": "University of Madras",
+        "normalized_name": "university of madras",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Tamil Nadu",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 21,
+        "name": "Bangalore University",
+        "normalized_name": "bangalore university",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Karnataka",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 22,
+        "name": "University of Rajasthan",
+        "normalized_name": "university of rajasthan",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Rajasthan",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 23,
+        "name": "Panjab University",
+        "normalized_name": "panjab university",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Chandigarh",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 24,
+        "name": "Gujarat University",
+        "normalized_name": "gujarat university",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Gujarat",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 25,
+        "name": "Osmania University",
+        "normalized_name": "osmania university",
+        "institution_type": "university",
+        "education_categories": "undergraduate_1_4",
+        "state": "Telangana",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 26,
+        "name": "Indian Institute of Technology Bombay",
+        "normalized_name": "indian institute of technology bombay",
+        "institution_type": "higher_institute",
+        "education_categories": "undergraduate_1_4",
+        "state": "Maharashtra",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 27,
+        "name": "Indian Institute of Technology Delhi",
+        "normalized_name": "indian institute of technology delhi",
+        "institution_type": "higher_institute",
+        "education_categories": "undergraduate_1_4",
+        "state": "Delhi",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 28,
+        "name": "Indian Institute of Technology Madras",
+        "normalized_name": "indian institute of technology madras",
+        "institution_type": "higher_institute",
+        "education_categories": "undergraduate_1_4",
+        "state": "Tamil Nadu",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 29,
+        "name": "Birla Institute of Technology and Science, Pilani",
+        "normalized_name": "birla institute of technology and science, pilani",
+        "institution_type": "higher_institute",
+        "education_categories": "undergraduate_1_4",
+        "state": "Rajasthan",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      },
+      {
+        "id": 30,
+        "name": "Manipal Academy of Higher Education",
+        "normalized_name": "manipal academy of higher education",
+        "institution_type": "higher_institute",
+        "education_categories": "undergraduate_1_4",
+        "state": "Karnataka",
+        "is_verified": 1,
+        "created_by_user_id": null,
+        "created_at": "2026-10-11 15:14:53"
+      }
+    ],
+    "notification_dispatch": [
+      {
+        "id": 1,
+        "event_key": "reward-payment-details-needed:4",
+        "created_at": "2026-10-15 20:07:52"
+      },
+      {
+        "id": 2,
+        "event_key": "reward-payout-initiated:1",
+        "created_at": "2026-10-15 20:18:24"
+      },
+      {
+        "id": 3,
+        "event_key": "reward-completed:1",
+        "created_at": "2026-10-15 20:19:35"
+      },
+      {
+        "id": 4,
+        "event_key": "reward-payment-details-needed:6",
+        "created_at": "2026-10-15 21:48:10"
+      },
+      {
+        "id": 5,
+        "event_key": "reward-payout-initiated:2",
+        "created_at": "2026-10-15 21:49:33"
+      },
+      {
+        "id": 6,
+        "event_key": "reward-completed:2",
+        "created_at": "2026-10-15 21:54:23"
+      },
+      {
+        "id": 7,
+        "event_key": "exam-started:2:user:1",
+        "created_at": "2026-10-16 17:15:02"
+      },
+      {
+        "id": 8,
+        "event_key": "exam-started:2:user:3",
+        "created_at": "2026-10-16 17:15:02"
+      },
+      {
+        "id": 9,
+        "event_key": "exam-started:2:user:5",
+        "created_at": "2026-10-16 17:15:02"
+      },
+      {
+        "id": 10,
+        "event_key": "scholarship-lifecycle:5:completed:user:1",
+        "created_at": "2026-10-16 17:43:34"
+      },
+      {
+        "id": 11,
+        "event_key": "scholarship-lifecycle:5:completed:user:3",
+        "created_at": "2026-10-16 17:43:34"
+      },
+      {
+        "id": 12,
+        "event_key": "scholarship-lifecycle:5:completed:user:5",
+        "created_at": "2026-10-16 17:43:34"
+      },
+      {
+        "id": 13,
+        "event_key": "scholarship-lifecycle:4:completed:user:1",
+        "created_at": "2026-10-16 18:30:02"
+      },
+      {
+        "id": 14,
+        "event_key": "scholarship-lifecycle:4:completed:user:4",
+        "created_at": "2026-10-16 18:30:02"
+      },
+      {
+        "id": 15,
+        "event_key": "scholarship-lifecycle:4:completed:user:5",
+        "created_at": "2026-10-16 18:30:02"
+      },
+      {
+        "id": 16,
+        "event_key": "scholarship-lifecycle:6:completed:user:3",
+        "created_at": "2026-10-16 18:30:02"
+      },
+      {
+        "id": 17,
+        "event_key": "scholarship-lifecycle:6:completed:user:5",
+        "created_at": "2026-10-16 18:30:02"
+      },
+      {
+        "id": 18,
+        "event_key": "reward-payment-details-needed:12",
+        "created_at": "2026-10-16 23:12:18"
+      },
+      {
+        "id": 19,
+        "event_key": "reward-payment-details-needed:10",
+        "created_at": "2026-10-16 23:12:35"
+      },
+      {
+        "id": 20,
+        "event_key": "reward-payout-initiated:3",
+        "created_at": "2026-10-16 23:19:33"
+      },
+      {
+        "id": 21,
+        "event_key": "reward-completed:3",
+        "created_at": "2026-10-16 23:19:41"
+      },
+      {
+        "id": 22,
+        "event_key": "reward-payout-initiated:4",
+        "created_at": "2026-10-17 00:57:45"
+      },
+      {
+        "id": 23,
+        "event_key": "reward-completed:4",
+        "created_at": "2026-10-17 00:57:51"
+      }
+    ],
+    "scholarship": [
+      {
+        "id": 1,
+        "title": "National Merit Challenge",
+        "category": "exam",
+        "description": "A fictional scholarship opportunity based on performance in a timed demonstration assessment.",
+        "award_amount": 25000,
+        "eligibility_description": "For declared Indian-citizen students who participate in the demo exam and meet its illustrative score requirement.",
+        "eligible_education_levels": "school_8_10,school_11_12,undergraduate_1_4",
+        "deadline": "2026-10-24",
+        "is_active": 0,
+        "education_category": null,
+        "lifecycle_status": "completed",
+        "passing_threshold": 70.0
+      },
+      {
+        "id": 2,
+        "title": "Future Learners Grant",
+        "category": "grade",
+        "description": "A fictional education grant recognising academic performance and consistent grades.",
+        "award_amount": 10000,
+        "eligibility_description": "For declared Indian-citizen students with an illustrative minimum academic score of 75%. Actual marks are not collected or verified by this demo.",
+        "eligible_education_levels": "school,college,university",
+        "deadline": "2026-12-15",
+        "is_active": 1,
+        "education_category": "school_8_10",
+        "lifecycle_status": "active",
+        "passing_threshold": 80.0
+      },
+      {
+        "id": 3,
+        "title": "Cloud Skills",
+        "category": "grade",
+        "description": "A fictional award recognising academic achievement and interest in digital skills.",
+        "award_amount": 15000,
+        "eligibility_description": "For declared Indian-citizen college and university students meeting the illustrative academic requirements.",
+        "eligible_education_levels": "college",
+        "deadline": "2026-10-20",
+        "is_active": 1,
+        "education_category": "undergraduate_1_4",
+        "lifecycle_status": "active",
+        "passing_threshold": 80.0
+      },
+      {
+        "id": 4,
+        "title": "Prime Minister Scholarship Scheme",
+        "category": "grade",
+        "description": "Scholarship provided by gov. of India for undergraduates.",
+        "award_amount": 2000,
+        "eligibility_description": "All Indian citizens who are undergraduate. From every field.",
+        "eligible_education_levels": "undergraduate_1_4",
+        "deadline": "2026-10-16",
+        "is_active": 0,
+        "education_category": "undergraduate_1_4",
+        "lifecycle_status": "completed",
+        "passing_threshold": 80.0
+      },
+      {
+        "id": 5,
+        "title": "Testing Exam Based",
+        "category": "exam",
+        "description": "Testig if it is visible even though one is already reunning",
+        "award_amount": 3000,
+        "eligibility_description": "And indian student.",
+        "eligible_education_levels": "school_8_10,school_11_12,undergraduate_1_4",
+        "deadline": "2026-10-15",
+        "is_active": 0,
+        "education_category": null,
+        "lifecycle_status": "completed",
+        "passing_threshold": 80.0
+      },
+      {
+        "id": 6,
+        "title": "Bharat Shiksha Vikas Yojana",
+        "category": "grade",
+        "description": "To help students.",
+        "award_amount": 15000,
+        "eligibility_description": "Any student under class 8-10 with Indian Citizenship.",
+        "eligible_education_levels": "school_8_10",
+        "deadline": "2026-10-16",
+        "is_active": 0,
+        "education_category": "school_8_10",
+        "lifecycle_status": "completed",
+        "passing_threshold": 80.0
+      },
+      {
+        "id": 7,
+        "title": "GovScale Phase 2 Demo Scholarship",
+        "category": "exam",
+        "description": "A practice scholarship created to validate GovScale's exam registration, submission, scoring, and history flow.",
+        "award_amount": 1000,
+        "eligibility_description": "For existing GovScale demo student accounts that satisfy the portal's standard eligibility checks.",
+        "eligible_education_levels": "school_8_10,school_11_12,undergraduate_1_4",
+        "deadline": "2026-10-14",
+        "is_active": 0,
+        "education_category": null,
+        "lifecycle_status": "completed",
+        "passing_threshold": 60.0
+      },
+      {
+        "id": 8,
+        "title": "Mathematics Skills Exam",
+        "category": "exam",
+        "description": "Specially designed for mathematics geniuses.",
+        "award_amount": 15000,
+        "eligibility_description": "Everyone.",
+        "eligible_education_levels": "school_8_10,school_11_12,undergraduate_1_4",
+        "deadline": null,
+        "is_active": 1,
+        "education_category": null,
+        "lifecycle_status": "active",
+        "passing_threshold": 70.0
+      },
+      {
+        "id": 9,
+        "title": "Central Sector Scheme",
+        "category": "grade",
+        "description": "To help college passed out for better opportunity in future.",
+        "award_amount": 10000,
+        "eligibility_description": "All Indian students from 11-12 class.",
+        "eligible_education_levels": "school_11_12",
+        "deadline": "2026-10-17",
+        "is_active": 0,
+        "education_category": "school_11_12",
+        "lifecycle_status": "inactive",
+        "passing_threshold": 80.0
+      },
+      {
+        "id": 10,
+        "title": "State Minority",
+        "category": "grade",
+        "description": "Help students in future journey.",
+        "award_amount": 5000,
+        "eligibility_description": "Every student from 11-12.",
+        "eligible_education_levels": "school_11_12",
+        "deadline": "2026-10-19",
+        "is_active": 1,
+        "education_category": "school_11_12",
+        "lifecycle_status": "active",
+        "passing_threshold": 80.0
+      },
+      {
+        "id": 11,
+        "title": "National Fellowship",
+        "category": "grade",
+        "description": "Help school students grow.",
+        "award_amount": 7000,
+        "eligibility_description": "8-10 class students.",
+        "eligible_education_levels": "school_8_10",
+        "deadline": "2026-10-20",
+        "is_active": 1,
+        "education_category": "school_8_10",
+        "lifecycle_status": "active",
+        "passing_threshold": 80.0
+      },
+      {
+        "id": 12,
+        "title": "NextGen Builder",
+        "category": "exam",
+        "description": "Aimed at students who create the most creative or out-of-the-box prototype.",
+        "award_amount": 8000,
+        "eligibility_description": "All.",
+        "eligible_education_levels": "school_8_10,school_11_12,undergraduate_1_4",
+        "deadline": null,
+        "is_active": 1,
+        "education_category": null,
+        "lifecycle_status": "active",
+        "passing_threshold": 75.0
+      },
+      {
+        "id": 13,
+        "title": "National Science & Technology Endowment:",
+        "category": "exam",
+        "description": "Demonstrating excellence in foundational STEM research and real-world application.",
+        "award_amount": 17000,
+        "eligibility_description": "All.",
+        "eligible_education_levels": "school_8_10,school_11_12,undergraduate_1_4",
+        "deadline": null,
+        "is_active": 1,
+        "education_category": null,
+        "lifecycle_status": "active",
+        "passing_threshold": 60.0
+      }
+    ],
+    "scholarship_application": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "scholarship_id": 3,
+        "status": "withdrawn",
+        "submitted_at": "2026-10-12 11:36:34",
+        "approved_at": null,
+        "withdrawn_at": "2026-10-15 02:44:10"
+      },
+      {
+        "id": 3,
+        "user_id": 4,
+        "scholarship_id": 3,
+        "status": "approved",
+        "submitted_at": "2026-10-13 13:19:40",
+        "approved_at": "2026-10-16 03:07:49.223371",
+        "withdrawn_at": null
+      },
+      {
+        "id": 4,
+        "user_id": 4,
+        "scholarship_id": 4,
+        "status": "approved",
+        "submitted_at": "2026-10-14 20:52:44",
+        "approved_at": "2026-10-15 02:44:10",
+        "withdrawn_at": null
+      },
+      {
+        "id": 5,
+        "user_id": 3,
+        "scholarship_id": 6,
+        "status": "approved",
+        "submitted_at": "2026-10-15 15:24:24",
+        "approved_at": "2026-10-17 02:21:39.623456",
+        "withdrawn_at": null
+      },
+      {
+        "id": 6,
+        "user_id": 3,
+        "scholarship_id": 11,
+        "status": "approved",
+        "submitted_at": "2026-10-15 21:47:16",
+        "approved_at": "2026-10-16 03:17:38.491553",
+        "withdrawn_at": null
+      },
+      {
+        "id": 7,
+        "user_id": 1,
+        "scholarship_id": 4,
+        "status": "rejected",
+        "submitted_at": "2026-10-15 23:02:06",
+        "approved_at": null,
+        "withdrawn_at": null
+      },
+      {
+        "id": 8,
+        "user_id": 3,
+        "scholarship_id": 2,
+        "status": "submitted",
+        "submitted_at": "2026-10-16 22:14:28",
+        "approved_at": null,
+        "withdrawn_at": null
+      },
+      {
+        "id": 9,
+        "user_id": 6,
+        "scholarship_id": 9,
+        "status": "submitted",
+        "submitted_at": "2026-10-16 22:28:42",
+        "approved_at": null,
+        "withdrawn_at": null
+      },
+      {
+        "id": 10,
+        "user_id": 2,
+        "scholarship_id": 7,
+        "status": "submitted",
+        "submitted_at": "2026-10-16 22:46:25",
+        "approved_at": null,
+        "withdrawn_at": null
+      },
+      {
+        "id": 11,
+        "user_id": 3,
+        "scholarship_id": 5,
+        "status": "submitted",
+        "submitted_at": "2026-10-16 22:46:25",
+        "approved_at": null,
+        "withdrawn_at": null
+      },
+      {
+        "id": 12,
+        "user_id": 1,
+        "scholarship_id": 5,
+        "status": "submitted",
+        "submitted_at": "2026-10-16 22:46:25",
+        "approved_at": null,
+        "withdrawn_at": null
+      },
+      {
+        "id": 13,
+        "user_id": 6,
+        "scholarship_id": 8,
+        "status": "submitted",
+        "submitted_at": "2026-10-16 22:52:34",
+        "approved_at": null,
+        "withdrawn_at": null
+      },
+      {
+        "id": 14,
+        "user_id": 1,
+        "scholarship_id": 8,
+        "status": "submitted",
+        "submitted_at": "2026-10-16 22:54:39",
+        "approved_at": null,
+        "withdrawn_at": null
+      },
+      {
+        "id": 15,
+        "user_id": 2,
+        "scholarship_id": 8,
+        "status": "withdrawn",
+        "submitted_at": "2026-10-16 23:53:09",
+        "approved_at": null,
+        "withdrawn_at": "2026-10-17 05:30:15.339979"
+      },
+      {
+        "id": 16,
+        "user_id": 2,
+        "scholarship_id": 3,
+        "status": "approved",
+        "submitted_at": "2026-10-16 23:53:43",
+        "approved_at": "2026-10-17 06:27:26.162179",
+        "withdrawn_at": null
+      }
+    ],
+    "scholarship_criteria": [],
+    "scholarship_payout_attempt": [
+      {
+        "id": 1,
+        "reward_id": 1,
+        "attempt_number": 1,
+        "status": "completed",
+        "amount": 2000,
+        "recipient_name_snapshot": "Demo Recipient reward 1",
+        "payment_method_snapshot": "upi_simulated",
+        "recipient_reference_snapshot": "DEMO-PAYOUT-1-1",
+        "initiated_by_admin_id": 5,
+        "initiated_at": "2026-10-15 20:18:24",
+        "resolved_by_admin_id": 5,
+        "resolved_at": "2026-10-15 20:19:35.520844",
+        "failure_reason": null
+      },
+      {
+        "id": 2,
+        "reward_id": 2,
+        "attempt_number": 1,
+        "status": "completed",
+        "amount": 7000,
+        "recipient_name_snapshot": "Demo Recipient reward 2",
+        "payment_method_snapshot": "upi_simulated",
+        "recipient_reference_snapshot": "DEMO-PAYOUT-2-1",
+        "initiated_by_admin_id": 5,
+        "initiated_at": "2026-10-15 21:49:33",
+        "resolved_by_admin_id": 5,
+        "resolved_at": "2026-10-15 21:54:23.662828",
+        "failure_reason": null
+      },
+      {
+        "id": 3,
+        "reward_id": 3,
+        "attempt_number": 1,
+        "status": "completed",
+        "amount": 1000,
+        "recipient_name_snapshot": "Demo Recipient reward 3",
+        "payment_method_snapshot": "upi_simulated",
+        "recipient_reference_snapshot": "DEMO-PAYOUT-3-1",
+        "initiated_by_admin_id": 5,
+        "initiated_at": "2026-10-16 23:19:33",
+        "resolved_by_admin_id": 5,
+        "resolved_at": "2026-10-16 23:19:41.245268",
+        "failure_reason": null
+      },
+      {
+        "id": 4,
+        "reward_id": 4,
+        "attempt_number": 1,
+        "status": "completed",
+        "amount": 15000,
+        "recipient_name_snapshot": "Demo Recipient reward 4",
+        "payment_method_snapshot": "upi_simulated",
+        "recipient_reference_snapshot": "DEMO-PAYOUT-4-1",
+        "initiated_by_admin_id": 5,
+        "initiated_at": "2026-10-17 00:57:45",
+        "resolved_by_admin_id": 5,
+        "resolved_at": "2026-10-17 00:57:51.446286",
+        "failure_reason": null
+      }
+    ],
+    "scholarship_reward": [
+      {
+        "id": 1,
+        "application_id": 4,
+        "user_id": 4,
+        "scholarship_id": 4,
+        "exam_submission_id": null,
+        "amount": 2000,
+        "status": "completed",
+        "completed_at": "2026-10-15 20:19:35.520844",
+        "completed_by_admin_id": 5,
+        "created_at": "2026-10-15 20:18:24",
+        "updated_at": "2026-10-15 20:19:35"
+      },
+      {
+        "id": 2,
+        "application_id": 6,
+        "user_id": 3,
+        "scholarship_id": 11,
+        "exam_submission_id": null,
+        "amount": 7000,
+        "status": "completed",
+        "completed_at": "2026-10-15 21:54:23.662828",
+        "completed_by_admin_id": 5,
+        "created_at": "2026-10-15 21:49:33",
+        "updated_at": "2026-10-15 21:54:23"
+      },
+      {
+        "id": 3,
+        "application_id": 10,
+        "user_id": 2,
+        "scholarship_id": 7,
+        "exam_submission_id": 1,
+        "amount": 1000,
+        "status": "completed",
+        "completed_at": "2026-10-16 23:19:41.245268",
+        "completed_by_admin_id": 5,
+        "created_at": "2026-10-16 23:19:33",
+        "updated_at": "2026-10-16 23:19:41"
+      },
+      {
+        "id": 4,
+        "application_id": 16,
+        "user_id": 2,
+        "scholarship_id": 3,
+        "exam_submission_id": null,
+        "amount": 15000,
+        "status": "completed",
+        "completed_at": "2026-10-17 00:57:51.446286",
+        "completed_by_admin_id": 5,
+        "created_at": "2026-10-17 00:57:45",
+        "updated_at": "2026-10-17 00:57:51"
+      }
+    ],
+    "student_payment_details": [
+      {
+        "id": 1,
+        "user_id": 4,
+        "recipient_name": "Demo Recipient 4",
+        "payment_method": "bank_simulated",
+        "recipient_reference": "DEMO-REDACTED-4",
+        "updated_at": "2026-10-15 21:03:30"
+      },
+      {
+        "id": 2,
+        "user_id": 3,
+        "recipient_name": "Demo Recipient 3",
+        "payment_method": "upi_simulated",
+        "recipient_reference": "DEMO-REDACTED-3",
+        "updated_at": "2026-10-15 21:49:24"
+      },
+      {
+        "id": 3,
+        "user_id": 2,
+        "recipient_name": "Demo Recipient 2",
+        "payment_method": "upi_simulated",
+        "recipient_reference": "DEMO-REDACTED-2",
+        "updated_at": "2026-10-16 23:19:19"
+      }
+    ],
+    "student_profile": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "education_category": "undergraduate_1_4",
+        "study_level": "ug_year_2",
+        "institution_name": "Savitribai Phule Pune University",
+        "institution_not_listed": 0,
+        "grading_system": "percentage",
+        "academic_score": 74.0,
+        "annual_family_income": 100000
+      },
+      {
+        "id": 2,
+        "user_id": 4,
+        "education_category": "undergraduate_1_4",
+        "study_level": "ug_year_4",
+        "institution_name": "Savitribai Phule Pune University",
+        "institution_not_listed": 0,
+        "grading_system": "cgpa",
+        "academic_score": 8.2,
+        "annual_family_income": 300000
+      },
+      {
+        "id": 3,
+        "user_id": 2,
+        "education_category": "undergraduate_1_4",
+        "study_level": "ug_year_1",
+        "institution_name": "Banaras Hindu University",
+        "institution_not_listed": 0,
+        "grading_system": "percentage",
+        "academic_score": 85.0,
+        "annual_family_income": 400000
+      },
+      {
+        "id": 4,
+        "user_id": 3,
+        "education_category": "school_8_10",
+        "study_level": "class_8",
+        "institution_name": "Bombay Scottish School, Mahim",
+        "institution_not_listed": 0,
+        "grading_system": "percentage",
+        "academic_score": 75.0,
+        "annual_family_income": 300000
+      },
+      {
+        "id": 5,
+        "user_id": 6,
+        "education_category": "school_11_12",
+        "study_level": "class_12",
+        "institution_name": "Delhi Public School, R.K. Puram",
+        "institution_not_listed": 0,
+        "grading_system": "percentage",
+        "academic_score": 87.0,
+        "annual_family_income": 350000
+      }
+    ],
+    "user": [
+      {
+        "id": 1,
+        "full_name": "Demo Student 1",
+        "email": "student-1@example.invalid",
+        "education_level": "university",
+        "indian_citizen_declared": 1,
+        "is_admin": 0
+      },
+      {
+        "id": 2,
+        "full_name": "Demo Student 2",
+        "email": "student-2@example.invalid",
+        "education_level": "school",
+        "indian_citizen_declared": 1,
+        "is_admin": 0
+      },
+      {
+        "id": 3,
+        "full_name": "Demo Student 3",
+        "email": "student-3@example.invalid",
+        "education_level": "school",
+        "indian_citizen_declared": 1,
+        "is_admin": 0
+      },
+      {
+        "id": 4,
+        "full_name": "Demo Student 4",
+        "email": "student-4@example.invalid",
+        "education_level": "not_specified",
+        "indian_citizen_declared": 1,
+        "is_admin": 0
+      },
+      {
+        "id": 5,
+        "full_name": "GovScale Demo System",
+        "email": "govscale-demo-system@example.invalid",
+        "education_level": "admin",
+        "indian_citizen_declared": 0,
+        "is_admin": 1
+      },
+      {
+        "id": 6,
+        "full_name": "Demo Student 6",
+        "email": "student-6@example.invalid",
+        "education_level": "not_specified",
+        "indian_citizen_declared": 1,
+        "is_admin": 0
+      }
+    ],
+    "user_notification": [
+      {
+        "id": 1,
+        "user_id": 3,
+        "title": "Scholarship application submitted",
+        "message": "Your application for \"Bharat Shiksha Vikas Yojana\" has been submitted.",
+        "link": "/my-applications",
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-15 15:24:24"
+      },
+      {
+        "id": 2,
+        "user_id": 4,
+        "title": "Add simulated payment details",
+        "message": "Your application for Prime Minister Scholarship Scheme is approved. Please add simulated recipient details in Payment Details so an administrator can review reward payout eligibility.",
+        "link": "/payment-details",
+        "is_read": 1,
+        "is_closed": 0,
+        "created_at": "2026-10-15 20:07:52"
+      },
+      {
+        "id": 3,
+        "user_id": 4,
+        "title": "Scholarship payout initiated",
+        "message": "A simulated payout of ₹2,000 for Prime Minister Scholarship Scheme has been initiated and is awaiting administrator confirmation. This is not yet marked as received.",
+        "link": "/my-applications",
+        "is_read": 1,
+        "is_closed": 0,
+        "created_at": "2026-10-15 20:18:24"
+      },
+      {
+        "id": 4,
+        "user_id": 4,
+        "title": "Scholarship reward confirmed",
+        "message": "Your scholarship reward of ₹2,000 for Prime Minister Scholarship Scheme has been confirmed as received.",
+        "link": "/my-history",
+        "is_read": 1,
+        "is_closed": 0,
+        "created_at": "2026-10-15 20:19:35"
+      },
+      {
+        "id": 5,
+        "user_id": 4,
+        "title": "Scholarship application approved",
+        "message": "Your application for \"Cloud Skills\" has been approved.",
+        "link": "/scholarships/3",
+        "is_read": 1,
+        "is_closed": 0,
+        "created_at": "2026-10-15 21:37:49"
+      },
+      {
+        "id": 6,
+        "user_id": 3,
+        "title": "Scholarship application submitted",
+        "message": "Your application for \"National Fellowship\" has been submitted.",
+        "link": "/my-applications",
+        "is_read": 1,
+        "is_closed": 0,
+        "created_at": "2026-10-15 21:47:16"
+      },
+      {
+        "id": 7,
+        "user_id": 3,
+        "title": "Scholarship application approved",
+        "message": "Your application for \"National Fellowship\" has been approved.",
+        "link": "/scholarships/11",
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-15 21:47:38"
+      },
+      {
+        "id": 8,
+        "user_id": 3,
+        "title": "Add simulated payment details",
+        "message": "Your application for National Fellowship is approved. Please add simulated recipient details in Payment Details so an administrator can review reward payout eligibility.",
+        "link": "/payment-details",
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-15 21:48:10"
+      },
+      {
+        "id": 9,
+        "user_id": 3,
+        "title": "Scholarship payout initiated",
+        "message": "A simulated payout of ₹7,000 for National Fellowship has been initiated and is awaiting administrator confirmation. This is not yet marked as received.",
+        "link": "/my-applications",
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-15 21:49:33"
+      },
+      {
+        "id": 10,
+        "user_id": 3,
+        "title": "Scholarship reward confirmed",
+        "message": "Your scholarship reward of ₹7,000 for National Fellowship has been confirmed as received.",
+        "link": "/my-history",
+        "is_read": 1,
+        "is_closed": 0,
+        "created_at": "2026-10-15 21:54:23"
+      },
+      {
+        "id": 11,
+        "user_id": 1,
+        "title": "Scholarship application submitted",
+        "message": "Your application for \"Prime Minister Scholarship Scheme\" has been submitted.",
+        "link": "/my-applications",
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-15 23:02:06"
+      },
+      {
+        "id": 12,
+        "user_id": 1,
+        "title": "Exam registration confirmed",
+        "message": "You have successfully registered for \"Testing Exam Based\".",
+        "link": "/scholarships/5",
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-16 13:31:03"
+      },
+      {
+        "id": 13,
+        "user_id": 1,
+        "title": "Exam has started",
+        "message": "\"Testing Exam Based\" started at 16 Oct 2026, 10:41 PM IST.",
+        "link": null,
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-16 17:15:02"
+      },
+      {
+        "id": 14,
+        "user_id": 3,
+        "title": "Exam has started",
+        "message": "\"Testing Exam Based\" started at 16 Oct 2026, 10:41 PM IST.",
+        "link": null,
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-16 17:15:02"
+      },
+      {
+        "id": 15,
+        "user_id": 5,
+        "title": "Exam has started",
+        "message": "\"Testing Exam Based\" started at 16 Oct 2026, 10:41 PM IST.",
+        "link": null,
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-16 17:15:02"
+      },
+      {
+        "id": 16,
+        "user_id": 1,
+        "title": "Exam result available",
+        "message": "Your result for \"Testing Exam Based\" is ready. You passed the required threshold (100.0% scored; 80.0% required).",
+        "link": "/exams/2/result",
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-16 17:34:51"
+      },
+      {
+        "id": 17,
+        "user_id": 3,
+        "title": "Exam result available",
+        "message": "Your result for \"Testing Exam Based\" is ready. You did not pass the required threshold (50.0% scored; 80.0% required).",
+        "link": "/exams/2/result",
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-16 17:36:46"
+      },
+      {
+        "id": 18,
+        "user_id": 1,
+        "title": "Scholarship completed",
+        "message": "\"Testing Exam Based\" has been marked completed.",
+        "link": null,
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-16 17:43:34"
+      },
+      {
+        "id": 19,
+        "user_id": 3,
+        "title": "Scholarship completed",
+        "message": "\"Testing Exam Based\" has been marked completed.",
+        "link": null,
+        "is_read": 1,
+        "is_closed": 0,
+        "created_at": "2026-10-16 17:43:34"
+      },
+      {
+        "id": 20,
+        "user_id": 5,
+        "title": "Scholarship completed",
+        "message": "\"Testing Exam Based\" has been marked completed.",
+        "link": null,
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-16 17:43:34"
+      },
+      {
+        "id": 21,
+        "user_id": 1,
+        "title": "Scholarship completed",
+        "message": "\"Prime Minister Scholarship Scheme\" has been marked completed.",
+        "link": null,
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-16 18:30:02"
+      },
+      {
+        "id": 22,
+        "user_id": 4,
+        "title": "Scholarship completed",
+        "message": "\"Prime Minister Scholarship Scheme\" has been marked completed.",
+        "link": null,
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-16 18:30:02"
+      },
+      {
+        "id": 23,
+        "user_id": 5,
+        "title": "Scholarship completed",
+        "message": "\"Prime Minister Scholarship Scheme\" has been marked completed.",
+        "link": null,
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-16 18:30:02"
+      },
+      {
+        "id": 24,
+        "user_id": 3,
+        "title": "Scholarship completed",
+        "message": "\"Bharat Shiksha Vikas Yojana\" has been marked completed.",
+        "link": null,
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-16 18:30:02"
+      },
+      {
+        "id": 25,
+        "user_id": 5,
+        "title": "Scholarship completed",
+        "message": "\"Bharat Shiksha Vikas Yojana\" has been marked completed.",
+        "link": null,
+        "is_read": 1,
+        "is_closed": 0,
+        "created_at": "2026-10-16 18:30:02"
+      },
+      {
+        "id": 26,
+        "user_id": 3,
+        "title": "Scholarship application approved",
+        "message": "Your application for \"Bharat Shiksha Vikas Yojana\" has been approved.",
+        "link": "/scholarships/6",
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-16 20:51:39"
+      },
+      {
+        "id": 27,
+        "user_id": 1,
+        "title": "Scholarship application rejected",
+        "message": "Your application for \"Prime Minister Scholarship Scheme\" has been rejected.",
+        "link": "/scholarships/4",
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-16 20:51:47"
+      },
+      {
+        "id": 28,
+        "user_id": 3,
+        "title": "Scholarship application submitted",
+        "message": "Your application for \"Future Learners Grant\" has been submitted.",
+        "link": "/my-applications",
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-16 22:14:28"
+      },
+      {
+        "id": 29,
+        "user_id": 6,
+        "title": "Scholarship application submitted",
+        "message": "Your application for \"Central Sector Scheme\" has been submitted.",
+        "link": "/my-applications",
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-16 22:28:42"
+      },
+      {
+        "id": 30,
+        "user_id": 6,
+        "title": "Exam registration confirmed",
+        "message": "You have successfully registered for \"Mathematics Skills Exam\".",
+        "link": "/scholarships/8",
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-16 22:52:34"
+      },
+      {
+        "id": 31,
+        "user_id": 1,
+        "title": "Exam registration confirmed",
+        "message": "You have successfully registered for \"Mathematics Skills Exam\".",
+        "link": "/scholarships/8",
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-16 22:54:39"
+      },
+      {
+        "id": 32,
+        "user_id": 1,
+        "title": "Add simulated payment details",
+        "message": "You are eligible for the reward for Testing Exam Based. Please add simulated recipient details in Payment Details so an administrator can review the payout.",
+        "link": "/payment-details",
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-16 23:12:18"
+      },
+      {
+        "id": 33,
+        "user_id": 2,
+        "title": "Add simulated payment details",
+        "message": "You are eligible for the reward for GovScale Phase 2 Demo Scholarship. Please add simulated recipient details in Payment Details so an administrator can review the payout.",
+        "link": "/payment-details",
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-16 23:12:35"
+      },
+      {
+        "id": 34,
+        "user_id": 2,
+        "title": "Scholarship payout initiated",
+        "message": "A simulated payout of ₹1,000 for GovScale Phase 2 Demo Scholarship has been initiated and is awaiting administrator confirmation. This is not yet marked as received.",
+        "link": "/my-applications",
+        "is_read": 1,
+        "is_closed": 0,
+        "created_at": "2026-10-16 23:19:33"
+      },
+      {
+        "id": 35,
+        "user_id": 2,
+        "title": "Scholarship reward confirmed",
+        "message": "Your scholarship reward of ₹1,000 for GovScale Phase 2 Demo Scholarship has been confirmed as received.",
+        "link": "/my-history",
+        "is_read": 1,
+        "is_closed": 0,
+        "created_at": "2026-10-16 23:19:41"
+      },
+      {
+        "id": 36,
+        "user_id": 2,
+        "title": "Exam registration confirmed",
+        "message": "You have successfully registered for \"Mathematics Skills Exam\".",
+        "link": "/scholarships/8",
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-16 23:53:09"
+      },
+      {
+        "id": 37,
+        "user_id": 2,
+        "title": "Scholarship application submitted",
+        "message": "Your application for \"Cloud Skills\" has been submitted.",
+        "link": "/my-applications",
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-16 23:53:43"
+      },
+      {
+        "id": 38,
+        "user_id": 2,
+        "title": "Scholarship application approved",
+        "message": "Your application for \"Cloud Skills\" has been approved.",
+        "link": "/scholarships/3",
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-17 00:57:26"
+      },
+      {
+        "id": 39,
+        "user_id": 2,
+        "title": "Scholarship payout initiated",
+        "message": "A simulated payout of ₹15,000 for Cloud Skills has been initiated and is awaiting administrator confirmation. This is not yet marked as received.",
+        "link": "/my-applications",
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-17 00:57:45"
+      },
+      {
+        "id": 40,
+        "user_id": 2,
+        "title": "Scholarship reward confirmed",
+        "message": "Your scholarship reward of ₹15,000 for Cloud Skills has been confirmed as received.",
+        "link": "/my-history",
+        "is_read": 1,
+        "is_closed": 1,
+        "created_at": "2026-10-17 00:57:51"
+      }
+    ]
+  },
+  "row_counts": {
+    "demo_exam": 6,
+    "exam_answer": 9,
+    "exam_question": 32,
+    "exam_question_paper": 4,
+    "exam_registration": 9,
+    "exam_submission": 3,
+    "institution": 30,
+    "notification_dispatch": 23,
+    "scholarship": 13,
+    "scholarship_application": 15,
+    "scholarship_criteria": 0,
+    "scholarship_payout_attempt": 4,
+    "scholarship_reward": 4,
+    "student_payment_details": 3,
+    "student_profile": 5,
+    "user": 6,
+    "user_notification": 40
+  }
+}
