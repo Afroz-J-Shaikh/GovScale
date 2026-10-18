@@ -1062,6 +1062,16 @@
         "id": 23,
         "event_key": "reward-completed:4",
         "created_at": "2026-10-17 00:57:51"
+      },
+      {
+        "id": 24,
+        "event_key": "scholarship-lifecycle:9:expired:user:5",
+        "created_at": "2026-10-18 00:51:40"
+      },
+      {
+        "id": 25,
+        "event_key": "scholarship-lifecycle:9:expired:user:6",
+        "created_at": "2026-10-18 00:51:40"
       }
     ],
     "scholarship": [
@@ -1188,7 +1198,7 @@
         "deadline": "2026-10-17",
         "is_active": 0,
         "education_category": "school_11_12",
-        "lifecycle_status": "inactive",
+        "lifecycle_status": "expired",
         "passing_threshold": 80.0
       },
       {
@@ -1534,7 +1544,7 @@
         "user_id": 1,
         "education_category": "undergraduate_1_4",
         "study_level": "ug_year_2",
-        "institution_name": "Savitribai Phule Pune University",
+        "institution_name": "Aligarh Muslim University",
         "institution_not_listed": 0,
         "grading_system": "percentage",
         "academic_score": 74.0,
@@ -2035,6 +2045,26 @@
         "is_read": 1,
         "is_closed": 1,
         "created_at": "2026-10-17 00:57:51"
+      },
+      {
+        "id": 41,
+        "user_id": 5,
+        "title": "Scholarship expired",
+        "message": "\"Central Sector Scheme\" has been marked expired.",
+        "link": null,
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-18 00:51:40"
+      },
+      {
+        "id": 42,
+        "user_id": 6,
+        "title": "Scholarship expired",
+        "message": "\"Central Sector Scheme\" has been marked expired.",
+        "link": null,
+        "is_read": 0,
+        "is_closed": 0,
+        "created_at": "2026-10-18 00:51:40"
       }
     ]
   },
@@ -2046,7 +2076,7 @@
     "exam_registration": 9,
     "exam_submission": 3,
     "institution": 30,
-    "notification_dispatch": 23,
+    "notification_dispatch": 25,
     "scholarship": 13,
     "scholarship_application": 15,
     "scholarship_criteria": 0,
@@ -2055,6 +2085,6 @@
     "student_payment_details": 3,
     "student_profile": 5,
     "user": 6,
-    "user_notification": 40
+    "user_notification": 42
   }
 }

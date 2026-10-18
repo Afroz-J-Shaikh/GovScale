@@ -15,8 +15,8 @@ def main():
     print("--------------------------------")
     print("This creates an admin account, not a student profile.\n")
 
-    full_name = input("Administrator name: ").strip()
-    email = input("Administrator email: ").strip().lower()
+    full_name = "GovScale Administrator"
+    email = "admin@gmail.com"
 
     if not full_name or len(full_name) > 100:
         print("Error: Name must contain 1–100 characters.")
@@ -28,8 +28,8 @@ def main():
         print("Error: Enter a valid email address.")
         return 1
 
-    password = getpass.getpass("Password (8–128 characters): ")
-    confirm_password = getpass.getpass("Confirm password: ")
+    password = "admin123"
+    confirm_password = password
 
     if not 8 <= len(password) <= 128:
         print("Error: Password must be 8–128 characters.")
@@ -40,15 +40,20 @@ def main():
         return 1
 
     with app.app_context():
-        existing_user = User.query.filter_by(email=email).first()
+        # Preserve the existing administrator even if their email has changed.
+        existing_admin = User.query.filter_by(is_admin=True).first()
+        if existing_admin:
+            print(f"Administrator already exists: {existing_admin.email}")
+            print("No changes made; existing account and credentials are preserved.")
+            return 0
 
+        # Do not promote or overwrite a non-admin account using the default email.
+        existing_user = User.query.filter(
+            db.func.lower(User.email) == email
+        ).first()
         if existing_user:
-            print(
-                "\nError: An account with this email already exists."
-            )
-            print(
-                "No changes were made. Use a different email address."
-            )
+            print(f"ERROR: {email} belongs to a non-admin account.")
+            print("No changes made. Resolve this email conflict manually.")
             return 1
 
         admin = User(
