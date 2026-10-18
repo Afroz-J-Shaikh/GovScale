@@ -59,8 +59,9 @@ app.config["SECRET_KEY"] = os.environ.get(
 
 Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = (
-    "sqlite:///" + str(Path(app.instance_path) / "govscale.db")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+    "GOVSCALE_DATABASE_URI",
+    "sqlite:///" + str(Path(app.instance_path) / "govscale.db"),
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 

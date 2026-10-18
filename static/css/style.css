@@ -7613,3 +7613,21 @@ body {
         color: #98702A;
     }
 }
+
+/* FIX: exam lobby single-column layout only */
+.exam-lobby-card {
+    display: block;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+}
+
+.exam-lobby-card .countdown-panel {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* FIX: spacing below registered exam on student dashboard */
+.dashboard-section > .exam-countdown-card {
+    margin-bottom: 20px;
+}
