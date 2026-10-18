@@ -7222,3 +7222,394 @@ body {
     font-size: 11px;
     line-height: 1.3;
 }
+
+/* Keep My Applications exam-result links vertically stacked without restyling. */
+.dashboard-management-grid .dashboard-card-actions.exam-result-actions {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* Align the two exam-result links without changing their visual styling. */
+.dashboard-management-grid .dashboard-card-actions.exam-result-actions > a.text-link:nth-child(1),
+.dashboard-management-grid .dashboard-card-actions.exam-result-actions > a.text-link:nth-child(2) {
+    display: block;
+    width: 150px;
+    box-sizing: border-box;
+}
+
+/* Keep exam-result actions horizontal without changing link styling. */
+.dashboard-management-grid .dashboard-card-actions.exam-result-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+}
+
+.dashboard-management-grid .dashboard-card-actions.exam-result-actions > a.text-link {
+    width: auto;
+}
+
+/* My Applications: slightly narrower, more compact application cards. */
+.dashboard-management-grid {
+    grid-template-columns: repeat(2, minmax(0, 360px));
+    gap: 16px;
+    max-width: 736px;
+}
+
+.dashboard-management-grid .dashboard-card {
+    padding: 18px;
+}
+
+.dashboard-management-grid .dashboard-card h2 {
+    margin-top: 9px;
+    margin-bottom: 8px;
+}
+
+.dashboard-management-grid .dashboard-card p {
+    margin-bottom: 10px;
+    line-height: 1.65;
+}
+
+.dashboard-management-grid .application-status-block {
+    margin-top: 12px;
+    padding: 12px;
+}
+
+@media (max-width: 760px) {
+    .dashboard-management-grid {
+        grid-template-columns: minmax(0, 1fr);
+        max-width: 400px;
+    }
+}
+
+/* Student dashboard: restore the themed registered-exam banner. */
+.exam-countdown-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
+    align-items: center;
+    gap: 32px;
+}
+
+.exam-banner-content {
+    min-width: 0;
+}
+
+.exam-banner-motivation {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 210px;
+    padding: 28px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: linear-gradient(135deg, #F4F6EF 0%, #E6EEE4 55%, #F8F0DE 100%);
+    color: var(--text);
+}
+
+.exam-banner-motivation-copy {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    text-align: center;
+}
+
+.exam-banner-eyebrow {
+    display: block;
+    margin-bottom: 18px;
+    color: #315B43;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+}
+
+.exam-banner-slogan {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    column-gap: 8px;
+    row-gap: 4px;
+}
+
+.exam-banner-slogan p {
+    margin: 0;
+    color: #244E3B;
+    font-size: clamp(19px, 2vw, 27px);
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+.exam-banner-slogan .exam-banner-highlight {
+    color: #98702A;
+}
+
+.exam-banner-caption {
+    display: block;
+    margin-top: 16px;
+    color: #53665A;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.exam-banner-orbit {
+    position: absolute;
+    z-index: 0;
+    display: block;
+    border: 1px solid rgba(109, 148, 119, 0.3);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.exam-banner-orbit-one {
+    width: 230px;
+    height: 230px;
+    top: -105px;
+    right: -45px;
+}
+
+.exam-banner-orbit-two {
+    width: 175px;
+    height: 175px;
+    bottom: -95px;
+    left: -35px;
+    border-color: rgba(217, 164, 65, 0.4);
+}
+
+.exam-banner-star {
+    position: absolute;
+    z-index: 1;
+    color: var(--gold);
+    line-height: 1;
+    pointer-events: none;
+}
+
+.exam-banner-star-one {
+    top: 19%;
+    left: 12%;
+    font-size: 23px;
+}
+
+.exam-banner-star-two {
+    top: 15%;
+    right: 13%;
+    font-size: 19px;
+}
+
+.exam-banner-star-three {
+    right: 10%;
+    bottom: 18%;
+    font-size: 25px;
+}
+
+.exam-banner-star-four {
+    bottom: 17%;
+    left: 15%;
+    font-size: 17px;
+}
+
+@media (max-width: 760px) {
+    .exam-countdown-card {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 24px;
+    }
+
+    .exam-banner-motivation {
+        min-height: 190px;
+        padding: 24px 18px;
+    }
+
+    .exam-banner-slogan p {
+        font-size: clamp(19px, 5vw, 25px);
+    }
+}
+
+/* Blend the GovScale branding directly into the exam panel. */
+.exam-banner-motivation {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+/* Keep the decorative orbit rings subtle against the parent panel. */
+.exam-banner-orbit-one {
+    border-color: rgba(109, 148, 119, 0.22);
+}
+
+.exam-banner-orbit-two {
+    border-color: rgba(217, 164, 65, 0.28);
+}
+
+/* Bring the slogan in from left to right, then repeat after a pause. */
+.exam-banner-slogan {
+    overflow: hidden;
+}
+
+.exam-banner-slogan p {
+    animation: govscale-slogan-arrive 5.5s ease-in-out infinite;
+    will-change: transform, opacity;
+}
+
+.exam-banner-slogan .exam-banner-highlight {
+    animation-delay: 0.18s;
+}
+
+@keyframes govscale-slogan-arrive {
+    0% {
+        opacity: 0;
+        transform: translateX(-28px);
+    }
+    14%, 72% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    88% {
+        opacity: 0;
+        transform: translateX(24px);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(24px);
+    }
+}
+
+/* Animate each star independently with a gentle twinkle. */
+.exam-banner-star-one {
+    animation: govscale-star-twinkle 2.8s ease-in-out infinite;
+}
+
+.exam-banner-star-two {
+    animation: govscale-star-twinkle 3.4s ease-in-out 0.6s infinite;
+}
+
+.exam-banner-star-three {
+    animation: govscale-star-twinkle 3s ease-in-out 1.1s infinite;
+}
+
+.exam-banner-star-four {
+    animation: govscale-star-twinkle 3.6s ease-in-out 0.3s infinite;
+}
+
+@keyframes govscale-star-twinkle {
+    0%, 100% {
+        opacity: 0.45;
+        transform: scale(0.82) rotate(-8deg);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.2) rotate(8deg);
+    }
+}
+
+/* Respect visitors who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+    .exam-banner-slogan p,
+    .exam-banner-star-one,
+    .exam-banner-star-two,
+    .exam-banner-star-three,
+    .exam-banner-star-four {
+        animation: none;
+        opacity: 1;
+        transform: none;
+        will-change: auto;
+    }
+}
+
+/* Word-by-word reveal with a soft passing light on the slogan. */
+.exam-banner-slogan {
+    overflow: visible;
+    row-gap: 7px;
+}
+
+.exam-banner-slogan p {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: 0.28em;
+    row-gap: 4px;
+    animation: none;
+}
+
+.exam-banner-slogan .slogan-word {
+    display: inline-block;
+    opacity: 0;
+    transform: translateX(-12px);
+    background-image: linear-gradient(
+        105deg,
+        #244E3B 0%,
+        #244E3B 35%,
+        #FFFFFF 48%,
+        #F3D78E 53%,
+        #98702A 60%,
+        #244E3B 75%,
+        #244E3B 100%
+    );
+    background-size: 260% 100%;
+    background-position: 100% 50%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation:
+        govscale-word-reveal 5.5s ease-in-out var(--word-delay) infinite,
+        govscale-light-sweep 5.5s ease-in-out infinite;
+    will-change: transform, opacity, background-position;
+}
+
+.exam-banner-slogan .exam-banner-highlight .slogan-word {
+    background-image: linear-gradient(
+        105deg,
+        #98702A 0%,
+        #98702A 35%,
+        #FFFDF4 48%,
+        #F5D98F 53%,
+        #B8872F 60%,
+        #98702A 75%,
+        #98702A 100%
+    );
+}
+
+@keyframes govscale-word-reveal {
+    0%, 3% {
+        opacity: 0;
+        transform: translateX(-12px);
+    }
+    9%, 70% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    82%, 100% {
+        opacity: 0;
+        transform: translateX(8px);
+    }
+}
+
+@keyframes govscale-light-sweep {
+    0%, 12% {
+        background-position: 100% 50%;
+    }
+    48%, 70% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .exam-banner-slogan .slogan-word {
+        opacity: 1;
+        transform: none;
+        background-image: none;
+        -webkit-text-fill-color: currentColor;
+        animation: none;
+        will-change: auto;
+    }
+
+    .exam-banner-slogan .exam-banner-highlight .slogan-word {
+        color: #98702A;
+    }
+}

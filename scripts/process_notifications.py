@@ -5,6 +5,13 @@ from datetime import datetime, timedelta
 import argparse
 from zoneinfo import ZoneInfo
 
+import sys
+from pathlib import Path
+
+# Allow this script to import the application from the project root.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
 from app import (
     app,
     db,

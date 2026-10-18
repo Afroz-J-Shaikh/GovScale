@@ -1683,6 +1683,17 @@ def my_applications():
         if application.id not in completed_application_ids
     ]
 
+    # Keep exam applications exclusively in the dedicated exam-card section.
+    exam_application_by_scholarship = {
+        application.scholarship_id: application
+        for application in applications
+        if application.scholarship.category == "exam"
+    }
+    applications = [
+        application for application in applications
+        if application.scholarship.category == "grade"
+    ]
+
     reward_by_application = {
         reward.application_id: reward
         for reward in ScholarshipReward.query.filter_by(
@@ -1751,8 +1762,10 @@ def my_applications():
         "my_applications.html",
         applications=applications,
         reward_by_application=reward_by_application,
+        exam_application_by_scholarship=exam_application_by_scholarship,
         exam_registrations=exam_registrations,
         registration_deadline_by_exam=registration_deadline_by_exam,
+        submissions_by_exam=submissions_by_exam,
         now_ist=now_ist,
     )
 
@@ -5344,117 +5357,6 @@ with app.app_context():
         {"timestamp": backfill_timestamp},
     )
     db.session.commit()
-
-    # Seed fictional demonstration opportunities only when the catalogue
-    # is empty. Existing users and scholarship records are preserved.
-    if db.session.query(Scholarship.id).first() is None:
-        demo_scholarships = [
-            Scholarship(
-                title="National Merit Challenge",
-                category="exam",
-                description=(
-                    "A fictional scholarship opportunity based on performance "
-                    "in a timed demonstration assessment."
-                ),
-                award_amount=25000,
-                eligibility_description=(
-                    "For declared Indian-citizen students who participate in "
-                    "the demo exam and meet its illustrative score requirement."
-                ),
-                eligible_education_levels="school,college,university",
-                deadline=date(2026, 11, 15),
-            ),
-            Scholarship(
-                title="Future Learners Grant",
-                category="grade",
-                description=(
-                    "A fictional education grant recognising academic "
-                    "performance and consistent grades."
-                ),
-                award_amount=10000,
-                eligibility_description=(
-                    "For declared Indian-citizen students with an illustrative "
-                    "minimum academic score of 75%. Actual marks are not "
-                    "collected or verified by this demo."
-                ),
-                eligible_education_levels="school,college,university",
-                deadline=date(2026, 12, 15),
-            ),
-            Scholarship(
-                title="Digital Skills Award",
-                category="grade",
-                description=(
-                    "A fictional award recognising academic achievement "
-                    "and interest in digital skills."
-                ),
-                award_amount=15000,
-                eligibility_description=(
-                    "For declared Indian-citizen college and university "
-                    "students meeting the illustrative academic requirements."
-                ),
-                eligible_education_levels="college,university",
-                deadline=date(2026, 11, 30),
-            ),
-        ]
-
-        starter_institutions = [
-            # Schools — suggestions for Classes 8–10 and 11–12
-            ("Delhi Public School, R.K. Puram", "school", "school_8_10,school_11_12", "Delhi"),
-            ("The Doon School", "school", "school_8_10,school_11_12", "Uttarakhand"),
-            ("Modern School, Barakhamba Road", "school", "school_8_10,school_11_12", "Delhi"),
-            ("The Cathedral and John Connon School", "school", "school_8_10,school_11_12", "Maharashtra"),
-            ("Bombay Scottish School, Mahim", "school", "school_8_10,school_11_12", "Maharashtra"),
-            ("St. Xavier's Collegiate School", "school", "school_8_10,school_11_12", "West Bengal"),
-            ("Loyola High School, Pune", "school", "school_8_10,school_11_12", "Maharashtra"),
-            ("Kendriya Vidyalaya, IIT Bombay", "school", "school_8_10,school_11_12", "Maharashtra"),
-
-            # Higher education — suggestions for undergraduate students
-            ("University of Delhi", "university", "undergraduate_1_4", "Delhi"),
-            ("University of Mumbai", "university", "undergraduate_1_4", "Maharashtra"),
-            ("Savitribai Phule Pune University", "university", "undergraduate_1_4", "Maharashtra"),
-            ("Jawaharlal Nehru University", "university", "undergraduate_1_4", "Delhi"),
-            ("University of Hyderabad", "university", "undergraduate_1_4", "Telangana"),
-            ("Banaras Hindu University", "university", "undergraduate_1_4", "Uttar Pradesh"),
-            ("Aligarh Muslim University", "university", "undergraduate_1_4", "Uttar Pradesh"),
-            ("Jamia Millia Islamia", "university", "undergraduate_1_4", "Delhi"),
-            ("University of Calcutta", "university", "undergraduate_1_4", "West Bengal"),
-            ("Anna University", "university", "undergraduate_1_4", "Tamil Nadu"),
-            ("Andhra University", "university", "undergraduate_1_4", "Andhra Pradesh"),
-            ("University of Madras", "university", "undergraduate_1_4", "Tamil Nadu"),
-            ("Bangalore University", "university", "undergraduate_1_4", "Karnataka"),
-            ("University of Rajasthan", "university", "undergraduate_1_4", "Rajasthan"),
-            ("Panjab University", "university", "undergraduate_1_4", "Chandigarh"),
-            ("Gujarat University", "university", "undergraduate_1_4", "Gujarat"),
-            ("Osmania University", "university", "undergraduate_1_4", "Telangana"),
-            ("Indian Institute of Technology Bombay", "higher_institute", "undergraduate_1_4", "Maharashtra"),
-            ("Indian Institute of Technology Delhi", "higher_institute", "undergraduate_1_4", "Delhi"),
-            ("Indian Institute of Technology Madras", "higher_institute", "undergraduate_1_4", "Tamil Nadu"),
-            ("Birla Institute of Technology and Science, Pilani", "higher_institute", "undergraduate_1_4", "Rajasthan"),
-            ("Manipal Academy of Higher Education", "higher_institute", "undergraduate_1_4", "Karnataka"),
-        ]
-
-        for name, institution_type, categories, state in starter_institutions:
-            normalized = normalize_institution_name(name)
-
-            existing = Institution.query.filter_by(
-                normalized_name=normalized
-            ).first()
-
-            if existing is None:
-                db.session.add(
-                    Institution(
-                        name=name,
-                        normalized_name=normalized,
-                        institution_type=institution_type,
-                        education_categories=categories,
-                        state=state,
-                        is_verified=True,
-                    )
-                )
-
-        db.session.add_all(demo_scholarships)
-        db.session.commit()
-
 
 if __name__ == "__main__":
     app.run(debug=True)
