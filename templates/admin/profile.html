@@ -7,7 +7,7 @@
     <div>
         <span class="dashboard-overview-kicker">GOVSCALE ADMINISTRATION</span>
         <h1>Profile</h1>
-        <p>Update the name displayed in your administrator account.</p>
+        <p>Update your administrator name and registered email address.</p>
     </div>
     <span class="dashboard-overview-mark" aria-hidden="true">♙</span>
 </section>
@@ -17,7 +17,7 @@
         <div>
             <span class="eyebrow"><span class="eyebrow-line"></span> PERSONAL INFORMATION</span>
             <h2>Edit profile</h2>
-            <p>Your registered email address cannot be changed here.</p>
+            <p>Use an email address you control. It must not already belong to another account.</p>
         </div>
     </div>
 
@@ -33,8 +33,11 @@
         </div>
 
         <div class="admin-form-field">
-            <span>Registered email</span>
-            <input type="email" value="{{ current_user.email }}" readonly>
+            {{ form.email.label }}
+            {{ form.email(autocomplete="email", maxlength="254", type="email") }}
+            {% for error in form.email.errors %}
+                <small>{{ error }}</small>
+            {% endfor %}
         </div>
 
         <div class="admin-account-actions">

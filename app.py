@@ -764,6 +764,26 @@ class SettingsForm(FlaskForm):
             raise ValidationError("Please enter your full name.")
 
 
+class AdminProfileForm(FlaskForm):
+    full_name = StringField(
+        "Full name",
+        validators=[DataRequired(), Length(min=2, max=100)],
+    )
+    email = StringField(
+        "Email address",
+        validators=[DataRequired(), Email(), Length(max=254)],
+    )
+    submit = SubmitField("Save profile")
+
+    def validate_full_name(self, field):
+        field.data = field.data.strip()
+        if len(field.data) < 2:
+            raise ValidationError("Please enter your full name.")
+
+    def validate_email(self, field):
+        field.data = field.data.strip().casefold()
+
+
 class ChangePasswordForm(FlaskForm):
     current_password = PasswordField(
         "Current password",
@@ -3014,16 +3034,27 @@ def admin_account():
 @app.route("/admin/profile", methods=["GET", "POST"])
 @admin_required
 def admin_profile():
-    form = SettingsForm()
+    form = AdminProfileForm()
 
     if request.method == "GET":
         form.full_name.data = current_user.full_name
+        form.email.data = current_user.email
 
     if form.validate_on_submit():
-        current_user.full_name = form.full_name.data.strip()
-        db.session.commit()
-        flash("Your administrator profile has been updated.", "success")
-        return redirect(url_for("admin_profile"))
+        new_email = form.email.data.strip().casefold()
+        existing_user = User.query.filter(
+            db.func.lower(User.email) == new_email,
+            User.id != current_user.id,
+        ).first()
+
+        if existing_user:
+            flash("That email address is already in use.", "error")
+        else:
+            current_user.full_name = form.full_name.data.strip()
+            current_user.email = new_email
+            db.session.commit()
+            flash("Your administrator profile has been updated.", "success")
+            return redirect(url_for("admin_profile"))
 
     return render_template("admin/profile.html", form=form)
 
