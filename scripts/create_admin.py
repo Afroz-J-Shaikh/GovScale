@@ -1,4 +1,5 @@
 import getpass
+import os
 import re
 import sys
 from pathlib import Path
@@ -16,7 +17,7 @@ def main():
     print("This creates an admin account, not a student profile.\n")
 
     full_name = "GovScale Administrator"
-    email = "admin@gmail.com"
+    email = os.environ.get("GOVSCALE_ADMIN_EMAIL", "admin@gmail.com").strip().lower()
 
     if not full_name or len(full_name) > 100:
         print("Error: Name must contain 1–100 characters.")
@@ -28,7 +29,7 @@ def main():
         print("Error: Enter a valid email address.")
         return 1
 
-    password = "admin123"
+    password = os.environ.get("GOVSCALE_ADMIN_PASSWORD", "admin123")
     confirm_password = password
 
     if not 8 <= len(password) <= 128:
