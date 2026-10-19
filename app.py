@@ -6,7 +6,7 @@ import time as time_module
 import csv
 import io
 from functools import wraps
-from sqlalchemy import text, or_
+from sqlalchemy import inspect as sa_inspect, text, or_
 from pathlib import Path
 from urllib.parse import urlsplit
 from datetime import date, datetime, timedelta
@@ -31,7 +31,7 @@ from flask_login import (
 )
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from werkzeug.security import check_password_hash, generate_password_hash
 from wtforms import (
     BooleanField,
@@ -59,11 +59,40 @@ app.config["SECRET_KEY"] = os.environ.get(
 
 Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
-    "GOVSCALE_DATABASE_URI",
-    "sqlite:///" + str(Path(app.instance_path) / "govscale.db"),
-)
+# GOVSCALE_POSTGRES_PATCH_APPLIED
+def _normalize_database_uri(uri):
+    """Accept postgres:// and postgresql:// URLs and force the psycopg2 driver."""
+    uri = (uri or "").strip()
+    for prefix in ("postgres://", "postgresql://"):
+        if uri.startswith(prefix):
+            return "postgresql+psycopg2://" + uri[len(prefix):]
+    return uri
+
+
+app.config["SQLALCHEMY_DATABASE_URI"] = _normalize_database_uri(
+    os.environ.get("GOVSCALE_DATABASE_URI")
+) or ("sqlite:///" + str(Path(app.instance_path) / "govscale.db"))
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+IS_POSTGRES = app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql")
+# PostgreSQL INTEGER limit. SQLite does not enforce it, PostgreSQL does.
+MAX_DB_INTEGER = 2_147_483_647
+
+_engine_options = {"pool_pre_ping": True}
+if IS_POSTGRES:
+    if app.config["SECRET_KEY"] == "local-development-key-change-before-deployment":
+        raise RuntimeError(
+            "Set GOVSCALE_SECRET_KEY (identical on every instance) "
+            "when running against PostgreSQL."
+        )
+    _engine_options.update(
+        pool_size=int(os.environ.get("GOVSCALE_DB_POOL_SIZE", "3")),
+        max_overflow=int(os.environ.get("GOVSCALE_DB_MAX_OVERFLOW", "2")),
+        pool_recycle=1800,
+        # Store and read naive timestamps as UTC, like SQLite's CURRENT_TIMESTAMP.
+        connect_args={"options": "-c timezone=UTC", "connect_timeout": 10},
+    )
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = _engine_options
 
 db = SQLAlchemy(app)
 
@@ -595,6 +624,20 @@ class Institution(db.Model):
     )
 
 
+class QuestionImportPreview(db.Model):
+    """Pending question-import preview, stored in the DB so that any app
+    instance behind the load balancer can confirm it."""
+    __tablename__ = "question_import_preview"
+
+    token = db.Column(db.String(64), primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    exam_id = db.Column(
+        db.Integer, db.ForeignKey("demo_exam.id"), nullable=False, index=True
+    )
+    created_at = db.Column(db.Float, nullable=False)  # epoch seconds
+    payload = db.Column(db.Text, nullable=False)
+
+
 def normalize_institution_name(name):
     return re.sub(r"\s+", " ", name.strip()).casefold()
 
@@ -970,7 +1013,7 @@ def home():
 
     
     scholarships = query.order_by(
-        Scholarship.deadline.asc(),
+        Scholarship.deadline.asc().nulls_first(),
         Scholarship.id.asc(),
     ).all()
 
@@ -1268,6 +1311,13 @@ def scholarship_detail(scholarship_id):
             scholarship_id=scholarship.id,
         ).first()
 
+    exam_submission = None
+    if current_user.is_authenticated and linked_exam:
+        exam_submission = ExamSubmission.query.filter_by(
+            user_id=current_user.id,
+            exam_id=linked_exam.id,
+        ).first()
+
     received_reward = False
     if current_user.is_authenticated and existing_application:
         received_reward = ScholarshipReward.query.filter(
@@ -1291,6 +1341,7 @@ def scholarship_detail(scholarship_id):
         registration_status=registration_status,
         registration_closes_at=registration_closes_at,
         now_ist=now_ist,
+        exam_submission=exam_submission,
     )
 
 @app.route("/exams/<int:exam_id>/register", methods=["POST"])
@@ -1690,6 +1741,17 @@ def my_applications():
         .all()
     }
 
+    failed_exam_scholarship_ids = {
+        row[0]
+        for row in db.session.query(DemoExam.scholarship_id)
+        .join(ExamSubmission, ExamSubmission.exam_id == DemoExam.id)
+        .filter(
+            ExamSubmission.user_id == current_user.id,
+            ExamSubmission.passed.is_(False),
+        )
+        .all()
+    }
+
     applications = (
         ScholarshipApplication.query
         .filter(
@@ -1702,6 +1764,7 @@ def my_applications():
     applications = [
         application for application in applications
         if application.id not in completed_application_ids
+        and application.scholarship_id not in failed_exam_scholarship_ids
     ]
 
     # Keep exam applications exclusively in the dedicated exam-card section.
@@ -1808,7 +1871,18 @@ def my_history():
         .all()
     )
 
-    # Rejections and withdrawals are decision history, not received rewards.
+    # Rejections, withdrawals, and failed exam applications are decision history.
+    failed_exam_scholarship_ids = {
+        row[0]
+        for row in db.session.query(DemoExam.scholarship_id)
+        .join(ExamSubmission, ExamSubmission.exam_id == DemoExam.id)
+        .filter(
+            ExamSubmission.user_id == current_user.id,
+            ExamSubmission.passed.is_(False),
+        )
+        .all()
+    }
+
     application_decisions = (
         ScholarshipApplication.query
         .filter(
@@ -1817,6 +1891,27 @@ def my_history():
         )
         .order_by(ScholarshipApplication.submitted_at.desc())
         .all()
+    )
+
+    failed_exam_applications = (
+        ScholarshipApplication.query
+        .filter(
+            ScholarshipApplication.user_id == current_user.id,
+            ScholarshipApplication.scholarship_id.in_(failed_exam_scholarship_ids),
+            ScholarshipApplication.status.in_(("submitted", "pending", "approved")),
+        )
+        .order_by(ScholarshipApplication.submitted_at.desc())
+        .all()
+    )
+
+    decisions_by_id = {
+        application.id: application
+        for application in application_decisions + failed_exam_applications
+    }
+    application_decisions = sorted(
+        decisions_by_id.values(),
+        key=lambda application: application.submitted_at,
+        reverse=True,
     )
 
     exam_submissions = (
@@ -1868,12 +1963,12 @@ def scholarship_category(category):
             scholarships = query.filter_by(
                 education_category=profile.education_category
             ).order_by(
-                Scholarship.deadline.asc(),
+                Scholarship.deadline.asc().nulls_first(),
                 Scholarship.id.asc(),
             ).all()
     else:
         scholarships = query.order_by(
-            Scholarship.deadline.asc(),
+            Scholarship.deadline.asc().nulls_first(),
             Scholarship.id.asc(),
         ).all()
 
@@ -2050,7 +2145,11 @@ def close_expired_exams(now_ist=None):
     if now_ist is None:
         now_ist = datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
 
-    expired_exams = DemoExam.query.filter(DemoExam.end_at <= now_ist).all()
+    expired_exams = (
+        DemoExam.query.filter(DemoExam.end_at <= now_ist)
+        .order_by(DemoExam.id)
+        .all()
+    )
 
     for exam in expired_exams:
         exam.is_active = False
@@ -2573,7 +2672,16 @@ def payment_details():
         details.recipient_name = recipient_name
         details.payment_method = payment_method
         details.recipient_reference = recipient_reference
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash(
+                "Your payment details were changed by another request. "
+                "Please review and save again.",
+                "error",
+            )
+            return redirect(url_for("payment_details"))
         flash("Your simulated payment details have been saved.", "success")
         return redirect(url_for("payment_details"))
 
@@ -2954,7 +3062,7 @@ def student_profile():
 
         if score is not None:
             maximum = 100 if form.grading_system.data == "percentage" else 10
-            if score < 0 or score > maximum:
+            if not (0 <= score <= maximum):
                 flash(
                     f"Your score must be between 0 and {maximum}.",
                     "error",
@@ -2964,8 +3072,8 @@ def student_profile():
                     institutions=institution_data,
                 )
 
-        if income is not None and income < 0:
-            flash("Family income cannot be negative.", "error")
+        if income is not None and (income < 0 or income > MAX_DB_INTEGER):
+            flash("Enter a valid family income (a non-negative whole number).", "error")
             return render_template(
                                 "profile.html", form=form, profile=profile,
                                 institutions=institution_data,
@@ -3016,7 +3124,19 @@ def student_profile():
 
 
         db.session.add(profile)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash(
+                "Your profile could not be saved because of a simultaneous "
+                "update. Please try again.",
+                "error",
+            )
+            return render_template(
+                "profile.html", form=form, profile=None,
+                institutions=institution_data,
+            )
 
         flash("Your student profile has been saved.", "success")
         return redirect(url_for("dashboard"))
@@ -3224,7 +3344,7 @@ def admin_rewards():
             )
         )
         .order_by(
-            ScholarshipApplication.approved_at.desc(),
+            ScholarshipApplication.approved_at.desc().nulls_last(),
             ScholarshipApplication.submitted_at.desc(),
         )
         .all()
@@ -3922,7 +4042,7 @@ def admin_scholarship_form(scholarship_id=None):
 
         try:
             amount = int(amount_text)
-            if amount < 2000:
+            if amount < 2000 or amount > MAX_DB_INTEGER:
                 raise ValueError
         except (ValueError, TypeError):
             amount = None
@@ -4441,6 +4561,10 @@ def admin_exam_question_import(exam_id):
     preview = []
     preview_token = ""
     filename = ""
+    invalid_preview_message = (
+        "This preview is already being processed, expired, or invalid. "
+        "Upload the file again if needed."
+    )
 
     if request.method == "POST" and request.form.get("mode") == "confirm":
         try:
@@ -4448,39 +4572,37 @@ def admin_exam_question_import(exam_id):
             if not re.fullmatch(r"[A-Za-z0-9_-]{32,128}", token):
                 raise ValueError("Invalid import preview. Upload the file again.")
 
-            preview_dir = Path(app.instance_path) / "question_import_previews"
-            preview_path = preview_dir / f"{token}.json"
-            claimed_path = preview_dir / f"{token}.processing"
+            stored_row = QuestionImportPreview.query.filter_by(
+                token=token, admin_id=current_user.id, exam_id=exam.id,
+            ).first()
+            if stored_row is None:
+                raise ValueError(invalid_preview_message)
+            payload_text = stored_row.payload
+            created_at = stored_row.created_at
 
-            # Atomically claim the token so another request cannot reuse it.
+            # Claim the token inside this transaction. A concurrent request
+            # blocks here, then deletes zero rows and is rejected.
+            claimed = QuestionImportPreview.query.filter_by(
+                token=token
+            ).delete(synchronize_session=False)
+            if claimed != 1:
+                raise ValueError(invalid_preview_message)
+
+            age = time_module.time() - created_at
             try:
-                preview_path.rename(claimed_path)
-            except OSError:
+                stored = json.loads(payload_text)
+            except ValueError:
+                stored = None
+            if not isinstance(stored, dict) or age > 900 or age < 0:
+                db.session.commit()  # consume the invalid or expired preview
                 raise ValueError(
-                    "This preview is already being processed, expired, or invalid. "
-                    "Upload the file again if needed."
+                    "This preview has expired or is invalid. Upload the file again."
                 )
-
-            try:
-                stored = json.loads(claimed_path.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                claimed_path.unlink(missing_ok=True)
-                raise ValueError("This preview has expired or is invalid. Upload the file again.")
-
-            if (
-                stored.get("admin_id") != current_user.id
-                or stored.get("exam_id") != exam.id
-                or not isinstance(stored.get("created_at"), (int, float))
-                or time_module.time() - stored["created_at"] > 900
-                or time_module.time() < stored["created_at"]
-            ):
-                claimed_path.unlink(missing_ok=True)
-                raise ValueError("This preview has expired or is invalid. Upload the file again.")
 
             data = stored.get("questions")
             filename = stored.get("filename", "")
             if not isinstance(data, list) or not data or len(data) > 200:
-                claimed_path.unlink(missing_ok=True)
+                db.session.commit()
                 raise ValueError("Invalid import preview. Upload the file again.")
 
             validated = _validate_import_questions(data)
@@ -4500,28 +4622,26 @@ def admin_exam_question_import(exam_id):
             # Prevent duplicate questions within this upload and against
             # questions already saved to this exam's paper.
             def _question_fingerprint(value):
-                return re.sub(r"\\s+", " ", str(value or "")).strip().casefold()
+                return re.sub(r"\s+", " ", str(value or "")).strip().casefold()
 
             existing_texts = {
-                _question_fingerprint(text)
-                for (text,) in db.session.query(ExamQuestion.question_text)
-                    .filter_by(paper_id=paper.id).all()
+                _question_fingerprint(question_text)
+                for (question_text,) in db.session.query(ExamQuestion.question_text)
+                .filter_by(paper_id=paper.id).all()
             }
 
             incoming_texts = set()
-            duplicate_texts = []
+            duplicate_rows = []
             for row in validated:
                 fingerprint = _question_fingerprint(row["question_text"])
                 if fingerprint in existing_texts or fingerprint in incoming_texts:
-                    duplicate_texts.append(row["source_row"])
+                    duplicate_rows.append(row["source_row"])
                 incoming_texts.add(fingerprint)
 
-            if duplicate_texts:
-                db.session.rollback()
-                claimed_path.unlink(missing_ok=True)
-                rows = ", ".join(str(row_number) for row_number in duplicate_texts[:20])
-                suffix = "…" if len(duplicate_texts) > 20 else ""
-                raise ValueError("Duplicate questions found.")
+            if duplicate_rows:
+                shown = ", ".join(str(number) for number in duplicate_rows[:20])
+                suffix = "…" if len(duplicate_rows) > 20 else ""
+                raise ValueError(f"Duplicate questions found (rows {shown}{suffix}).")
 
             for row in validated:
                 db.session.add(ExamQuestion(
@@ -4536,25 +4656,20 @@ def admin_exam_question_import(exam_id):
                 ))
 
             # Enforce the exam lock again immediately before committing.
-            now_before_commit = datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
+            now_before_commit = datetime.now(
+                ZoneInfo("Asia/Kolkata")
+            ).replace(tzinfo=None)
             if now_before_commit >= exam.start_at:
-                db.session.rollback()
-                claimed_path.unlink(missing_ok=True)
                 raise ValueError(
-                    "The exam has started, so its question paper is locked. Nothing was imported."
+                    "The exam has started, so its question paper is locked. "
+                    "Nothing was imported."
                 )
 
             db.session.commit()
-            try:
-                claimed_path.unlink(missing_ok=True)
-            except OSError:
-                # The token was already claimed, so cleanup failure must not
-                # misreport a successful database commit as an import failure.
-                app.logger.warning(
-                    "Could not clean claimed question-import preview for exam %s",
-                    exam.id,
-                )
-            flash(f"Imported {len(validated)} questions. Existing questions were preserved.", "success")
+            flash(
+                f"Imported {len(validated)} questions. Existing questions were preserved.",
+                "success",
+            )
             return redirect(url_for("admin_exam_questions", exam_id=exam.id))
         except (ValueError, TypeError, json.JSONDecodeError) as exc:
             db.session.rollback()
@@ -4567,13 +4682,10 @@ def admin_exam_question_import(exam_id):
             return redirect(url_for("admin_exam_question_import", exam_id=exam.id))
         except Exception:
             db.session.rollback()
-            if "claimed_path" in locals():
-                try:
-                    claimed_path.unlink(missing_ok=True)
-                except OSError:
-                    app.logger.warning("Could not clean failed question-import preview")
             app.logger.exception("Question import failed for exam %s", exam.id)
-            errors.append("Import failed. Please upload the file again if no questions were saved.")
+            errors.append(
+                "Import failed. Please upload the file again if no questions were saved."
+            )
 
     elif request.method == "POST":
         upload = request.files.get("question_file")
@@ -4589,30 +4701,33 @@ def admin_exam_question_import(exam_id):
             else:
                 try:
                     parsed = _parse_question_csv_or_docx(filename, content)
+                    # PostgreSQL cannot store NUL characters in text columns.
+                    parsed = [
+                        {
+                            key: (value.replace("\x00", "") if isinstance(value, str) else value)
+                            for key, value in record.items()
+                        }
+                        for record in parsed
+                    ]
                     preview = _validate_import_questions(parsed)
                     if any(r["errors"] for r in preview):
-                        errors.append("Fix the invalid rows in your file and upload it again. Nothing has been imported.")
+                        errors.append(
+                            "Fix the invalid rows in your file and upload it again. "
+                            "Nothing has been imported."
+                        )
                     else:
-                        preview_dir = Path(app.instance_path) / "question_import_previews"
-                        preview_dir.mkdir(parents=True, exist_ok=True)
-
                         # Remove abandoned previews older than 24 hours.
-                        for old_file in preview_dir.glob("*.json"):
-                            try:
-                                if time_module.time() - old_file.stat().st_mtime > 86400:
-                                    old_file.unlink(missing_ok=True)
-                            except OSError:
-                                app.logger.warning(
-                                    "Could not clean expired question-import preview"
-                                )
+                        QuestionImportPreview.query.filter(
+                            QuestionImportPreview.created_at < time_module.time() - 86400
+                        ).delete(synchronize_session=False)
 
                         preview_token = secrets.token_urlsafe(32)
-                        preview_path = preview_dir / f"{preview_token}.json"
-                        preview_path.write_text(
-                            json.dumps({
-                                "admin_id": current_user.id,
-                                "exam_id": exam.id,
-                                "created_at": time_module.time(),
+                        db.session.add(QuestionImportPreview(
+                            token=preview_token,
+                            admin_id=current_user.id,
+                            exam_id=exam.id,
+                            created_at=time_module.time(),
+                            payload=json.dumps({
                                 "filename": filename,
                                 "questions": [
                                     {k: r[k] for k in (
@@ -4623,10 +4738,17 @@ def admin_exam_question_import(exam_id):
                                     for r in preview
                                 ],
                             }, ensure_ascii=False),
-                            encoding="utf-8",
-                        )
+                        ))
+                        db.session.commit()
                 except ValueError as exc:
+                    db.session.rollback()
                     errors.append(str(exc))
+                except Exception:
+                    db.session.rollback()
+                    preview = []
+                    preview_token = ""
+                    app.logger.exception("Question import preview failed for exam %s", exam.id)
+                    errors.append("The file could not be processed. Please try again.")
 
     return render_template(
         "admin/exam_question_import.html",
@@ -4812,7 +4934,7 @@ def admin_exam_form(exam_id=None, scholarship_id=None):
 
         try:
             amount = int(amount_text)
-            if amount < 2000:
+            if amount < 2000 or amount > MAX_DB_INTEGER:
                 raise ValueError
         except (ValueError, TypeError):
             amount = None
@@ -4994,7 +5116,7 @@ def admin_exam_form(exam_id=None, scholarship_id=None):
 def admin_dashboard():
     from datetime import datetime
 
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
 
     search = request.args.get("q", "").strip()
     category_filter = request.args.get("category", "").strip()
@@ -5154,7 +5276,7 @@ def process_lifecycle_transitions(now_ist=None):
         ).replace(tzinfo=None)
 
     changed = False
-    for scholarship in Scholarship.query.all():
+    for scholarship in Scholarship.query.order_by(Scholarship.id).all():
         old_status = scholarship.lifecycle_status or (
             "active" if scholarship.is_active else "inactive"
         )
@@ -5243,150 +5365,193 @@ def inject_notification_summary():
     }
 
 
+_LIFECYCLE_INTERVAL_SECONDS = float(
+    os.environ.get("GOVSCALE_LIFECYCLE_INTERVAL", "15")
+)
+_last_lifecycle_run = float("-inf")
+
+
 @app.before_request
 def update_opportunity_lifecycles():
-    """Persist lifecycle transitions and queue their notifications."""
-    process_lifecycle_transitions()
+    """Persist lifecycle transitions and queue their notifications.
+
+    Throttled per worker process so it does not scan the database on every
+    request, and skipped for health checks and static files."""
+    global _last_lifecycle_run
+
+    if request.endpoint in ("static", "health"):
+        return None
+
+    # PostgreSQL rejects NUL characters in text values.
+    if request.method == "POST" and any(
+        "\x00" in value for value in request.form.values()
+    ):
+        abort(400)
+
+    now = time_module.monotonic()
+    if (
+        _LIFECYCLE_INTERVAL_SECONDS > 0
+        and now - _last_lifecycle_run < _LIFECYCLE_INTERVAL_SECONDS
+    ):
+        return None
+    _last_lifecycle_run = now
+
+    try:
+        process_lifecycle_transitions()
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Lifecycle refresh failed; continuing with the request.")
+    return None
 
 
-with app.app_context():
+# ---------------------------------------------------------------------------
+# Startup schema initialisation (SQLite and PostgreSQL).
+#
+# Every gunicorn worker on every instance imports this module, so the work
+# below must be idempotent and safe to run concurrently. On PostgreSQL a
+# session-level advisory lock serialises it; SQLite is a single local file.
+# ---------------------------------------------------------------------------
+_SCHEMA_LOCK_KEY = 7264110211
+
+
+def _ddl(sqlite_sql, postgres_sql=None):
+    """Return a constant DDL statement for the active dialect."""
+    if postgres_sql is not None and db.engine.dialect.name == "postgresql":
+        return text(postgres_sql)
+    return text(sqlite_sql)
+
+
+def _column_names(table_name):
+    """Column names of a table, read through the session's own connection."""
+    return {
+        column["name"]
+        for column in sa_inspect(db.session.connection()).get_columns(table_name)
+    }
+
+
+def _initialize_schema():
     db.create_all()
 
     # Migrate legacy scholarship categories to the supported grade category.
-    # This deliberately preserves all other scholarship fields.
     db.session.execute(
         text("UPDATE scholarship SET category = 'grade' WHERE category = 'merit'")
     )
     db.session.commit()
 
-    # Safely add persistent lifecycle tracking to existing SQLite databases.
-    scholarship_columns = {
-        row[1]
-        for row in db.session.execute(
-            text("PRAGMA table_info(scholarship)")
-        ).fetchall()
-    }
+    scholarship_columns = _column_names("scholarship")
 
     if "lifecycle_status" not in scholarship_columns:
-        db.session.execute(
-            text(
-                "ALTER TABLE scholarship "
-                "ADD COLUMN lifecycle_status VARCHAR(20) "
-                "NOT NULL DEFAULT 'active'"
-            )
-        )
-        db.session.execute(
-            text("""
-                UPDATE scholarship
-                SET lifecycle_status = CASE
-                    WHEN is_active = 1 THEN 'active'
-                    ELSE 'inactive'
-                END
-            """)
-        )
+        db.session.execute(_ddl(
+            "ALTER TABLE scholarship ADD COLUMN lifecycle_status "
+            "VARCHAR(20) NOT NULL DEFAULT 'active'"
+        ))
+        db.session.execute(text(
+            "UPDATE scholarship SET lifecycle_status = "
+            "CASE WHEN is_active THEN 'active' ELSE 'inactive' END"
+        ))
         db.session.commit()
 
-    # Safely add the exam passing threshold to existing SQLite databases.
     if "passing_threshold" not in scholarship_columns:
-        db.session.execute(
-            text(
-                "ALTER TABLE scholarship "
-                "ADD COLUMN passing_threshold FLOAT "
-                "NOT NULL DEFAULT 80.0"
-            )
-        )
+        db.session.execute(_ddl(
+            "ALTER TABLE scholarship ADD COLUMN passing_threshold "
+            "FLOAT NOT NULL DEFAULT 80.0"
+        ))
         db.session.commit()
 
-    # Safely add admin authorization to existing SQLite databases.
-    user_columns = {
-        row[1]
-        for row in db.session.execute(
-            text("PRAGMA table_info(user)")
-        ).fetchall()
-    }
-
-    if "is_admin" not in user_columns:
-        db.session.execute(
-            text(
-                "ALTER TABLE user "
-                "ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0"
-            )
-        )
+    if "is_admin" not in _column_names("user"):
+        db.session.execute(_ddl(
+            'ALTER TABLE "user" ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0',
+            'ALTER TABLE "user" ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT FALSE',
+        ))
         db.session.commit()
 
-    # Safely add registration opening time to existing SQLite databases.
-    exam_columns = {
-        row[1]
-        for row in db.session.execute(
-            text("PRAGMA table_info(demo_exam)")
-        ).fetchall()
-    }
-
-    if "registration_opens_at" not in exam_columns:
-        db.session.execute(
-            text(
-                "ALTER TABLE demo_exam "
-                "ADD COLUMN registration_opens_at DATETIME"
-            )
-        )
+    if "registration_opens_at" not in _column_names("demo_exam"):
+        db.session.execute(_ddl(
+            "ALTER TABLE demo_exam ADD COLUMN registration_opens_at DATETIME",
+            "ALTER TABLE demo_exam ADD COLUMN registration_opens_at TIMESTAMP",
+        ))
         db.session.commit()
+
+    application_columns = _column_names("scholarship_application")
+    if "approved_at" not in application_columns:
+        db.session.execute(_ddl(
+            "ALTER TABLE scholarship_application ADD COLUMN approved_at DATETIME",
+            "ALTER TABLE scholarship_application ADD COLUMN approved_at TIMESTAMP",
+        ))
+    if "withdrawn_at" not in application_columns:
+        db.session.execute(_ddl(
+            "ALTER TABLE scholarship_application ADD COLUMN withdrawn_at DATETIME",
+            "ALTER TABLE scholarship_application ADD COLUMN withdrawn_at TIMESTAMP",
+        ))
+    db.session.commit()
 
     # Existing demo exams default to opening registration 15 days early.
-    db.session.execute(
-        text("""
-            UPDATE demo_exam
-            SET registration_opens_at = datetime(start_at, '-15 days')
-            WHERE registration_opens_at IS NULL
-        """)
-    )
+    for exam in DemoExam.query.filter(
+        DemoExam.registration_opens_at.is_(None)
+    ).all():
+        exam.registration_opens_at = exam.start_at - timedelta(days=15)
     db.session.commit()
 
-    # Safely add application decision timestamps to existing SQLite databases.
-    application_columns = {
-        row[1]
-        for row in db.session.execute(
-            text("PRAGMA table_info(scholarship_application)")
-        ).fetchall()
-    }
+    # Backfill only missing decision timestamps (real datetime values).
+    backfill_timestamp = datetime.now()
+    for application in ScholarshipApplication.query.filter(
+        ScholarshipApplication.status == "approved",
+        ScholarshipApplication.approved_at.is_(None),
+    ).all():
+        application.approved_at = backfill_timestamp
+    for application in ScholarshipApplication.query.filter(
+        ScholarshipApplication.status == "withdrawn",
+        ScholarshipApplication.withdrawn_at.is_(None),
+    ).all():
+        application.withdrawn_at = backfill_timestamp
+    db.session.commit()
 
-    if "approved_at" not in application_columns:
-        db.session.execute(
-            text(
-                "ALTER TABLE scholarship_application "
-                "ADD COLUMN approved_at DATETIME"
+
+def initialize_database():
+    """Create tables and apply column migrations; safe to run concurrently."""
+    lock_connection = None
+    try:
+        if db.engine.dialect.name == "postgresql":
+            lock_connection = db.engine.connect()
+            lock_connection.execute(
+                text("SELECT pg_advisory_lock(:key)"), {"key": _SCHEMA_LOCK_KEY}
             )
-        )
+        _initialize_schema()
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        if lock_connection is not None:
+            try:
+                lock_connection.execute(
+                    text("SELECT pg_advisory_unlock(:key)"),
+                    {"key": _SCHEMA_LOCK_KEY},
+                )
+            finally:
+                lock_connection.close()
 
-    if "withdrawn_at" not in application_columns:
-        db.session.execute(
-            text(
-                "ALTER TABLE scholarship_application "
-                "ADD COLUMN withdrawn_at DATETIME"
+
+def _initialize_database_with_retry():
+    attempts = max(1, int(os.environ.get("GOVSCALE_DB_CONNECT_RETRIES", "10")))
+    delay = float(os.environ.get("GOVSCALE_DB_CONNECT_DELAY", "3"))
+    for attempt in range(1, attempts + 1):
+        try:
+            initialize_database()
+            return
+        except OperationalError:
+            db.session.rollback()
+            if attempt == attempts:
+                raise
+            app.logger.warning(
+                "Database not ready (attempt %s/%s); retrying in %ss.",
+                attempt, attempts, delay,
             )
-        )
+            time_module.sleep(delay)
 
-    db.session.commit()
 
-    # Existing database accounts are demo students. Backfill only missing
-    # timestamps for applications already in these terminal statuses.
-    backfill_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    db.session.execute(
-        text("""
-            UPDATE scholarship_application
-            SET approved_at = :timestamp
-            WHERE status = 'approved' AND approved_at IS NULL
-        """),
-        {"timestamp": backfill_timestamp},
-    )
-    db.session.execute(
-        text("""
-            UPDATE scholarship_application
-            SET withdrawn_at = :timestamp
-            WHERE status = 'withdrawn' AND withdrawn_at IS NULL
-        """),
-        {"timestamp": backfill_timestamp},
-    )
-    db.session.commit()
+with app.app_context():
+    _initialize_database_with_retry()
+
 
 if __name__ == "__main__":
     app.run(debug=os.environ.get("GOVSCALE_DEBUG") == "1")

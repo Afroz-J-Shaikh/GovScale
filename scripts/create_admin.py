@@ -3,11 +3,13 @@ import re
 import sys
 from pathlib import Path
 
+from sqlalchemy.exc import IntegrityError
+
 # Add the project root so this script can import app.py.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from app import app, db, User
+from app import app, db, User  # noqa: E402
 
 
 def main():
@@ -29,14 +31,9 @@ def main():
         return 1
 
     password = os.environ.get("GOVSCALE_ADMIN_PASSWORD", "admin123")
-    confirm_password = password
 
     if not 8 <= len(password) <= 128:
         print("Error: Password must be 8–128 characters.")
-        return 1
-
-    if password != confirm_password:
-        print("Error: Passwords do not match.")
         return 1
 
     with app.app_context():
@@ -70,6 +67,14 @@ def main():
         try:
             db.session.add(admin)
             db.session.commit()
+        except IntegrityError:
+            # Another instance created the administrator at the same moment.
+            db.session.rollback()
+            if User.query.filter_by(is_admin=True).first():
+                print("Administrator was created concurrently; no changes made.")
+                return 0
+            print(f"ERROR: {email} is already registered by a non-admin account.")
+            return 1
         except Exception:
             db.session.rollback()
             print(

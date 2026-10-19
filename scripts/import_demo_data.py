@@ -1,33 +1,55 @@
 #!/usr/bin/env python3
 """Optionally load the sanitized demo dataset into a freshly initialized database.
 
-Run after the default initialization (institutions + admin). The default
+Works on SQLite and PostgreSQL (whatever GOVSCALE_DATABASE_URI selects). Run
+after the default initialization (institutions + admin). The default
 institutions and administrator are replaced by the seed's rows. The existing
 administrator's email and password are carried over to the seed's system admin,
 so you can still sign in. Demo students get GOVSCALE_DEMO_PASSWORD (random if unset).
+Everything runs in one transaction.
 """
 
 import json
 import os
 import secrets
-import sqlite3
 import sys
+from datetime import date, datetime
 from pathlib import Path
 
+from sqlalchemy import Boolean, Date, DateTime, func, or_, select
 from werkzeug.security import generate_password_hash
 
 ROOT = Path(__file__).resolve().parent.parent
 SEED = ROOT / "seed_data" / "govscale_demo.json"
-DATABASE = (ROOT / "instance" / "govscale.db").resolve()
 SYSTEM_EMAIL = "govscale-demo-system@example.invalid"
+
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from app import app, db  # noqa: E402
+from dbtools import reset_postgres_sequences  # noqa: E402
 
 
 def fail(message):
     raise SystemExit(f"ERROR: {message}")
 
 
-def qi(name):
-    return '"' + name.replace('"', '""') + '"'
+def coerce(table, row):
+    """Convert JSON values to the Python types the column expects."""
+    converted = {}
+    for name, value in row.items():
+        column_type = table.c[name].type
+        if value is None:
+            converted[name] = None
+        elif isinstance(column_type, Boolean):
+            converted[name] = bool(value)
+        elif isinstance(column_type, DateTime) and isinstance(value, str):
+            converted[name] = datetime.fromisoformat(value)
+        elif isinstance(column_type, Date) and isinstance(value, str):
+            converted[name] = date.fromisoformat(value)
+        else:
+            converted[name] = value
+    return converted
 
 
 def main():
@@ -66,22 +88,13 @@ def main():
     if len(system_rows) != 1:
         fail("Expected exactly one synthetic system identity.")
 
-    for table, rows in tables.items():
-        if not isinstance(table, str) or not isinstance(rows, list):
-            fail(f"Invalid table data: {table!r}")
+    for table_name, rows in tables.items():
+        if not isinstance(table_name, str) or not isinstance(rows, list):
+            fail(f"Invalid table data: {table_name!r}")
         if any(not isinstance(row, dict) or not row for row in rows):
-            fail(f"Invalid row in table: {table}")
-        if counts.get(table) != len(rows):
-            fail(f"Seed row count mismatch: {table}")
-
-    # Importing the app creates the schema if it does not exist yet.
-    sys.path.insert(0, str(ROOT))
-    import app as govscale_app
-
-    if govscale_app.app.config["SQLALCHEMY_DATABASE_URI"] != "sqlite:///" + str(DATABASE):
-        fail("Application is not configured for the standard database.")
-    if not DATABASE.is_file():
-        fail("The application did not create the expected database.")
+            fail(f"Invalid row in table: {table_name}")
+        if counts.get(table_name) != len(rows):
+            fail(f"Seed row count mismatch: {table_name}")
 
     demo_password = os.environ.get("GOVSCALE_DEMO_PASSWORD", "").strip()
     random_password = not demo_password
@@ -89,101 +102,90 @@ def main():
         demo_password = secrets.token_urlsafe(24)
     student_hash = generate_password_hash(demo_password)
 
-    connection = sqlite3.connect(DATABASE)
-    try:
-        connection.execute("PRAGMA foreign_keys = OFF")
-
-        available = {
-            row[0]
-            for row in connection.execute(
-                "SELECT name FROM sqlite_master "
-                "WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-            )
-        }
-        missing = set(tables) - available
+    with app.app_context():
+        metadata = db.metadata
+        missing = set(tables) - set(metadata.tables)
         if missing:
             fail("Schema missing tables: " + ", ".join(sorted(missing)))
 
-        # The database must be in its default state: one admin, no students,
-        # only the seeded institutions, and nothing else.
-        admins = connection.execute(
-            'SELECT id, email, password_hash FROM "user" WHERE is_admin = 1'
-        ).fetchall()
-        student_count = connection.execute(
-            'SELECT COUNT(*) FROM "user" WHERE is_admin = 0'
-        ).fetchone()[0]
-        if len(admins) != 1 or student_count:
-            fail(
-                "Demo data can only be loaded into a freshly initialized "
-                "database (one admin, no students)."
-            )
+        user_table = metadata.tables["user"]
+        institution_table = metadata.tables["institution"]
 
-        for table in sorted(available - {"user", "institution"}):
-            if connection.execute(f"SELECT COUNT(*) FROM {qi(table)}").fetchone()[0]:   # nosec B608
+        with db.engine.begin() as connection:
+            admins = connection.execute(
+                select(user_table.c.id, user_table.c.email, user_table.c.password_hash)
+                .where(user_table.c.is_admin.is_(True))
+            ).all()
+            student_count = connection.execute(
+                select(func.count()).select_from(user_table)
+                .where(user_table.c.is_admin.is_(False))
+            ).scalar()
+            if len(admins) != 1 or student_count:
                 fail(
-                    f"Table {table} already contains data. Demo data can only "
-                    "be loaded into a freshly initialized database."
+                    "Demo data can only be loaded into a freshly initialized "
+                    "database (one admin, no students)."
                 )
 
-        custom_institutions = connection.execute(
-            "SELECT COUNT(*) FROM institution "
-            "WHERE created_by_user_id IS NOT NULL OR is_verified = 0"
-        ).fetchone()[0]
-        if custom_institutions:
-            fail("The database contains user-created institutions; refusing to replace them.")
+            for table in metadata.sorted_tables:
+                if table.name in ("user", "institution"):
+                    continue
+                if connection.execute(select(func.count()).select_from(table)).scalar():
+                    fail(
+                        f"Table {table.name} already contains data. Demo data can "
+                        "only be loaded into a freshly initialized database."
+                    )
 
-        _admin_id, admin_email, admin_hash = admins[0]
+            custom_institutions = connection.execute(
+                select(func.count()).select_from(institution_table).where(or_(
+                    institution_table.c.created_by_user_id.is_not(None),
+                    institution_table.c.is_verified.is_(False),
+                ))
+            ).scalar()
+            if custom_institutions:
+                fail("The database contains user-created institutions; refusing to replace them.")
 
-        connection.execute("BEGIN")
-        connection.execute("DELETE FROM institution")
-        connection.execute('DELETE FROM "user"')
+            _admin_id, admin_email, admin_hash = admins[0]
 
-        for table, rows in tables.items():
-            quoted_table = qi(table)
-            schema_columns = {
-                row[1] for row in connection.execute(f"PRAGMA table_info({quoted_table})")
-            }
+            connection.execute(institution_table.delete())
+            connection.execute(user_table.delete())
 
-            for original in rows:
-                row = dict(original)
-                unknown = set(row) - schema_columns
-                if unknown:
-                    fail(f"Unknown columns in {table}: " + ", ".join(sorted(unknown)))
+            for table in metadata.sorted_tables:
+                rows = tables.get(table.name)
+                if not rows:
+                    continue
+                prepared = []
+                for original in rows:
+                    row = dict(original)
+                    unknown = set(row) - set(table.c.keys())
+                    if unknown:
+                        fail(f"Unknown columns in {table.name}: " + ", ".join(sorted(unknown)))
 
-                if table == "user":
-                    if row.get("id") == system_id:
-                        # Keep the real administrator's login.
-                        row["email"] = admin_email
-                        row["password_hash"] = admin_hash
-                    else:
-                        row["password_hash"] = student_hash
-                        # email-validator rejects the reserved ".invalid" domain,
-                        # which would block login through the web form.
-                        row["email"] = row["email"].replace("@example.invalid", "@example.com")
+                    if table.name == "user":
+                        if row.get("id") == system_id:
+                            # Keep the real administrator's login.
+                            row["email"] = admin_email
+                            row["password_hash"] = admin_hash
+                        else:
+                            row["password_hash"] = student_hash
+                            # email-validator rejects the reserved ".invalid" domain.
+                            row["email"] = row["email"].replace("@example.invalid", "@example.com")
 
-                columns = list(row)
-                connection.execute(
-                    f"INSERT INTO {quoted_table} "    # nosec B608 - identifier quoted, values use ? placeholders
-                    f"({', '.join(qi(c) for c in columns)}) "
-                    f"VALUES ({', '.join('?' for _ in columns)})",
-                    [row[c] for c in columns],
-                )
+                    prepared.append(coerce(table, row))
+                connection.execute(table.insert(), prepared)
 
-        violations = connection.execute("PRAGMA foreign_key_check").fetchall()
-        if violations:
-            fail(f"Foreign-key check failed: {violations[:10]}")
+            if connection.dialect.name == "sqlite":
+                violations = connection.exec_driver_sql("PRAGMA foreign_key_check").fetchall()
+                if violations:
+                    fail(f"Foreign-key check failed: {violations[:10]}")
 
-        for table, rows in tables.items():
-            actual = connection.execute(f"SELECT COUNT(*) FROM {qi(table)}").fetchone()[0]   # nosec B608
-            if actual != len(rows):
-                fail(f"Imported row count mismatch: {table}")
+            reset_postgres_sequences(connection, [metadata.tables[n] for n in tables])
 
-        connection.commit()
-    except BaseException:
-        connection.rollback()
-        raise
-    finally:
-        connection.close()
+            for table_name, rows in tables.items():
+                actual = connection.execute(
+                    select(func.count()).select_from(metadata.tables[table_name])
+                ).scalar()
+                if actual != len(rows):
+                    fail(f"Imported row count mismatch: {table_name}")
 
     print("Demo seed import succeeded.")
     print(f"Tables: {len(tables)}  Rows: {sum(len(r) for r in tables.values())}")

@@ -9,14 +9,12 @@
             <span class="section-kicker">EXAM RESULT</span>
 
             {% if submission.passed %}
-            <div class="result-celebration" aria-hidden="true">
-                <span class="result-firework firework-one">✦</span>
-                <span class="result-firework firework-two">✧</span>
-                <span class="result-firework firework-three">✦</span>
-                <span class="result-sparkle sparkle-one">✧</span>
-                <span class="result-sparkle sparkle-two">✦</span>
-            </div>
-            <h1 class="exam-result-status">PASSED</h1>
+            <canvas
+                id="celebrationCanvas"
+                class="celebration-canvas"
+                aria-hidden="true"
+            ></canvas>
+            <h1 class="exam-result-status">PASSED 🎉</h1>
             {% else %}
             <h1 class="exam-result-status">FAILED</h1>
             {% endif %}
@@ -32,10 +30,192 @@
         </div>
 
         <div class="exam-result-footer">
-            <a href="{{ url_for('my_history') }}" class="student-back-dashboard exam-result-back">
+            <a href="{{ url_for('my_history') }}" class="detail-apply-button exam-result-back">
                 <span aria-hidden="true">←</span> Back to History
             </a>
         </div>
     </div>
 </section>
+
+<style>
+.celebration-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.exam-result-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.result-passed .exam-result-status {
+    animation: resultPop 0.8s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+@keyframes resultPop {
+    0% {
+        transform: scale(0.5) rotate(-4deg);
+        opacity: 0;
+    }
+
+    65% {
+        transform: scale(1.12) rotate(2deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .celebration-canvas {
+        display: none;
+    }
+
+    .result-passed .exam-result-status {
+        animation: none;
+    }
+}
+</style>
+
+{% if submission.passed %}
+<script>
+(function () {
+    const canvas = document.getElementById("celebrationCanvas");
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    const colors = [
+        "#ffd700", "#ff4d6d", "#4cc9f0",
+        "#80ed99", "#c77dff", "#ffffff"
+    ];
+
+    let particles = [];
+    let animationFrame = null;
+    let running = true;
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+    function randomBetween(min, max) {
+        return min + Math.random() * (max - min);
+    }
+
+    function createStarBurst(centerX, centerY, particleCount) {
+        for (let i = 0; i < particleCount; i++) {
+            const angle = randomBetween(0, Math.PI * 2);
+            const speed = randomBetween(5, 13);
+
+            particles.push({
+                x: centerX,
+                y: centerY,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - randomBetween(2, 6),
+                size: randomBetween(7, 16),
+                color: colors[Math.floor(Math.random() * colors.length)],
+                life: randomBetween(90, 150),
+                maxLife: 150,
+                rotation: randomBetween(0, Math.PI * 2),
+                rotationSpeed: randomBetween(-0.25, 0.25),
+                starPoints: 5
+            });
+        }
+    }
+
+    function drawStar(particle) {
+        const spikes = particle.starPoints;
+        const outerRadius = particle.size;
+        const innerRadius = particle.size * 0.45;
+
+        ctx.beginPath();
+
+        for (let i = 0; i < spikes * 2; i++) {
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            const angle = (Math.PI / spikes) * i + particle.rotation;
+            const x = particle.x + Math.cos(angle) * radius;
+            const y = particle.y + Math.sin(angle) * radius;
+
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+
+        ctx.closePath();
+        ctx.fillStyle = particle.color;
+        ctx.fill();
+    }
+
+    function animate() {
+        if (!running) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        particles = particles.filter(function (particle) {
+            return particle.life > 0;
+        });
+
+        particles.forEach(function (particle) {
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+            particle.vy += 0.16;
+            particle.vx *= 0.99;
+            particle.life -= 1;
+            particle.rotation += particle.rotationSpeed;
+
+            ctx.save();
+            ctx.globalAlpha = Math.max(particle.life / particle.maxLife, 0);
+            drawStar(particle);
+            ctx.restore();
+        });
+
+        if (particles.length > 0) {
+            animationFrame = requestAnimationFrame(animate);
+        }
+    }
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    const burstSchedule = [
+        { delay: 200, x: 0.22, y: 0.32, count: 55 },
+        { delay: 500, x: 0.78, y: 0.32, count: 55 },
+        { delay: 800, x: 0.50, y: 0.22, count: 75 },
+        { delay: 1200, x: 0.35, y: 0.50, count: 40 },
+        { delay: 1500, x: 0.65, y: 0.50, count: 40 }
+    ];
+
+    burstSchedule.forEach(function (burst) {
+        setTimeout(function () {
+            createStarBurst(
+                canvas.width * burst.x,
+                canvas.height * burst.y,
+                burst.count
+            );
+
+            if (!animationFrame) {
+                animate();
+            }
+        }, burst.delay);
+    });
+
+    window.addEventListener("beforeunload", function () {
+        running = false;
+
+        if (animationFrame) {
+            cancelAnimationFrame(animationFrame);
+        }
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}
