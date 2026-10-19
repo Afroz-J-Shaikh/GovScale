@@ -1,0 +1,56 @@
+name: Release - Push Image to ECR
+
+# Pushes the exact image that passed the Trivy scan (no rebuild).
+# Disabled by default in ci.yml until the repo variable ENABLE_ECR_PUSH=true.
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        type: string
+        default: govscale
+    secrets:
+      AWS_ROLE_ARN:
+        required: true
+      AWS_REGION:
+        required: true
+      ECR_REPOSITORY:
+        required: true
+
+permissions:
+  id-token: write   # OIDC - no long-lived AWS keys
+  contents: read
+
+jobs:
+  push:
+    name: Push to ECR
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download scanned image
+        uses: actions/download-artifact@v4
+        with:
+          name: scanned-image
+
+      - name: Load image
+        run: docker load -i image.tar
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Tag and push
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          LOCAL_IMAGE: ${{ inputs.image-name }}:${{ github.sha }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker tag "$LOCAL_IMAGE" "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"

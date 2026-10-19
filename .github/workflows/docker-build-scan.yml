@@ -1,0 +1,92 @@
+name: Build - Image Build, Smoke Test & Trivy Scan
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        description: Local image name
+        type: string
+        default: govscale
+      upload-image:
+        description: Upload the scanned image as an artifact (for a later registry push)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-scan:
+    name: Build, Smoke Test & Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Built exactly once. The same image is scanned, smoke-tested and
+      # (optionally) pushed, so what is scanned is what ships.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          push: false
+          pull: true
+          tags: ${{ inputs.image-name }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test - /health
+        env:
+          IMAGE: ${{ inputs.image-name }}:${{ github.sha }}
+        run: |
+          docker run -d --name smoke -p 5000:5000 \
+            -e GOVSCALE_SECRET_KEY=ci-only-not-a-real-secret "$IMAGE"
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:5000/health; then
+              echo; echo "Healthy"; exit 0
+            fi
+            sleep 2
+          done
+          echo "Container never became healthy"; docker logs smoke; exit 1
+
+      - name: Run Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ inputs.image-name }}:${{ github.sha }}
+          format: table
+          output: trivy-report.txt
+          exit-code: "1"            # fail on CRITICAL/HIGH
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+      - name: Show Trivy report
+        if: always()
+        run: cat trivy-report.txt || true
+
+      - name: Upload Trivy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-scan-report
+          path: trivy-report.txt
+          retention-days: 14
+
+      - name: Save image for registry push
+        if: inputs.upload-image
+        run: docker save ${{ inputs.image-name }}:${{ github.sha }} -o image.tar
+
+      - name: Upload image artifact
+        if: inputs.upload-image
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanned-image
+          path: image.tar
+          retention-days: 1

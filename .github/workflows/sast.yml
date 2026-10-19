@@ -1,0 +1,54 @@
+name: CI - SAST
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: SAST - Semgrep
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: semgrep/semgrep:latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # --error makes any finding fail the job
+      - name: Run Semgrep
+        run: >-
+          semgrep scan
+          --config p/python
+          --config p/flask
+          --config p/owasp-top-ten
+          --config p/secrets
+          --error
+          --metrics=off
+          app.py scripts
+
+  bandit:
+    name: SAST - Bandit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      # Fail on medium severity and above
+      - name: Run Bandit
+        run: bandit -r app.py scripts --severity-level medium
