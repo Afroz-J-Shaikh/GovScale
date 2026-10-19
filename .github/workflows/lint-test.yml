@@ -63,4 +63,5 @@ jobs:
       - name: Run tests
         env:
           GOVSCALE_SECRET_KEY: ci-only-not-a-real-secret
-        run: pytest -q
+        # `python -m pytest` puts the repo root on sys.path so `from app import app` works
+        run: python -m pytest -q
