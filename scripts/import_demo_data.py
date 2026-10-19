@@ -119,7 +119,7 @@ def main():
             )
 
         for table in sorted(available - {"user", "institution"}):
-            if connection.execute(f"SELECT COUNT(*) FROM {qi(table)}").fetchone()[0]:
+            if connection.execute(f"SELECT COUNT(*) FROM {qi(table)}").fetchone()[0]:   # nosec B608
                 fail(
                     f"Table {table} already contains data. Demo data can only "
                     "be loaded into a freshly initialized database."
@@ -163,7 +163,7 @@ def main():
 
                 columns = list(row)
                 connection.execute(
-                    f"INSERT INTO {quoted_table} "
+                    f"INSERT INTO {quoted_table} "    # nosec B608 - identifier quoted, values use ? placeholders
                     f"({', '.join(qi(c) for c in columns)}) "
                     f"VALUES ({', '.join('?' for _ in columns)})",
                     [row[c] for c in columns],
@@ -174,7 +174,7 @@ def main():
             fail(f"Foreign-key check failed: {violations[:10]}")
 
         for table, rows in tables.items():
-            actual = connection.execute(f"SELECT COUNT(*) FROM {qi(table)}").fetchone()[0]
+            actual = connection.execute(f"SELECT COUNT(*) FROM {qi(table)}").fetchone()[0]   # nosec B608
             if actual != len(rows):
                 fail(f"Imported row count mismatch: {table}")
 

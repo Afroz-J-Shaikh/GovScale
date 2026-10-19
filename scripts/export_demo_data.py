@@ -78,7 +78,7 @@ def main():
             rows = [
                 dict(row)
                 for row in con.execute(
-                    f"SELECT * FROM {quoted} ORDER BY rowid"
+                    f"SELECT * FROM {quoted} ORDER BY rowid"  # nosec B608 - identifier quoted, from sqlite schema
                 )
             ]
 
