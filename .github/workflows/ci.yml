@@ -3,8 +3,22 @@ name: GovScale CI - DevSecOps Pipeline
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".gitignore"
+      - ".env.example"
+      - ".github/dependabot.yml"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".gitignore"
+      - ".env.example"
+      - ".github/dependabot.yml"
   workflow_dispatch:
 
 # Cancel superseded runs on the same ref
