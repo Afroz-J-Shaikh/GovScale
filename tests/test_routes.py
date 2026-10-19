@@ -6,7 +6,10 @@ from pathlib import Path
 _test_db_directory = tempfile.TemporaryDirectory(prefix="govscale-tests-")
 _test_db_path = Path(_test_db_directory.name) / "govscale-test.db"
 
-os.environ["GOVSCALE_DATABASE_URI"] = f"sqlite:///{_test_db_path}"
+os.environ["GOVSCALE_DATABASE_URI"] = (
+    os.environ.get("GOVSCALE_TEST_DATABASE_URI") or f"sqlite:///{_test_db_path}"
+)
+os.environ.setdefault("GOVSCALE_SECRET_KEY", "test-only-secret-key")
 
 from app import app  # noqa: E402
 
@@ -49,3 +52,28 @@ def test_unknown_url_returns_404():
     response = app.test_client().get("/this-route-does-not-exist-for-tests")
 
     assert response.status_code == 404
+
+
+def test_database_initialization_is_idempotent():
+    from app import initialize_database
+
+    with app.app_context():
+        initialize_database()
+        initialize_database()
+
+
+def test_database_roundtrip_on_configured_backend():
+    from app import Institution, db
+
+    name = "pytest roundtrip institution"
+    with app.app_context():
+        Institution.query.filter_by(normalized_name=name).delete()
+        db.session.commit()
+        db.session.add(Institution(
+            name=name, normalized_name=name, institution_type="school",
+            education_categories="school_8_10", is_verified=True,
+        ))
+        db.session.commit()
+        assert Institution.query.filter_by(normalized_name=name).count() == 1
+        Institution.query.filter_by(normalized_name=name).delete()
+        db.session.commit()

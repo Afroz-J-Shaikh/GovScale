@@ -1,12 +1,13 @@
-
 import sys
 from pathlib import Path
+
+from sqlalchemy.exc import IntegrityError
 
 # Allow this script to import the application from the project root.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from app import app, db, Institution, normalize_institution_name
+from app import app, db, Institution, normalize_institution_name  # noqa: E402
 
 institutions = [
     # Schools: Classes 8–10 and 11–12
@@ -51,23 +52,27 @@ with app.app_context():
     for name, kind, categories, state in institutions:
         normalized = normalize_institution_name(name)
 
-        existing = Institution.query.filter_by(
-            normalized_name=normalized
-        ).first()
-
-        if existing:
+        if Institution.query.filter_by(normalized_name=normalized).first():
             continue
 
-        db.session.add(
-            Institution(
-                name=name,
-                normalized_name=normalized,
-                institution_type=kind,
-                education_categories=categories,
-                state=state,
-                is_verified=True,
-            )
-        )
+        try:
+            # Savepoint: if another instance inserted the same institution
+            # a moment ago, only this one insert is rolled back.
+            with db.session.begin_nested():
+                db.session.add(
+                    Institution(
+                        name=name,
+                        normalized_name=normalized,
+                        institution_type=kind,
+                        education_categories=categories,
+                        state=state,
+                        is_verified=True,
+                    )
+                )
+                db.session.flush()
+        except IntegrityError:
+            continue
+
         added += 1
 
     db.session.commit()

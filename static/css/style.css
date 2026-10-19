@@ -7631,3 +7631,420 @@ body {
 .dashboard-section > .exam-countdown-card {
     margin-bottom: 20px;
 }
+
+/* Exam result page: centered content, clear action button and visible fireworks */
+.exam-result-section .exam-result-card,
+.exam-result-section .exam-result-heading,
+.exam-result-section .exam-result-details,
+.exam-result-section .exam-result-details p,
+.exam-result-section .exam-result-footer {
+    text-align: center;
+}
+
+.exam-result-section .exam-result-footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 26px;
+}
+
+.exam-result-section .exam-result-footer a.exam-result-back {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 50px;
+    padding: 14px 22px;
+    border: 1px solid var(--gs-green, #245c43) !important;
+    border-radius: 10px;
+    background: var(--gs-green, #245c43) !important;
+    color: #fffdf8 !important;
+    font-size: 15px;
+    font-weight: 750;
+    line-height: 1.4;
+    text-decoration: none !important;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: background-color .2s ease, transform .2s ease;
+}
+
+.exam-result-section .exam-result-footer a.exam-result-back:hover {
+    background: var(--gs-green-dark, #183d2b) !important;
+    color: #fffdf8 !important;
+    transform: translateY(-1px);
+}
+
+.exam-result-section .result-fireworks {
+    position: relative;
+    display: block;
+    width: min(280px, 100%);
+    height: 125px;
+    margin: 8px auto 0;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.exam-result-section .result-firework-burst {
+    position: absolute;
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    opacity: 1;
+    animation: govscale-result-firework 1.8s ease-out infinite;
+}
+
+.exam-result-section .result-firework-burst::before,
+.exam-result-section .result-firework-burst::after {
+    content: "";
+    position: absolute;
+    inset: -24px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle, currentColor 0 2px, transparent 3px)
+        center top / 8px 8px no-repeat,
+        radial-gradient(circle, currentColor 0 2px, transparent 3px)
+        right 5px top 5px / 8px 8px no-repeat,
+        radial-gradient(circle, currentColor 0 2px, transparent 3px)
+        right top 50% / 8px 8px no-repeat,
+        radial-gradient(circle, currentColor 0 2px, transparent 3px)
+        right 5px bottom 5px / 8px 8px no-repeat,
+        radial-gradient(circle, currentColor 0 2px, transparent 3px)
+        center bottom / 8px 8px no-repeat,
+        radial-gradient(circle, currentColor 0 2px, transparent 3px)
+        left 5px bottom 5px / 8px 8px no-repeat,
+        radial-gradient(circle, currentColor 0 2px, transparent 3px)
+        left center / 8px 8px no-repeat,
+        radial-gradient(circle, currentColor 0 2px, transparent 3px)
+        left 5px top 5px / 8px 8px no-repeat;
+}
+
+.exam-result-section .result-firework-burst::after {
+    inset: -15px;
+    transform: rotate(22deg) scale(.72);
+}
+
+.exam-result-section .burst-one {
+    left: 22%;
+    top: 43px;
+    color: #f4b942;
+    animation-delay: 0s;
+}
+
+.exam-result-section .burst-two {
+    left: 73%;
+    top: 34px;
+    color: #ef6b55;
+    animation-delay: .45s;
+}
+
+.exam-result-section .burst-three {
+    left: 49%;
+    top: 76px;
+    color: #48a9a6;
+    animation-delay: .9s;
+}
+
+@keyframes govscale-result-firework {
+    0% {
+        transform: scale(.35);
+        opacity: 0;
+    }
+    15% {
+        opacity: 1;
+    }
+    65% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1.35);
+        opacity: .15;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .exam-result-section .result-firework-burst {
+        animation: none;
+        opacity: 1;
+    }
+}
+
+@media (max-width: 600px) {
+    .exam-result-section .exam-result-footer a.exam-result-back {
+        width: 100%;
+    }
+}
+
+
+/* Exam result: explicit pass/fail colors and visible celebration */
+.exam-result-section .exam-result-status {
+    display: block;
+    margin: 12px 0;
+    font-weight: 800;
+    text-align: center;
+}
+
+.exam-result-section .exam-result-card.result-passed .exam-result-status {
+    color: #187443 !important;
+}
+
+.exam-result-section .exam-result-card.result-failed .exam-result-status {
+    color: #c62828 !important;
+}
+
+/* Draw fireworks with visible burst characters rather than tiny gradients. */
+.exam-result-section .result-fireworks {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    width: 100%;
+    min-height: 100px;
+    margin: 8px auto 0;
+    overflow: visible;
+}
+
+.exam-result-section .result-firework-burst {
+    display: block;
+    position: relative;
+    width: 52px;
+    height: 52px;
+    font-size: 0;
+    line-height: 1;
+    opacity: 1;
+    animation: govscale-firework-pop 1.25s ease-in-out infinite;
+}
+
+.exam-result-section .result-firework-burst::before {
+    content: "✳";
+    display: block;
+    font-size: 48px;
+    line-height: 52px;
+    text-align: center;
+    text-shadow: 0 0 10px currentColor;
+}
+
+.exam-result-section .burst-one {
+    color: #e9a817;
+    animation-delay: 0s;
+}
+
+.exam-result-section .burst-two {
+    color: #e65353;
+    animation-delay: .25s;
+}
+
+.exam-result-section .burst-three {
+    color: #399c91;
+    animation-delay: .5s;
+}
+
+@keyframes govscale-firework-pop {
+    0%, 100% {
+        transform: scale(.72) rotate(-12deg);
+        opacity: .72;
+    }
+    50% {
+        transform: scale(1.12) rotate(12deg);
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .exam-result-section .result-firework-burst {
+        animation: none;
+        opacity: 1;
+    }
+}
+
+
+/* Exam result: replace decorative stars with actual firework bursts */
+.exam-result-section .result-celebration,
+.exam-result-section .result-firework,
+.exam-result-section .result-sparkle {
+    display: none !important;
+}
+
+.exam-result-section .result-fireworks {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+    height: 125px;
+    margin: 10px auto 14px;
+    overflow: visible;
+}
+
+.exam-result-section .firework-burst {
+    --firework-color: #f4b942;
+    display: block;
+    flex: 0 0 76px;
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle, var(--firework-color) 0 3px, transparent 4px)
+            50% 0 / 8px 8px no-repeat,
+        radial-gradient(circle, var(--firework-color) 0 3px, transparent 4px)
+            100% 50% / 8px 8px no-repeat,
+        radial-gradient(circle, var(--firework-color) 0 3px, transparent 4px)
+            50% 100% / 8px 8px no-repeat,
+        radial-gradient(circle, var(--firework-color) 0 3px, transparent 4px)
+            0 50% / 8px 8px no-repeat,
+        radial-gradient(circle, var(--firework-color) 0 3px, transparent 4px)
+            85% 15% / 8px 8px no-repeat,
+        radial-gradient(circle, var(--firework-color) 0 3px, transparent 4px)
+            85% 85% / 8px 8px no-repeat,
+        radial-gradient(circle, var(--firework-color) 0 3px, transparent 4px)
+            15% 85% / 8px 8px no-repeat,
+        radial-gradient(circle, var(--firework-color) 0 3px, transparent 4px)
+            15% 15% / 8px 8px no-repeat;
+    position: relative;
+    opacity: 0;
+    animation: govscale-real-firework 1.8s ease-out infinite;
+}
+
+.exam-result-section .firework-burst::before {
+    content: "";
+    position: absolute;
+    inset: 7px;
+    border-radius: 50%;
+    background: repeating-conic-gradient(
+        from 0deg,
+        var(--firework-color) 0deg 3deg,
+        transparent 3deg 30deg
+    );
+    -webkit-mask: radial-gradient(
+        circle,
+        transparent 0 18%,
+        #000 22% 58%,
+        transparent 63%
+    );
+    mask: radial-gradient(
+        circle,
+        transparent 0 18%,
+        #000 22% 58%,
+        transparent 63%
+    );
+}
+
+.exam-result-section .firework-burst::after {
+    content: "";
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    left: 32px;
+    top: 32px;
+    border-radius: 50%;
+    background: #fff3c4;
+    box-shadow: 0 0 12px 4px var(--firework-color);
+}
+
+.exam-result-section .firework-burst.burst-one {
+    --firework-color: #f4b942;
+    animation-delay: 0s;
+}
+
+.exam-result-section .firework-burst.burst-two {
+    --firework-color: #ef6b55;
+    animation-delay: .6s;
+}
+
+.exam-result-section .firework-burst.burst-three {
+    --firework-color: #48a9a6;
+    animation-delay: 1.2s;
+}
+
+@keyframes govscale-real-firework {
+    0% {
+        transform: scale(.12) rotate(0deg);
+        opacity: 0;
+    }
+    15% {
+        opacity: 1;
+    }
+    65% {
+        transform: scale(1) rotate(24deg);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1.2) rotate(45deg);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .exam-result-section .firework-burst {
+        animation: none;
+        opacity: 1;
+    }
+}
+
+
+/* GovScale result fireworks: force visible rays and particles */
+.exam-result-section .result-fireworks {
+    display: flex !important;
+    position: relative;
+    z-index: 2;
+    min-height: 132px !important;
+    height: 132px !important;
+    overflow: visible !important;
+    visibility: visible !important;
+}
+
+.exam-result-section .firework-burst {
+    display: block !important;
+    position: relative !important;
+    flex: 0 0 76px !important;
+    width: 76px !important;
+    height: 76px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none;
+    animation: govscale-firework-pulse 1.4s ease-in-out infinite !important;
+}
+
+.exam-result-section .firework-burst::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    display: block !important;
+    border-radius: 50%;
+    background: repeating-conic-gradient(
+        var(--firework-color) 0deg 5deg,
+        transparent 5deg 22.5deg
+    ) !important;
+    -webkit-mask: radial-gradient(
+        circle, transparent 0 12%, #000 18% 72%, transparent 78%
+    ) !important;
+    mask: radial-gradient(
+        circle, transparent 0 12%, #000 18% 72%, transparent 78%
+    ) !important;
+}
+
+.exam-result-section .firework-burst::after {
+    content: "" !important;
+    display: block !important;
+    position: absolute !important;
+    left: 31px !important;
+    top: 31px !important;
+    width: 14px !important;
+    height: 14px !important;
+    border-radius: 50%;
+    background: #fff6d5 !important;
+    box-shadow: 0 0 8px 4px var(--firework-color),
+                0 0 20px 8px var(--firework-color) !important;
+}
+
+@keyframes govscale-firework-pulse {
+    0%, 100% { transform: scale(.82) rotate(0deg); }
+    50% { transform: scale(1.12) rotate(18deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .exam-result-section .firework-burst {
+        animation: none !important;
+        opacity: 1 !important;
+    }
+}

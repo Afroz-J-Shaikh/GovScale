@@ -22,7 +22,7 @@
                     {% if reward.scholarship.category == "exam" %}
                         {% set exam_submission = exam_submission_by_scholarship.get(reward.scholarship_id) %}
                         {% if exam_submission %}
-                            <p>Status: <strong>Exam Submitted</strong></p>
+                            <p>Status: <strong>Reward Received</strong></p>
                             <p>Result:
                                 {% if exam_submission.passed %}
                                     <strong class="result-passed">PASS</strong>
@@ -50,14 +50,23 @@
         </article>
     {% endif %}
 
-    <h2>Application Decisions</h2>
+    <h2>Past Application Decisions</h2>
     {% if application_decisions %}
         <div class="dashboard-grid dashboard-quick-links history-card-grid">
             {% for application in application_decisions %}
                 <article class="dashboard-card history-card">
                     <h3>{{ application.scholarship.title }}</h3>
                     <p>Category: {{ "Exam-based" if application.scholarship.category == "exam" else "Grade-based" }}</p>
-                    <p>Status: <strong>{{ application.status|capitalize }}</strong></p>
+                    <p>Status:
+                        <strong>
+                        {% if application.scholarship.category == "exam"
+                              and application.status in ("submitted", "pending", "approved") %}
+                            Exam Failed
+                        {% else %}
+                            {{ application.status|capitalize }}
+                        {% endif %}
+                        </strong>
+                    </p>
                     <p>Submitted: {{ application.submitted_at.strftime("%d %B %Y") }}</p>
                     <a class="text-link" href="{{ url_for('scholarship_detail', scholarship_id=application.scholarship_id, source='history') }}">View scholarship →</a>
                 </article>
@@ -65,7 +74,7 @@
         </div>
     {% else %}
         <article class="dashboard-card history-card">
-            <p>No rejected or withdrawn scholarship applications.</p>
+            <p>No rejected, withdrawn, or failed exam applications yet.</p>
         </article>
     {% endif %}
 

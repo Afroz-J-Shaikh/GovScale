@@ -8,8 +8,8 @@
         <span aria-hidden="true">←</span> Back to History
     </a>
     {% else %}
-    <a href="{{ url_for('home') }}#scholarships" class="detail-back-link">
-        <span aria-hidden="true">←</span> Back to scholarships
+    <a href="{{ url_for('home') }}#scholarships" class="detail-apply-button">
+        <span aria-hidden="true">←</span> Back to Scholarships
     </a>
     {% endif %}
 
@@ -183,13 +183,72 @@
 
         <div class="detail-application-area">
             {% if scholarship.category == 'exam' %}
-                {# Exam registration is handled only in the EXAM REGISTRATION panel above. #}
+                {% if received_reward %}
+                    <div class="eligibility-message eligibility-success">
+                        <span class="eligibility-status status-eligible">
+                            ✓ Scholarship reward received
+                        </span>
+                        <p>
+                            You passed the linked exam, and your scholarship reward has been
+                            confirmed as received.
+                        </p>
+                        <a class="detail-apply-button" href="{{ url_for('my_history') }}">
+                            View My History
+                        </a>
+                    </div>
+                {% elif exam_submission and not exam_submission.passed %}
+                    <div class="eligibility-message eligibility-warning">
+                        <span class="eligibility-status status-ineligible">
+                            ✕ Exam Failed
+                        </span>
+                        <p>
+                            You did not pass the linked exam, so this scholarship cannot be
+                            awarded. You cannot apply again for this opportunity.
+                        </p>
+                        <a class="detail-apply-button" href="{{ url_for('my_history') }}">
+                            View My History
+                        </a>
+                    </div>
+                {% elif exam_submission and exam_submission.passed %}
+                    <div class="eligibility-message eligibility-success">
+                        <span class="eligibility-status status-eligible">
+                            ✓ Exam Passed
+                        </span>
+                        <p>
+                            You passed the linked exam. Your scholarship reward is awaiting
+                            administrator confirmation.
+                        </p>
+                        <a class="detail-apply-button" href="{{ url_for('my_applications') }}">
+                            View My Applications
+                        </a>
+                    </div>
+                {% elif existing_application and existing_application.status == 'rejected' %}
+                    <div class="eligibility-message eligibility-warning">
+                        <span class="eligibility-status status-ineligible">
+                            ✕ Application Rejected
+                        </span>
+                        <p>Your application for this scholarship was rejected. You cannot apply again.</p>
+                        <a class="detail-apply-button" href="{{ url_for('my_history') }}">
+                            View My History
+                        </a>
+                    </div>
+                {% elif existing_application %}
+                    <div class="eligibility-message eligibility-success">
+                        <span class="eligibility-status status-eligible">
+                            ✓ Application Submitted
+                        </span>
+                        <p>Your exam registration and scholarship application are active.</p>
+                        <a class="detail-apply-button" href="{{ url_for('my_applications') }}">
+                            View My Applications
+                        </a>
+                    </div>
+                {% endif %}
             {% else %}
                 {% if current_user.is_authenticated %}
                     {% if existing_application %}
                         <div class="eligibility-message eligibility-success">
                             <span class="eligibility-status status-eligible">
-                                {% if existing_application.status == 'approved' and received_reward and request.args.get('source') == 'history' %}
+                                {% if received_reward %}
                                     ✓ Scholarship reward received
                                 {% elif existing_application.status == 'approved' %}
                                     ✓ Application approved
@@ -202,7 +261,7 @@
                                 {% endif %}
                             </span>
                             <p>
-                                {% if existing_application.status == 'approved' and received_reward and request.args.get('source') == 'history' %}
+                                {% if received_reward %}
                                     Your scholarship application was approved, and the illustrative reward payout has been completed.
                                 {% elif existing_application.status == 'approved' %}
                                     Your application has been approved.
@@ -215,10 +274,15 @@
                                 {% endif %}
                             </p>
                         </div>
-                        {% if request.args.get('source') != 'history' %}
-                        <a class="detail-secondary-link"
+                        {% if received_reward %}
+                        <a class="detail-apply-button"
+                        href="{{ url_for('my_history') }}">
+                            View My History
+                        </a>
+                        {% elif request.args.get('source') != 'history' %}
+                        <a class="detail-apply-button"
                         href="{{ url_for('my_applications') }}">
-                            View my applications →
+                            View My Applications
                         </a>
                         {% endif %}
                     {% elif eligible %}

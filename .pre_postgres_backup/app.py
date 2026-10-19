@@ -9,7 +9,7 @@ from functools import wraps
 from sqlalchemy import text, or_
 from pathlib import Path
 from urllib.parse import urlsplit
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 from flask import (
     Flask,
@@ -59,8 +59,9 @@ app.config["SECRET_KEY"] = os.environ.get(
 
 Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = (
-    "sqlite:///" + str(Path(app.instance_path) / "govscale.db")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+    "GOVSCALE_DATABASE_URI",
+    "sqlite:///" + str(Path(app.instance_path) / "govscale.db"),
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -3412,7 +3413,7 @@ def admin_resolve_reward_payout(attempt_id):
         return redirect(url_for("admin_rewards"))
 
     reward = attempt.reward
-    application = reward.application
+    # application = reward.application   
     attempt.status = outcome
     attempt.resolved_by_admin_id = current_user.id
     attempt.resolved_at = datetime.utcnow()
@@ -4246,8 +4247,6 @@ def admin_exam_questions(exam_id):
 
 def _parse_question_csv_or_docx(filename, content):
     """Return question records parsed from CSV or a Word document."""
-    import csv
-    import io
 
     suffix = Path(filename).suffix.lower()
 
@@ -5390,4 +5389,4 @@ with app.app_context():
     db.session.commit()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=os.environ.get("GOVSCALE_DEBUG") == "1")
