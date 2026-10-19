@@ -1,4 +1,3 @@
-import getpass
 import os
 import re
 import sys
