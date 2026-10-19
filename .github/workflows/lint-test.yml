@@ -1,0 +1,66 @@
+name: CI - Lint & Test
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: Python version used for lint and tests
+        type: string
+        default: "3.12"
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint - Ruff
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      # Blocking: syntax errors, undefined names, invalid comparisons
+      - name: Ruff - hard errors (blocking)
+        run: ruff check . --select E9,F63,F7,F82
+
+      # Audit mode: full default ruleset reported as annotations, not blocking
+      - name: Ruff - style audit (non-blocking)
+        run: ruff check . --output-format=github || true
+
+  test:
+    name: Test - Pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        env:
+          GOVSCALE_SECRET_KEY: ci-only-not-a-real-secret
+        run: pytest -q

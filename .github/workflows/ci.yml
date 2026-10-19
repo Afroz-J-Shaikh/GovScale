@@ -1,0 +1,53 @@
+name: GovScale CI - DevSecOps Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege by default; jobs that need more declare it themselves.
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  # ---- Quality & security gates (run in parallel) ----
+  lint-test:
+    uses: ./.github/workflows/lint-test.yml
+
+  secret-scan:
+    uses: ./.github/workflows/secrets-scan.yml
+
+  sast:
+    uses: ./.github/workflows/sast.yml
+
+  dependency-scan:
+    uses: ./.github/workflows/dependency-scan.yml
+
+  dockerfile-lint:
+    uses: ./.github/workflows/dockerfile-lint.yml
+
+  # ---- Build once every gate has passed ----
+  build-scan:
+    needs: [lint-test, secret-scan, sast, dependency-scan, dockerfile-lint]
+    uses: ./.github/workflows/docker-build-scan.yml
+    with:
+      # Keep the image only when it may be pushed to ECR
+      upload-image: ${{ vars.ENABLE_ECR_PUSH == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+
+  # ---- Optional: push to ECR (enable with repo variable ENABLE_ECR_PUSH=true) ----
+  ecr-push:
+    if: ${{ vars.ENABLE_ECR_PUSH == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+    needs: build-scan
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/ecr-push.yml
+    secrets: inherit

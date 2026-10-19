@@ -1,0 +1,24 @@
+name: CI - Dockerfile Lint
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  hadolint:
+    name: Dockerfile Lint - Hadolint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
