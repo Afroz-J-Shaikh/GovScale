@@ -9,7 +9,7 @@ from functools import wraps
 from sqlalchemy import text, or_
 from pathlib import Path
 from urllib.parse import urlsplit
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 from flask import (
     Flask,
@@ -3413,7 +3413,7 @@ def admin_resolve_reward_payout(attempt_id):
         return redirect(url_for("admin_rewards"))
 
     reward = attempt.reward
-    application = reward.application
+    # application = reward.application   
     attempt.status = outcome
     attempt.resolved_by_admin_id = current_user.id
     attempt.resolved_at = datetime.utcnow()
@@ -4247,8 +4247,6 @@ def admin_exam_questions(exam_id):
 
 def _parse_question_csv_or_docx(filename, content):
     """Return question records parsed from CSV or a Word document."""
-    import csv
-    import io
 
     suffix = Path(filename).suffix.lower()
 
