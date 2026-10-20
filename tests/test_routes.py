@@ -6,9 +6,9 @@ from pathlib import Path
 _test_db_directory = tempfile.TemporaryDirectory(prefix="govscale-tests-")
 _test_db_path = Path(_test_db_directory.name) / "govscale-test.db"
 
-os.environ["GOVSCALE_DATABASE_URI"] = (
-    os.environ.get("GOVSCALE_TEST_DATABASE_URI") or f"sqlite:///{_test_db_path}"
-)
+os.environ.setdefault("GOVSCALE_DATABASE_URI", (
+    os.environ.get("GOVSCALE_TEST_DATABASE_URI") or f"postgresql://govscale_user:test_password@localhost:5432/govscale_test"
+))
 os.environ.setdefault("GOVSCALE_SECRET_KEY", "test-only-secret-key")
 
 from app import app  # noqa: E402
