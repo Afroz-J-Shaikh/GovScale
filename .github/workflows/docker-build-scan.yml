@@ -43,15 +43,15 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Start throwaway Postgres database
-              run: |
-                docker run -d --name test-db -p 5432:5432 \
-                  -e POSTGRES_USER=smoke_user \
-                  -e POSTGRES_PASSWORD=smoke_pass \
-                  -e POSTGRES_DB=smoke_db \
-                  postgres:15
-                
-                # Give Postgres a few seconds to initialize before the app tries to connect
-                sleep 5
+        run: |
+          docker run -d --name test-db -p 5432:5432 \
+            -e POSTGRES_USER=smoke_user \
+            -e POSTGRES_PASSWORD=smoke_pass \
+            -e POSTGRES_DB=smoke_db \
+            postgres:15
+          
+          # Give Postgres a few seconds to initialize before the app tries to connect
+          sleep 5
 
       - name: Run Smoke Test
         run: |
