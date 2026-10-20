@@ -69,9 +69,21 @@ def _normalize_database_uri(uri):
     return uri
 
 
-app.config["SQLALCHEMY_DATABASE_URI"] = _normalize_database_uri(
-    os.environ.get("GOVSCALE_DATABASE_URI")
-) or ("sqlite:///" + str(Path(app.instance_path) / "govscale.db"))
+# PostgreSQL is required in every environment. Fail fast if unconfigured.
+_database_uri = _normalize_database_uri(os.environ.get("GOVSCALE_DATABASE_URI"))
+
+if not _database_uri:
+    raise RuntimeError(
+        "GOVSCALE_DATABASE_URI is required. GovScale supports PostgreSQL only."
+    )
+
+if not _database_uri.startswith("postgresql"):
+    raise RuntimeError(
+        "GOVSCALE_DATABASE_URI must use PostgreSQL, for example: "
+        "postgresql+psycopg2://user:password@host:5432/govscale"
+    )
+
+app.config["SQLALCHEMY_DATABASE_URI"] = _database_uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 IS_POSTGRES = app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql")

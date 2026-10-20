@@ -1,20 +1,28 @@
-# Shared build settings, reused by all app services (same image)
-x-build: &build
-  context: .
+# GovScale local development / hackathon deployment.
+# Secrets and environment-specific values belong in `.env`, never in this file.
 
-# Shared environment. Values come from .env; `:?` stops with an error if missing.
-x-env: &env
+x-app-build: &app-build
+  context: .
+  dockerfile: Dockerfile
+
+# Application configuration shared by init, app, and optional demo seeding.
+x-app-env: &app-env
   GOVSCALE_SECRET_KEY: ${GOVSCALE_SECRET_KEY:?Set GOVSCALE_SECRET_KEY in .env}
-  GOVSCALE_ADMIN_EMAIL: ${GOVSCALE_ADMIN_EMAIL:-admin@gmail.com}
+  GOVSCALE_ADMIN_EMAIL: ${GOVSCALE_ADMIN_EMAIL:-admin@example.com}
   GOVSCALE_ADMIN_PASSWORD: ${GOVSCALE_ADMIN_PASSWORD:?Set GOVSCALE_ADMIN_PASSWORD in .env}
+  # PostgreSQL is mandatory for GovScale in all environments.
   GOVSCALE_DATABASE_URI: postgresql+psycopg2://govscale:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/govscale
 
+# Common container hardening.
 x-hardening: &hardening
-  cap_drop: [ALL]
+  cap_drop:
+    - ALL
   security_opt:
     - no-new-privileges:true
+  restart: unless-stopped
 
 services:
+  # PostgreSQL datastore. Data persists in the named `pgdata` volume.
   db:
     image: postgres:16-alpine
     environment:
@@ -24,44 +32,75 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      # Local only; used by scripts/test_postgres.sh and migration scripts
+      # Bound to localhost only. Remove this block if host scripts do not need DB access.
       - "127.0.0.1:${GOVSCALE_PG_HOST_PORT:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U govscale -d govscale"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
+    cap_drop:
+      - ALL
+    cap_add:
+      # PostgreSQL requires these capabilities for normal operation.
+      - CHOWN
+      - DAC_READ_SEARCH
+      - FOWNER
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
     restart: unless-stopped
 
-  # Default initialization: institutions + admin. Idempotent and race-safe.
+  # One-time schema initialization and baseline seed data.
+  # This is the correct place for database initialization—not the Dockerfile.
   init:
     <<: *hardening
-    build: *build
+    build: *app-build
     image: govscale:local
-    command: ["sh", "-c", "python scripts/seed_institutions.py && python scripts/create_admin.py"]
-    environment: *env
+    command: ["python", "scripts/seed_institutions.py"]
+    environment: *app-env
     depends_on:
       db:
         condition: service_healthy
     restart: "no"
 
-  app:
+  # Create the initial administrator after base initialization.
+  admin-init:
     <<: *hardening
-    build: *build
     image: govscale:local
+    build: *app-build
+    command: ["python", "scripts/create_admin.py"]
+    environment: *app-env
     depends_on:
       init:
+        condition: service_completed_successfully
+    restart: "no"
+
+  # Main Flask/Gunicorn application.
+  app:
+    <<: *hardening
+    build: *app-build
+    image: govscale:local
+    depends_on:
+      admin-init:
         condition: service_completed_successfully
     ports:
       - "${GOVSCALE_HOST_PORT:-5000}:5000"
     environment:
-      <<: *env
+      <<: *app-env
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-3}
       GUNICORN_THREADS: ${GUNICORN_THREADS:-4}
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/instance:size=64m,mode=0750
     cpus: 1.0
     mem_limit: 512m
     pids_limit: 256
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)"]
       interval: 15s
@@ -69,18 +108,19 @@ services:
       retries: 5
       start_period: 20s
 
-  # Optional demo data. Run with: docker compose run --rm demo-seed
+  # Optional demo data. Run explicitly with:
+  #   docker compose --profile demo run --rm demo-seed
   demo-seed:
     <<: *hardening
-    build: *build
+    build: *app-build
     image: govscale:local
     profiles: ["demo"]
     command: ["python", "scripts/import_demo_data.py"]
     environment:
-      <<: *env
+      <<: *app-env
       GOVSCALE_DEMO_PASSWORD: ${GOVSCALE_DEMO_PASSWORD:-}
     depends_on:
-      init:
+      admin-init:
         condition: service_completed_successfully
     restart: "no"
 
