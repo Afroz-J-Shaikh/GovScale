@@ -23,10 +23,11 @@ RUN groupadd --system --gid 1001 govscale \
 
 COPY --from=builder /install /usr/local
 # Copy only runtime application files; dependencies come from the builder stage.
-COPY --chown=govscale:govscale app.py docker-entrypoint.sh ./
 COPY --chown=govscale:govscale scripts ./scripts
 COPY --chown=govscale:govscale templates ./templates
 COPY --chown=govscale:govscale static ./static
+COPY --chown=govscale:govscale seed_data ./seed_data
+COPY --chown=govscale:govscale app.py ./app.py
 
 # Flask requires a writable instance directory even when PostgreSQL is used.
 # No SQLite/database file is stored here; PostgreSQL data remains in Compose volume pgdata.
@@ -37,9 +38,6 @@ RUN mkdir -p /app/instance \
 USER govscale
 
 EXPOSE 5000
-
-# Start the application; database initialization is handled by Compose services.
-ENTRYPOINT ["sh", "/app/docker-entrypoint.sh"]
 
 # Workers/threads/port are configurable: WEB_CONCURRENCY,
 # GUNICORN_THREADS and PORT (default 5000).
