@@ -22,17 +22,25 @@ RUN groupadd --system --gid 1001 govscale \
     && useradd --system --uid 1001 --gid govscale --home-dir /app --no-create-home govscale
 
 COPY --from=builder /install /usr/local
-COPY --chown=govscale:govscale . .
+# Copy only runtime application files; dependencies come from the builder stage.
+COPY --chown=govscale:govscale app.py docker-entrypoint.sh ./
+COPY --chown=govscale:govscale scripts ./scripts
+COPY --chown=govscale:govscale templates ./templates
+COPY --chown=govscale:govscale static ./static
 
-RUN mkdir -p /app/instance && chown govscale:govscale /app/instance
+# Flask requires a writable instance directory even when PostgreSQL is used.
+# No SQLite/database file is stored here; PostgreSQL data remains in Compose volume pgdata.
+RUN mkdir -p /app/instance \
+    && chown govscale:govscale /app/instance \
+    && chmod 750 /app/instance
 
 USER govscale
 
 EXPOSE 5000
 
-# Optional idempotent init (GOVSCALE_RUN_INIT=1), then the command below.
+# Start the application; database initialization is handled by Compose services.
 ENTRYPOINT ["sh", "/app/docker-entrypoint.sh"]
 
-# Workers/threads/port are configurable: WEB_CONCURRENCY (use 1 with SQLite),
+# Workers/threads/port are configurable: WEB_CONCURRENCY,
 # GUNICORN_THREADS and PORT (default 5000).
 CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:${PORT:-5000} --workers ${WEB_CONCURRENCY:-3} --threads ${GUNICORN_THREADS:-4} --timeout 60 --graceful-timeout 30 --worker-tmp-dir /dev/shm --access-logfile - --error-logfile - app:app"]
