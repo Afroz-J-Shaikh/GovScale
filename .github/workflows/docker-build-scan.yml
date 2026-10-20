@@ -42,12 +42,24 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Smoke test - /health
-        env:
-          IMAGE: ${{ inputs.image-name }}:${{ github.sha }}
+      - name: Start throwaway Postgres database
+              run: |
+                docker run -d --name test-db -p 5432:5432 \
+                  -e POSTGRES_USER=smoke_user \
+                  -e POSTGRES_PASSWORD=smoke_pass \
+                  -e POSTGRES_DB=smoke_db \
+                  postgres:15
+                
+                # Give Postgres a few seconds to initialize before the app tries to connect
+                sleep 5
+
+      - name: Run Smoke Test
         run: |
-          docker run -d --name smoke -p 5000:5000 \
-            -e GOVSCALE_SECRET_KEY=ci-only-not-a-real-secret "$IMAGE"
+          docker run -d --name smoke --network host \
+            -e GOVSCALE_SECRET_KEY=ci-only-not-a-real-secret \
+            -e GOVSCALE_DATABASE_URI="postgresql://smoke_user:smoke_pass@127.0.0.1:5432/smoke_db" \
+            "$IMAGE"
+            
           for i in $(seq 1 20); do
             if curl -fsS http://127.0.0.1:5000/health; then
               echo; echo "Healthy"; exit 0
