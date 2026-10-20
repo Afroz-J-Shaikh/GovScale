@@ -20,3 +20,8 @@ __pycache__/
 htmlcov/
 Dockerfile
 compose.yaml
+tempCodeRunnerFile.py
+Dockerfile
+compose.yaml
+docker-compose*.yaml
+README.md

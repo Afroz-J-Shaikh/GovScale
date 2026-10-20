@@ -219,20 +219,3 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# GovScale: never bake secrets, local databases, backups, or logs into images
-.env.*
-!.env.example
-instance/
-*.db
-*.sqlite3
-*.sqlite3-journal
-*.bak*
-logs/
-tempCodeRunnerFile.py
-
-# Docker/Compose files are not needed inside the runtime image
-Dockerfile
-compose.yaml
-docker-compose*.yaml
-README.md
-tests/
