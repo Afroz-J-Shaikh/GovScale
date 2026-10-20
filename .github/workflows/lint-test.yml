@@ -40,10 +40,27 @@ jobs:
       - name: Ruff - style audit (non-blocking)
         run: ruff check . --output-format=github || true
 
-  test:
+test:
     name: Test - Pytest
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    
+    # Add a PostgreSQL service container for the tests
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: govscale_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: govscale_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -63,5 +80,6 @@ jobs:
       - name: Run tests
         env:
           GOVSCALE_SECRET_KEY: ci-only-not-a-real-secret
-        # `python -m pytest` puts the repo root on sys.path so `from app import app` works
+          # Point the app to the spun-up PostgreSQL service container
+          GOVSCALE_DATABASE_URI: postgresql://govscale_user:test_password@localhost:5432/govscale_test
         run: python -m pytest -q
