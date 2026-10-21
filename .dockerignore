@@ -25,3 +25,4 @@ Dockerfile
 compose.yaml
 docker-compose*.yaml
 README.md
+seed_data/

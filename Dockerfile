@@ -26,7 +26,6 @@ COPY --from=builder /install /usr/local
 COPY --chown=govscale:govscale scripts ./scripts
 COPY --chown=govscale:govscale templates ./templates
 COPY --chown=govscale:govscale static ./static
-COPY --chown=govscale:govscale seed_data ./seed_data
 COPY --chown=govscale:govscale app.py ./app.py
 
 # Flask requires a writable instance directory even when PostgreSQL is used.
