@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars (git-ignored) only if you want to override a default.
+# aws_region        = "ap-south-1"
+# ecr_repository_name = "govscale"
+# db_multi_az       = true
+# deployment_policy = "Immutable"

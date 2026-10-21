@@ -1,0 +1,112 @@
+name: CD - Deploy to Elastic Beanstalk
+
+# Deploys the image that CI just pushed to ECR. The image tag is the short commit SHA,
+# the same tag ecr-push.yml creates, so nobody ever edits an image name by hand.
+
+on:
+  workflow_call:
+    secrets:
+      AWS_ROLE_ARN:
+        required: true
+      AWS_REGION:
+        required: true
+      ECR_REPOSITORY:
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-eb
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Beanstalk
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      EB_APP: ${{ vars.EB_APPLICATION_NAME || 'govscale' }}
+      EB_ENV: ${{ vars.EB_ENVIRONMENT_NAME || 'govscale-prod' }}
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build deployment bundle
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+        run: |
+          set -euo pipefail
+          IMAGE_TAG="${GITHUB_SHA:0:7}"
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          # Fail early if CI did not push this exact image.
+          aws ecr describe-images --repository-name "$ECR_REPOSITORY" \
+            --image-ids imageTag="$IMAGE_TAG" > /dev/null
+
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          echo "VERSION_LABEL=$IMAGE_TAG-$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+
+          cat > Dockerrun.aws.json <<JSON
+          {
+            "AWSEBDockerrunVersion": "1",
+            "Image": { "Name": "$IMAGE", "Update": "true" },
+            "Ports": [ { "ContainerPort": 5000 } ]
+          }
+          JSON
+          zip -q bundle.zip Dockerrun.aws.json
+
+      - name: Upload bundle and create application version
+        run: |
+          set -euo pipefail
+          BUCKET=$(aws elasticbeanstalk create-storage-location --query S3Bucket --output text)
+          KEY="$EB_APP/$VERSION_LABEL.zip"
+          aws s3 cp bundle.zip "s3://$BUCKET/$KEY"
+          aws elasticbeanstalk create-application-version \
+            --application-name "$EB_APP" \
+            --version-label "$VERSION_LABEL" \
+            --source-bundle S3Bucket="$BUCKET",S3Key="$KEY" \
+            --description "$IMAGE (commit $GITHUB_SHA)"
+
+      - name: Deploy to environment
+        run: |
+          aws elasticbeanstalk update-environment \
+            --environment-name "$EB_ENV" \
+            --version-label "$VERSION_LABEL"
+
+      - name: Wait for a healthy deployment
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 120); do
+            read -r STATUS HEALTH VERSION < <(aws elasticbeanstalk describe-environments \
+              --environment-names "$EB_ENV" \
+              --query 'Environments[0].[Status,Health,VersionLabel]' --output text)
+            echo "[$i] status=$STATUS health=$HEALTH version=$VERSION"
+            if [ "$STATUS" = "Ready" ]; then
+              if [ "$VERSION" = "$VERSION_LABEL" ] && [ "$HEALTH" = "Green" ]; then
+                echo "Deployment healthy."; exit 0
+              fi
+              # Ready but not on our version after a few minutes means Beanstalk rolled back.
+              if [ "$VERSION" != "$VERSION_LABEL" ] && [ "$i" -gt 12 ]; then
+                echo "Environment is not running $VERSION_LABEL (rolled back?)"; exit 1
+              fi
+            fi
+            sleep 15
+          done
+          echo "Timed out waiting for the deployment"; exit 1
+
+      - name: Smoke test
+        run: |
+          CNAME=$(aws elasticbeanstalk describe-environments \
+            --environment-names "$EB_ENV" --query 'Environments[0].CNAME' --output text)
+          curl -fsS --retry 5 --retry-delay 5 "http://$CNAME/health"
+          echo

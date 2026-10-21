@@ -65,3 +65,13 @@ jobs:
       contents: read
     uses: ./.github/workflows/ecr-push.yml
     secrets: inherit
+
+  # ---- Optional: deploy to Elastic Beanstalk (enable with ENABLE_EB_DEPLOY=true) ----
+  deploy:
+    if: ${{ vars.ENABLE_ECR_PUSH == 'true' && vars.ENABLE_EB_DEPLOY == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+    needs: ecr-push
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy-eb.yml
+    secrets: inherit 
