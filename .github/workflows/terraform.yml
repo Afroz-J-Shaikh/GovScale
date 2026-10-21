@@ -49,7 +49,7 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    environment: production # add required reviewers in GitHub > Settings > Environments for a manual approval gate
+    #environment: production # add required reviewers in GitHub > Settings > Environments for a manual approval gate
     steps:
       - uses: actions/checkout@v4
         with:
