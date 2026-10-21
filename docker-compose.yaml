@@ -1,10 +1,65 @@
 services:
+  # 1. New service to automatically create the database if missing
+  db-ensure:
+    image: ${GOVSCALE_IMAGE}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        python3 <<'EOF'
+        import re
+        import sqlalchemy
+        import os
+
+        uri = os.environ.get('GOVSCALE_DATABASE_URI')
+        if not uri:
+            print("Error: GOVSCALE_DATABASE_URI environment variable is missing.")
+            exit(1)
+
+        # Use regex to safely isolate everything after the last slash (ignoring query params)
+        # Format: postgresql://user:pass@host:port/db_name?options
+        match = re.search(r'\/([^/?#]+)(?:\?.*)?$', uri)
+        if not match:
+            print("Error: Could not extract database name from URI.")
+            exit(1)
+            
+        db_name = match.group(1)
+
+        # Reconstruct the initialization URI by cutting off the target db name and attaching /postgres
+        base_uri = uri[:uri.rfind(f"/{db_name}")]
+        
+        # Keep any query arguments if present (like ?sslmode=...)
+        query_args = uri[uri.rfind(db_name) + len(db_name):]
+        init_uri = f"{base_uri}/postgres{query_args}"
+
+        engine = sqlalchemy.create_engine(init_uri)
+        with engine.connect() as conn:
+            conn.execute(sqlalchemy.text('COMMIT'))
+            res = conn.execute(sqlalchemy.text(f"SELECT 1 FROM pg_database WHERE datname='{db_name}'"))
+            if not res.fetchone():
+                print(f"Database '{db_name}' not found. Creating it...")
+                conn.execute(sqlalchemy.text(f"CREATE DATABASE {db_name}"))
+                print(f"Database '{db_name}' created successfully!")
+            else:
+                print(f"Database '{db_name}' already exists.")
+        EOF
+    environment:
+      GOVSCALE_DATABASE_URI: ${GOVSCALE_DATABASE_URI}
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
   init:
     image: ${GOVSCALE_IMAGE}
     command: ["python", "scripts/seed_institutions.py"]
     environment:
       GOVSCALE_SECRET_KEY: ${GOVSCALE_SECRET_KEY}
       GOVSCALE_DATABASE_URI: ${GOVSCALE_DATABASE_URI}
+    # Main scripts must wait for db-ensure to finish first
+    depends_on:
+      db-ensure:
+        condition: service_completed_successfully
     restart: "no"
     security_opt:
       - no-new-privileges:true
@@ -37,12 +92,10 @@ services:
       GUNICORN_THREADS: ${GUNICORN_THREADS:-4}
       PORT: "5000"
     depends_on:
-      init:
-        condition: service_completed_successfully
       admin-init:
         condition: service_completed_successfully
     ports:
-      - "5000"
+      - "5000:5000"
     restart: unless-stopped
     read_only: true
     tmpfs:

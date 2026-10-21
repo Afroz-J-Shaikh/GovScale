@@ -1,0 +1,69 @@
+services:
+  init:
+    image: ${GOVSCALE_IMAGE}
+    command: ["python", "scripts/seed_institutions.py"]
+    environment:
+      GOVSCALE_SECRET_KEY: ${GOVSCALE_SECRET_KEY}
+      GOVSCALE_DATABASE_URI: ${GOVSCALE_DATABASE_URI}
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  admin-init:
+    image: ${GOVSCALE_IMAGE}
+    command: ["python", "scripts/create_admin.py"]
+    environment:
+      GOVSCALE_SECRET_KEY: ${GOVSCALE_SECRET_KEY}
+      GOVSCALE_DATABASE_URI: ${GOVSCALE_DATABASE_URI}
+      GOVSCALE_ADMIN_EMAIL: ${GOVSCALE_ADMIN_EMAIL}
+      GOVSCALE_ADMIN_PASSWORD: ${GOVSCALE_ADMIN_PASSWORD}
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  app:
+    image: ${GOVSCALE_IMAGE}
+    environment:
+      GOVSCALE_SECRET_KEY: ${GOVSCALE_SECRET_KEY}
+      GOVSCALE_DATABASE_URI: ${GOVSCALE_DATABASE_URI}
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-4}
+      PORT: "5000"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      admin-init:
+        condition: service_completed_successfully
+    ports:
+      - "5000"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/instance:size=64m,mode=0750
+    cpus: 1.0
+    mem_limit: 512m
+    pids_limit: 256
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
