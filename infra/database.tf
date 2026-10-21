@@ -57,8 +57,8 @@ resource "aws_secretsmanager_secret_version" "govscale" {
   secret_id = aws_secretsmanager_secret.govscale.id
   secret_string = jsonencode({
     secret_key        = random_password.secret_key.result
-    admin_password   = random_password.admin.result
+    admin_password    = random_password.admin.result
     database_password = random_password.db.result
-    rds_endpoint     = aws_db_instance.main.address
+    rds_endpoint      = aws_db_instance.main.address
   })
 }
