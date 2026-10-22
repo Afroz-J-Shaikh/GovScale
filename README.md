@@ -31,6 +31,10 @@ Government portals often face heavy load during scholarship deadlines, examinati
 | CI/CD | GitHub Actions |
 | Domain and HTTPS | Route 53, AWS Certificate Manager |
 
+## Architecture Diagram
+
+   ![snapshot](./architecture/AWSVPCArchitectureandDataFlow.png)
+
 ## Quick Local Start
 
 ### 1. Clone the repository
