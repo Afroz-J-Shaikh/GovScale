@@ -33,7 +33,7 @@ jobs:
     steps:
       # Needed for deploy/01_init.sh.tpl
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
