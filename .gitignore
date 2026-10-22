@@ -171,3 +171,5 @@ seed_data/
 *.tfstate.*
 *.tfvars
 tfplan
+
+!*.auto.tfvars
