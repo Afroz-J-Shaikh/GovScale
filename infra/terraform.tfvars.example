@@ -3,3 +3,7 @@
 # ecr_repository_name = "govscale"
 # db_multi_az       = true
 # deployment_policy = "Immutable"
+# Leave this empty to deploy with only the AWS Elastic Beanstalk HTTP URL.
+# Set it to deploy with Route 53 DNS and an ACM HTTPS certificate.
+# domain_name = "example.com"
+domain_name = ""

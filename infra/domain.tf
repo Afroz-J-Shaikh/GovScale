@@ -1,24 +1,34 @@
-# HTTPS for the app on your own domain:
-#   Route 53 (existing zone) -> ACM certificate -> ALB :443 -> Beanstalk
-#
-# The hosted zone is looked up, NOT created here, on purpose: a zone created by
-# Terraform would get new nameservers after every destroy/apply and break your
-# registrar delegation. Create it once by hand (see the notes in the chat).
+# Optional custom domain + HTTPS.
+# Leave var.domain_name empty ("") to deploy using only the AWS Elastic Beanstalk URL over HTTP.
 
 variable "domain_name" {
-  type    = string
-  default = "afrozdevops.online"
+  description = "Custom apex domain, e.g. example.com. Leave empty to use the Elastic Beanstalk URL only."
+  type        = string
+  default     = ""
+}
+
+variable "create_www_record" {
+  description = "Also create a www.<domain> alias record. Only used when domain_name is set."
+  type        = bool
+  default     = true
+}
+
+locals {
+  has_domain = var.domain_name != ""
 }
 
 data "aws_route53_zone" "main" {
+  count = local.has_domain ? 1 : 0
+
   name         = var.domain_name
   private_zone = false
 }
 
-# Certificate must be in the same region as the ALB (ap-south-1), which is the provider default.
 resource "aws_acm_certificate" "app" {
+  count = local.has_domain ? 1 : 0
+
   domain_name               = var.domain_name
-  subject_alternative_names = ["www.${var.domain_name}"]
+  subject_alternative_names = var.create_www_record ? ["www.${var.domain_name}"] : []
   validation_method         = "DNS"
 
   lifecycle {
@@ -27,15 +37,15 @@ resource "aws_acm_certificate" "app" {
 }
 
 resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for o in aws_acm_certificate.app.domain_validation_options : o.domain_name => {
+  for_each = local.has_domain ? {
+    for o in aws_acm_certificate.app[0].domain_validation_options : o.domain_name => {
       name   = o.resource_record_name
       type   = o.resource_record_type
       record = o.resource_record_value
     }
-  }
+  } : {}
 
-  zone_id         = data.aws_route53_zone.main.zone_id
+  zone_id         = data.aws_route53_zone.main[0].zone_id
   name            = each.value.name
   type            = each.value.type
   records         = [each.value.record]
@@ -44,12 +54,16 @@ resource "aws_route53_record" "cert_validation" {
 }
 
 resource "aws_acm_certificate_validation" "app" {
-  certificate_arn         = aws_acm_certificate.app.arn
+  count = local.has_domain ? 1 : 0
+
+  certificate_arn         = aws_acm_certificate.app[0].arn
   validation_record_fqdns = [for r in aws_route53_record.cert_validation : r.fqdn]
 }
 
-# HTTPS into the load balancer. Port 80 stays open only so nginx can redirect it to HTTPS.
+# HTTPS security-group rule only when a domain/certificate is configured.
 resource "aws_vpc_security_group_ingress_rule" "alb_https" {
+  count = local.has_domain ? 1 : 0
+
   security_group_id = aws_security_group.alb.id
   cidr_ipv4         = "0.0.0.0/0"
   from_port         = 443
@@ -57,35 +71,42 @@ resource "aws_vpc_security_group_ingress_rule" "alb_https" {
   ip_protocol       = "tcp"
 }
 
-# The ALB that Beanstalk created for the environment.
+# The ALB created by Elastic Beanstalk.
 data "aws_lb" "app" {
+  count = local.has_domain ? 1 : 0
+
   arn = aws_elastic_beanstalk_environment.env.load_balancers[0]
 }
 
 resource "aws_route53_record" "apex" {
-  zone_id = data.aws_route53_zone.main.zone_id
+  count = local.has_domain ? 1 : 0
+
+  zone_id = data.aws_route53_zone.main[0].zone_id
   name    = var.domain_name
   type    = "A"
 
   alias {
-    name                   = data.aws_lb.app.dns_name
-    zone_id                = data.aws_lb.app.zone_id
+    name                   = data.aws_lb.app[0].dns_name
+    zone_id                = data.aws_lb.app[0].zone_id
     evaluate_target_health = true
   }
 }
 
 resource "aws_route53_record" "www" {
-  zone_id = data.aws_route53_zone.main.zone_id
+  count = local.has_domain && var.create_www_record ? 1 : 0
+
+  zone_id = data.aws_route53_zone.main[0].zone_id
   name    = "www.${var.domain_name}"
   type    = "A"
 
   alias {
-    name                   = data.aws_lb.app.dns_name
-    zone_id                = data.aws_lb.app.zone_id
+    name                   = data.aws_lb.app[0].dns_name
+    zone_id                = data.aws_lb.app[0].zone_id
     evaluate_target_health = true
   }
 }
 
 output "app_https_url" {
-  value = "https://${var.domain_name}"
+  description = "Custom HTTPS URL; empty when no custom domain is configured."
+  value       = local.has_domain ? "https://${var.domain_name}" : ""
 }

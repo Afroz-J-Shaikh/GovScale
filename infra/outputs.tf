@@ -1,5 +1,11 @@
 output "app_url" {
-  value = "http://${aws_elastic_beanstalk_environment.env.cname}"
+  description = "Primary application URL: custom HTTPS domain when configured, otherwise the Elastic Beanstalk HTTP URL."
+  value       = var.domain_name != "" ? "https://${var.domain_name}" : "http://${aws_elastic_beanstalk_environment.env.cname}"
+}
+
+output "eb_http_url" {
+  description = "Always-available Elastic Beanstalk HTTP URL."
+  value       = "http://${aws_elastic_beanstalk_environment.env.cname}"
 }
 
 output "eb_application_name" {
