@@ -68,10 +68,39 @@ jobs:
     uses: ./.github/workflows/ecr-push.yml
     secrets: inherit
 
-  # ---- Optional: deploy to Elastic Beanstalk (enable with ENABLE_EB_DEPLOY=true) ----
-  deploy:
+  # ---- Does the Beanstalk environment exist yet? (Terraform must have applied first) ----
+  check-infra:
     if: ${{ vars.ENABLE_ECR_PUSH == 'true' && vars.ENABLE_EB_DEPLOY == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
-    needs: ecr-push
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      exists: ${{ steps.check.outputs.exists }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - id: check
+        env:
+          EB_ENV: ${{ vars.EB_ENVIRONMENT_NAME || 'govscale-prod' }}
+        run: |
+          STATUS=$(aws elasticbeanstalk describe-environments \
+            --environment-names "$EB_ENV" \
+            --query "Environments[?Status!='Terminated'] | [0].Status" --output text)
+          if [ -z "$STATUS" ] || [ "$STATUS" = "None" ]; then
+            echo "::warning::Environment $EB_ENV does not exist. Run 'Infra - Terraform' first. Skipping deploy."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Environment status: $STATUS"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ---- Optional: deploy to Elastic Beanstalk ----
+  deploy:
+    if: ${{ needs.check-infra.outputs.exists == 'true' }}
+    needs: [ecr-push, check-infra]
     permissions:
       id-token: write
       contents: read
