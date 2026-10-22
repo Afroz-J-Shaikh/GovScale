@@ -180,6 +180,26 @@ class NotificationDispatch(db.Model):
     )
 
 
+def notify_missing_student_profile(user):
+    """Notify a student once if their education profile has not been created."""
+    if user.is_admin:
+        return
+
+    profile = StudentProfile.query.filter_by(user_id=user.id).first()
+
+    if profile is not None:
+        return
+
+    dispatch_notification(
+        user.id,
+        f"missing_student_profile:{user.id}",
+        "Complete your student profile",
+        "Add your education details to discover grade-based scholarships "
+        "matched to your current class or year.",
+        url_for("profile"),
+    )
+
+
 def dispatch_notification(user_id, event_key, title, message, link=None):
     """Queue a notification once per event and recipient, safely handling races."""
     if NotificationDispatch.query.filter_by(event_key=event_key).first():
@@ -1969,7 +1989,9 @@ def scholarship_category(category):
             user_id=current_user.id
         ).first()
 
-        if profile is None:
+        profile_missing = profile is None
+
+        if profile_missing:
             scholarships = []
         else:
             scholarships = query.filter_by(
@@ -2035,6 +2057,7 @@ def scholarship_category(category):
 
     return render_template(
         "scholarship_category.html",
+        profile_missing=profile_missing,
         scholarships=scholarships,
         category=category,
         category_title=category_title,
@@ -2128,6 +2151,9 @@ def login():
 
         if user and user.check_password(form.password.data):
             login_user(user)
+
+            if not user.is_admin:
+                notify_missing_student_profile(user)
             flash("You are now logged in.", "success")
 
             # Admins must always enter the admin panel.

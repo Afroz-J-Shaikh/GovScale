@@ -65,11 +65,23 @@
         </article>
         {% else %}
         <article class="dashboard-card">
-            <h2>No scholarships available yet</h2>
-            <p>
-                There are currently no active scholarships in this category
-                matching your profile.
-            </p>
+            {% if category == "grade" and profile_missing %}
+                <h2>Complete your profile to see grade-based scholarships</h2>
+                <p>
+                    You have not created your student profile yet. Add your
+                    education details so GovScale can match you with
+                    grade-based scholarships.
+                </p>
+                <a href="{{ url_for('profile') }}" class="button button-primary">
+                    Create or update profile
+                </a>
+            {% else %}
+                <h2>No scholarships available yet</h2>
+                <p>
+                    There are currently no active scholarships in this category
+                    matching your profile.
+                </p>
+            {% endif %}
         </article>
         {% endfor %}
     </div>
