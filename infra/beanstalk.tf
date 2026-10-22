@@ -34,6 +34,10 @@ locals {
     { ns = "aws:elasticbeanstalk:environment:process:default", name = "MatcherHTTPCode", value = "200" },
     { ns = "aws:elasticbeanstalk:environment:process:default", name = "HealthCheckInterval", value = "15" },
     { ns = "aws:elasticbeanstalk:environment:process:default", name = "DeregistrationDelay", value = "20" },
+    { ns = "aws:elbv2:listener:443", name = "Protocol", value = "HTTPS" },
+    { ns = "aws:elbv2:listener:443", name = "SSLCertificateArns", value = aws_acm_certificate_validation.app.certificate_arn },
+    { ns = "aws:elbv2:listener:443", name = "SSLPolicy", value = "ELBSecurityPolicy-TLS13-1-2-2021-06" },
+
 
     # --- nginx on the instance forwards port 80 to the container's port 5000 ---
     { ns = "aws:elasticbeanstalk:environment:proxy", name = "ProxyServer", value = "nginx" },
