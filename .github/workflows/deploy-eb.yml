@@ -2,6 +2,7 @@ name: CD - Deploy to Elastic Beanstalk
 
 # Deploys the image that CI just pushed to ECR. The image tag is the short commit SHA,
 # the same tag ecr-push.yml creates, so nobody ever edits an image name by hand.
+# The bundle also carries a postdeploy hook that seeds institutions and creates the admin.
 
 on:
   workflow_call:
@@ -30,6 +31,12 @@ jobs:
       EB_APP: ${{ vars.EB_APPLICATION_NAME || 'govscale' }}
       EB_ENV: ${{ vars.EB_ENVIRONMENT_NAME || 'govscale-prod' }}
     steps:
+      # Needed for deploy/01_init.sh.tpl
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -63,7 +70,16 @@ jobs:
             "Ports": [ { "ContainerPort": 5000 } ]
           }
           JSON
-          zip -q bundle.zip Dockerrun.aws.json
+
+          # Postdeploy hook: seeds institutions + creates the admin in a one-shot container.
+          mkdir -p .platform/hooks/postdeploy
+          sed -e "s|__IMAGE__|$IMAGE|" \
+              -e "s|__REGION__|$AWS_REGION|" \
+              -e "s|__SECRET_ID__|$EB_ENV-credentials|" \
+              deploy/01_init.sh.tpl > .platform/hooks/postdeploy/01_init.sh
+          chmod +x .platform/hooks/postdeploy/01_init.sh
+
+          zip -qr bundle.zip Dockerrun.aws.json .platform
 
       - name: Upload bundle and create application version
         run: |

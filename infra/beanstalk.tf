@@ -63,7 +63,6 @@ locals {
 
     # --- non-secret app config ---
     { ns = "aws:elasticbeanstalk:application:environment", name = "GOVSCALE_ADMIN_EMAIL", value = var.admin_email },
-    { ns = "aws:elasticbeanstalk:application:environment", name = "GOVSCALE_RUN_INIT", value = "1" },
     { ns = "aws:elasticbeanstalk:application:environment", name = "WEB_CONCURRENCY", value = "2" },
     { ns = "aws:elasticbeanstalk:application:environment", name = "GUNICORN_THREADS", value = "4" },
   ]
