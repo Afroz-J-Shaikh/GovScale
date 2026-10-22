@@ -69,7 +69,9 @@ jobs:
     secrets: inherit
 
   # ---- Does the Beanstalk environment exist yet? (Terraform must have applied first) ----
-  check-infra:
+  # Set ENABLE_EB_DEPLOY=TRUE
+  check-infra: 
+    needs: ecr-push
     if: ${{ vars.ENABLE_ECR_PUSH == 'true' && vars.ENABLE_EB_DEPLOY == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
