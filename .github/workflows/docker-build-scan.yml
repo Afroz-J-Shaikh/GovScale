@@ -32,7 +32,7 @@ jobs:
       # Built exactly once. The same image is scanned, smoke-tested and
       # (optionally) pushed, so what is scanned is what ships.
       - name: Build image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true
